@@ -1,0 +1,6 @@
+[site1]
+provider="github.com"
+
+[site2]
+provider="coding.net"
+

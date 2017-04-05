@@ -1,0 +1,10 @@
+[Unit]
+Description=MyCDN service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/mycdn-controller
+
+[Install]
+WantedBy=multi-user.target
