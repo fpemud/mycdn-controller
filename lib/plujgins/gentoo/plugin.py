@@ -7,7 +7,13 @@ import shutil
 import multiprocessing
 
 
-class PluginObject:
+class InfoProvider:
+
+    def getInformation(self):
+        pass
+
+
+class Updater:
 
     def __init__(self, param, api):
         self.param = param
@@ -16,13 +22,13 @@ class PluginObject:
         self.source = "rsync://ftp.ussg.iu.edu::gentoo-distfiles"
 
     def start(self):
-        pass
+        cmd = "/usr/bin/rsync -q -a --delete %s \"%s\"" % (self.api.get_data_directory())
+        ret = subprocess.Popen(cmd, shell=True, universal_newlines=True)
+
+        _Util.shellExec()
 
     def stop(self):
         pass
-
-    def update(self):
-        _Util.shellExec("/usr/bin/rsync -q -a --delete %s \"%s\"" % (self.api.get_data_directory()))
 
 
 class _Util:
