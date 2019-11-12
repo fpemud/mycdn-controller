@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FILES="./mycdn-controller"
+FILES="./mycdn"
 LIBFILES=""
 LIBFILES="${LIBFILES} $(find ./lib -name '*.py' | tr '\n' ' ')"
 ERRFLAG=0

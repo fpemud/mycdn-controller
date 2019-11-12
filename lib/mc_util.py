@@ -105,41 +105,6 @@ class McUtil:
         os.mkdir(dirname)
 
     @staticmethod
-    def shell(cmd, flags=""):
-        """Execute shell command"""
-
-        assert cmd.startswith("/")
-
-        # Execute shell command, throws exception when failed
-        if flags == "":
-            retcode = subprocess.Popen(cmd, shell=True, universal_newlines=True).wait()
-            if retcode != 0:
-                raise Exception("Executing shell command \"%s\" failed, return code %d" % (cmd, retcode))
-            return
-
-        # Execute shell command, throws exception when failed, returns stdout+stderr
-        if flags == "stdout":
-            proc = subprocess.Popen(cmd,
-                                    shell=True, universal_newlines=True,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
-            out = proc.communicate()[0]
-            if proc.returncode != 0:
-                raise Exception("Executing shell command \"%s\" failed, return code %d, output %s" % (cmd, proc.returncode, out))
-            return out
-
-        # Execute shell command, returns (returncode,stdout+stderr)
-        if flags == "retcode+stdout":
-            proc = subprocess.Popen(cmd,
-                                    shell=True, universal_newlines=True,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
-            out = proc.communicate()[0]
-            return (proc.returncode, out)
-
-        assert False
-
-    @staticmethod
     def ensureDir(dirname):
         if not os.path.exists(dirname):
             os.makedirs(dirname)

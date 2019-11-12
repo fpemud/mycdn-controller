@@ -7,20 +7,12 @@ import os
 class McParam:
 
     def __init__(self):
-        self.etcDir = "/etc/mycdn-controller"
-        self.libDir = "/usr/lib/mycdn-controller"
-        self.dataDir = "/usr/share/mycdn-controller"
-        self.cacheDir = "/var/cache/mycdn-controller"
-        self.tmpDir = "/tmp/mycdn-controller"
+        self.etcDir = "/etc/mycdn"
+        self.libDir = "/usr/lib/mycdn"
+        self.dataDir = "/usr/share/mycdn"
+        self.cacheDir = "/var/cache/mycdn"
+        self.tmpDir = "/tmp/mycdn"
 
-        self.sourcesDir = os.path.join(self.libDir, "sources")
-        self.mirrorsDir = os.path.join(self.libDir, "mirrors")
-        self.helpersDir = os.path.join(self.libDir, "helpers")
-
-        self.caCertFile = os.path.join(self.etcDir, "ca-cert.pem")
-        self.caKeyFile = os.path.join(self.etcDir, "ca-privkey.pem")
-
-        self.syncTaskInterval = 60
-        self.apiPort = 3220
+        self.pluginsDir = os.path.join(self.libDir, "plugins")
 
         self.mainloop = None

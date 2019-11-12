@@ -31,7 +31,7 @@ class McDaemon:
     def run(self):
         McUtil.mkDirAndClear(self.param.tmpDir)
         try:
-            sys.stdout = StdoutRedirector(os.path.join(self.param.tmpDir, "mycdn-controller.out"))
+            sys.stdout = StdoutRedirector(os.path.join(self.param.tmpDir, "mycdn.out"))
             sys.stderr = sys.stdout
 
             logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
@@ -45,12 +45,8 @@ class McDaemon:
             self.param.mainloop = GLib.MainLoop()
 
             # write pid file
-            with open(os.path.join(self.param.tmpDir, "mycdn-controller.pid"), "w") as f:
+            with open(os.path.join(self.param.tmpDir, "mycdn.pid"), "w") as f:
                 f.write(str(os.getpid()))
-
-            # start api service
-            self.apiServer = McApiServer(self.param)
-            logging.info("api-service started.")
 
             # load objects
             self._loadObjects()
@@ -79,18 +75,7 @@ class McDaemon:
         return True
 
     def _loadObjects(self):
-        # load helper objects
-        import helpers
-        for basename in os.listdir(self.param.helpersDir):
-            if not basename.endswith(".py"):
-                continue
-            basename = basename[:-3]        # remove ".py" postfix
-            exec("from helpers.%s import HelperObject" % (basename))
-            hobj = eval("helpers.%s.HelperObject(self.param)" % (basename))
-            self.helperObjects[basename] = hobj
-            logging.info("Helper \"%s\" loaded." % (basename))
-
-        # load source objects
+        # load plugin objects
         import sources
         for basename in os.listdir(self.param.sourcesDir):
             if not basename.endswith(".py"):
@@ -101,33 +86,6 @@ class McDaemon:
             self.sourceObjects.append(sobj)
             self.mirrorObjects[McUtil.objpath(sobj)] = []
             logging.info("Source \"%s\" loaded." % (sobj.name))
-
-        # initialize source objects
-        for sobj in self.sourceObjects:
-            if hasattr(sobj, "helpers_needed"):
-                for name in sobj.helpers_needed:
-                    hobj = self.helperObjects[name]
-                    if McUtil.is_method(hobj, "check_source"):
-                        hobj.check_source(sobj)
-            api = SourceObjectInnerApi(self.param, self, sobj)
-            sobj.init2(api)
-            logging.info("Source \"%s\" initialized." % (sobj.name))
-
-        # load mirror refresh threads
-        import mirrors
-        for sobj in self.sourceObjects:
-            mobjDir = os.path.join(self.param.mirrorsDir, McUtil.objpath(sobj))
-            self.mirrorRefreshThreads[McUtil.objpath(sobj)] = []
-            if os.path.exists(mobjDir):
-                for basename in os.listdir(mobjDir):
-                    if not basename.endswith(".py"):
-                        continue
-                    basename = basename[:-3]        # remove ".py" postfix
-                    exec("from mirrors.%s.%s import MirrorRefreshThread" % (McUtil.objpath(sobj), basename))
-                    cb = _MirrorCallback(self, sobj)
-                    mrThread = eval("mirrors.%s.%s.MirrorRefreshThread(cb)" % (McUtil.objpath(sobj), basename))
-                    cb.mirrorRefreshThread = mrThread
-                    self.mirrorRefreshThreads[McUtil.objpath(sobj)].append(mrThread)
 
     def _refreshMirrorObjects(self):
         logging.info("Refresh task started.")
@@ -155,72 +113,3 @@ class McDaemon:
         logging.info("Refresh task completed.")
 
         self.scheduler.add_job(self._syncMirrorObjects, "date")
-
-    def _syncMirrorObjects(self):
-        syncThreads = dict()
-
-        # start sync threads
-        for obj in self.sourceObjects:
-            t = obj.getSyncThread()
-            if t is None:
-                continue
-            syncThreads[obj.name] = t
-            t.start()
-            logging.info("Sync task for source \"%s\" started." % (obj.name))
-
-        # wait sync threads
-        while True:
-            time.sleep(60)
-            exists = False
-            for name, tobj in syncThreads.items():
-                if tobj is None:
-                    continue
-                if tobj.is_alive():
-                    logging.info("Sync task for source \"%s\" is in progress, %d%%." % (name, tobj.get_progress()))
-                    exists = True
-                else:
-                    syncThreads[name] = None
-            if not exists:
-                break
-
-        # wait sync threads
-        t = datetime.datetime.now()
-        t = datetime.datetime(t.year, t.month, t.day)
-        t = t + datetime.timedelta(days=1)
-        self.scheduler.add_job(self._refreshMirrorObjects, "date", run_date=t)
-
-
-class _MirrorCallback:
-
-    def __init__(self, daemon, source):
-        self.daemon = daemon
-        self.source = source
-        self.mirrorRefreshThread = None
-
-    def __call__(self, mirror):
-        # the mirror already exist
-        for mobj in self.daemon.mirrorObjects[McUtil.objpath(self.source)]:
-            if mobj.__mirror_refresh_thread == self.mirrorRefreshThread and mobj.name == mirror.name:
-                del mobj.__old
-                return
-
-        # new mirror
-        mirror.__mirror_refresh_thread = self.mirrorRefreshThread
-        logging.info("Mirror \"%s\" for source \"%s\" loaded." % (mirror.name, self.source.name))
-
-        if hasattr(self.source, "helpers_needed"):
-            for name in self.source.helpers_needed:
-                hobj = self.daemon.helperObjects[name]
-                if McUtil.is_method(hobj, "check_mirror"):
-                    hobj.check_mirror(mirror)
-        if hasattr(mirror, "helpers_needed"):
-            for name in mirror.helpers_needed:
-                hobj = self.daemon.helperObjects[name]
-                if McUtil.is_method(hobj, "check_mirror"):
-                    hobj.check_mirror(mirror)
-
-        self.daemon.mirrorObjects[McUtil.objpath(self.source)].append(mirror)
-
-        api = MirrorObjectInnerApi(self.daemon.param, self.source, mirror)
-        mirror.init2(api)
-        logging.info("Mirror \"%s\" for source \"%s\" initialized." % (mirror.name, self.source.name))

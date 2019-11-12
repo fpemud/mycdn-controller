@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/mycdn-controller
+ExecStart=/usr/sbin/mycdn
 
 [Install]
 WantedBy=multi-user.target
