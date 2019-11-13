@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin id="gentoo" version="1.0">
+  <mirror-site id="gentoo">
+    <name>Gentoo Source Mirror</name>
+    <public-mirror-database>
+      <filename>plugin.py</filename>
+      <classname>Db</classname>
+    </public-mirror-database>
+    <updater>
+      <filename>plugin.py</filename>
+      <classname>Updater</classname>
+      <type>periodical</type>
+    </updater>
+    <advertiser>
+      <protocol>http</protocol>
+      <protocol>ftp</protocol>
+    </advertiser>
+  </mirror-site>
+  <mirror-site id="gentoo-portage">
+    <name>Gentoo Portage</name>
+    <public-mirror-database>
+      <filename>plugin.py</filename>
+      <classname>PortageDb</classname>
+    </public-mirror-database>
+    <updater>
+      <filename>plugin.py</filename>
+      <classname>PortageUpdater</classname>
+      <type>periodical</type>
+    </updater>
+    <advertiser>
+      <protocol>rsync</protocol>
+    </advertiser>
+  </mirror-site>
+</plugin>

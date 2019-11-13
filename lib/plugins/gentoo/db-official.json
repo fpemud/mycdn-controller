@@ -1,0 +1,722 @@
+{
+    "ftp://mirrors.tera-byte.com/pub/gentoo": {
+        "name": "Tera-byte Dot Com Inc",
+        "country": "CA",
+        "protocol": "ftp"
+    },
+    "http://gentoo.mirrors.tera-byte.com/": {
+        "name": "Tera-byte Dot Com Inc",
+        "country": "CA",
+        "protocol": "http"
+    },
+    "rsync://mirrors.tera-byte.com/gentoo": {
+        "name": "Tera-byte Dot Com Inc",
+        "country": "CA",
+        "protocol": "rsync"
+    },
+    "ftp://mirror.csclub.uwaterloo.ca/gentoo-distfiles/": {
+        "name": "University of Waterloo",
+        "country": "CA",
+        "protocol": "ftp"
+    },
+    "https://mirror.csclub.uwaterloo.ca/gentoo-distfiles/": {
+        "name": "University of Waterloo",
+        "country": "CA",
+        "protocol": "http"
+    },
+    "http://mirror.csclub.uwaterloo.ca/gentoo-distfiles/": {
+        "name": "University of Waterloo",
+        "country": "CA",
+        "protocol": "http"
+    },
+    "http://gentoo.gossamerhost.com": {
+        "name": "Gossamer Threads",
+        "country": "CA",
+        "protocol": "http"
+    },
+    "rsync://gentoo.gossamerhost.com/gentoo-distfiles/": {
+        "name": "Gossamer Threads",
+        "country": "CA",
+        "protocol": "rsync"
+    },
+    "https://gentoo.osuosl.org/": {
+        "name": "OSU Open Source Lab",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://gentoo.osuosl.org/": {
+        "name": "OSU Open Source Lab",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://mirrors.evowise.com/gentoo/": {
+        "name": "Evowise.com (Anycast: London)",
+        "country": "UK",
+        "protocol": "http"
+    },
+    "https://mirrors.evowise.com/gentoo/": {
+        "name": "Evowise.com (Anycast: London)",
+        "country": "UK",
+        "protocol": "http"
+    },
+    "http://www.gtlib.gatech.edu/pub/gentoo": {
+        "name": "Georgia Tech",
+        "country": "US",
+        "protocol": "http"
+    },
+    "rsync://rsync.gtlib.gatech.edu/gentoo": {
+        "name": "Georgia Tech",
+        "country": "US",
+        "protocol": "rsync"
+    },
+    "ftp://ftp.ussg.iu.edu/pub/linux/gentoo": {
+        "name": "Indiana University",
+        "country": "US",
+        "protocol": "ftp"
+    },
+    "https://gentoo.ussg.indiana.edu/": {
+        "name": "Indiana University",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://gentoo.ussg.indiana.edu/": {
+        "name": "Indiana University",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://gentoo.mirrors.tds.net/gentoo": {
+        "name": "TDS Internet Services",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://gentoo.cs.utah.edu/": {
+        "name": "University of Utah",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://gentoo.mirrors.easynews.com/linux/gentoo/": {
+        "name": "Easynews NNTP Hosting",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://mirror.lug.udel.edu/pub/gentoo/": {
+        "name": "University of Delaware, Delaware Linux Users Group",
+        "country": "US",
+        "protocol": "http"
+    },
+    "https://mirrors.rit.edu/gentoo/": {
+        "name": "Rochester Institute of Technology",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://mirrors.rit.edu/gentoo/": {
+        "name": "Rochester Institute of Technology",
+        "country": "US",
+        "protocol": "http"
+    },
+    "ftp://mirrors.rit.edu/gentoo/": {
+        "name": "Rochester Institute of Technology",
+        "country": "US",
+        "protocol": "ftp"
+    },
+    "rsync://mirrors.rit.edu/gentoo/": {
+        "name": "Rochester Institute of Technology",
+        "country": "US",
+        "protocol": "rsync"
+    },
+    "http://gentoo.mirrors.pair.com/": {
+        "name": "Pair Networks",
+        "country": "US",
+        "protocol": "http"
+    },
+    "https://mirror.sjc02.svwh.net/gentoo/": {
+        "name": "Silicon Valley Web Hosting",
+        "country": "US",
+        "protocol": "http"
+    },
+    "http://mirror.sjc02.svwh.net/gentoo/": {
+        "name": "Silicon Valley Web Hosting",
+        "country": "US",
+        "protocol": "http"
+    },
+    "https://gentoo.c3sl.ufpr.br/": {
+        "name": "C3SL, Federal University of Paran\u00e1",
+        "country": "BR",
+        "protocol": "http"
+    },
+    "http://gentoo.c3sl.ufpr.br/": {
+        "name": "C3SL, Federal University of Paran\u00e1",
+        "country": "BR",
+        "protocol": "http"
+    },
+    "rsync://gentoo.c3sl.ufpr.br/gentoo/": {
+        "name": "C3SL, Federal University of Paran\u00e1",
+        "country": "BR",
+        "protocol": "rsync"
+    },
+    "http://ftp.fi.muni.cz/pub/linux/gentoo/": {
+        "name": "Masaryk University Brno",
+        "country": "CZ",
+        "protocol": "http"
+    },
+    "ftp://ftp.fi.muni.cz/pub/linux/gentoo/": {
+        "name": "Masaryk University Brno",
+        "country": "CZ",
+        "protocol": "ftp"
+    },
+    "rsync://ftp.fi.muni.cz/pub/linux/gentoo/": {
+        "name": "Masaryk University Brno",
+        "country": "CZ",
+        "protocol": "rsync"
+    },
+    "http://gentoo.mirror.web4u.cz/": {
+        "name": "Web4U Mirror",
+        "country": "CZ",
+        "protocol": "http"
+    },
+    "ftp://gentoo.mirror.web4u.cz/": {
+        "name": "Web4U Mirror",
+        "country": "CZ",
+        "protocol": "ftp"
+    },
+    "http://mirror.dkm.cz/gentoo/": {
+        "name": "UPC \u010cesk\u00e1 republika, a.s.",
+        "country": "CZ",
+        "protocol": "http"
+    },
+    "https://mirror.dkm.cz/gentoo/": {
+        "name": "UPC \u010cesk\u00e1 republika, a.s.",
+        "country": "CZ",
+        "protocol": "http"
+    },
+    "ftp://mirror.dkm.cz/gentoo/": {
+        "name": "UPC \u010cesk\u00e1 republika, a.s.",
+        "country": "CZ",
+        "protocol": "ftp"
+    },
+    "rsync://mirror.dkm.cz/gentoo/": {
+        "name": "UPC \u010cesk\u00e1 republika, a.s.",
+        "country": "CZ",
+        "protocol": "rsync"
+    },
+    "http://gentoo.mirrors.ovh.net/gentoo-distfiles/": {
+        "name": "OVH",
+        "country": "FR",
+        "protocol": "http"
+    },
+    "ftp://ftp.free.fr/mirrors/ftp.gentoo.org/": {
+        "name": "Free",
+        "country": "FR",
+        "protocol": "ftp"
+    },
+    "http://ftp.free.fr/mirrors/ftp.gentoo.org/": {
+        "name": "Free",
+        "country": "FR",
+        "protocol": "http"
+    },
+    "https://mirrors.soeasyto.com/distfiles.gentoo.org/": {
+        "name": "soeasyto.com",
+        "country": "FR",
+        "protocol": "http"
+    },
+    "http://mirrors.soeasyto.com/distfiles.gentoo.org/": {
+        "name": "soeasyto.com",
+        "country": "FR",
+        "protocol": "http"
+    },
+    "ftp://mirrors.soeasyto.com/distfiles.gentoo.org/": {
+        "name": "soeasyto.com",
+        "country": "FR",
+        "protocol": "ftp"
+    },
+    "http://gentoo.modulix.net/gentoo/": {
+        "name": "modulix.net",
+        "country": "FR",
+        "protocol": "http"
+    },
+    "https://linux.rz.ruhr-uni-bochum.de/download/gentoo-mirror/": {
+        "name": "Ruhr-Universit\u00e4t Bochum",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "http://linux.rz.ruhr-uni-bochum.de/download/gentoo-mirror/": {
+        "name": "Ruhr-Universit\u00e4t Bochum",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "https://ftp.fau.de/gentoo": {
+        "name": "Uni Erlangen-N\u00fcrnberg",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "http://ftp.fau.de/gentoo": {
+        "name": "Uni Erlangen-N\u00fcrnberg",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "ftp://ftp.fau.de/gentoo": {
+        "name": "Uni Erlangen-N\u00fcrnberg",
+        "country": "DE",
+        "protocol": "ftp"
+    },
+    "rsync://ftp.fau.de/gentoo": {
+        "name": "Uni Erlangen-N\u00fcrnberg",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "ftp://ftp.wh2.tu-dresden.de/pub/mirrors/gentoo": {
+        "name": "Dresden University of Technology/AG DSN",
+        "country": "DE",
+        "protocol": "ftp"
+    },
+    "https://ftp-stud.hs-esslingen.de/pub/Mirrors/gentoo/": {
+        "name": "University of Applied Sciences, Esslingen",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "http://ftp-stud.hs-esslingen.de/pub/Mirrors/gentoo/": {
+        "name": "University of Applied Sciences, Esslingen",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "ftp://ftp-stud.hs-esslingen.de/pub/Mirrors/gentoo/": {
+        "name": "University of Applied Sciences, Esslingen",
+        "country": "DE",
+        "protocol": "ftp"
+    },
+    "rsync://ftp-stud.hs-esslingen.de/gentoo/": {
+        "name": "University of Applied Sciences, Esslingen",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "https://mirror.eu.oneandone.net/linux/distributions/gentoo/gentoo/": {
+        "name": "1&1 Internet SE",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "http://mirror.eu.oneandone.net/linux/distributions/gentoo/gentoo/": {
+        "name": "1&1 Internet SE",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "rsync://mirror.eu.oneandone.net/gentoo/": {
+        "name": "1&1 Internet SE",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "ftp://mirror.netcologne.de/gentoo/": {
+        "name": "Netcologne",
+        "country": "DE",
+        "protocol": "ftp"
+    },
+    "https://mirror.netcologne.de/gentoo/": {
+        "name": "Netcologne",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "http://mirror.netcologne.de/gentoo/": {
+        "name": "Netcologne",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "rsync://mirror.netcologne.de/gentoo/": {
+        "name": "Netcologne",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "https://ftp.halifax.rwth-aachen.de/gentoo/": {
+        "name": "RWTH Aachen University",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "http://ftp.halifax.rwth-aachen.de/gentoo/": {
+        "name": "RWTH Aachen University",
+        "country": "DE",
+        "protocol": "http"
+    },
+    "ftp://ftp.halifax.rwth-aachen.de/gentoo/": {
+        "name": "RWTH Aachen University",
+        "country": "DE",
+        "protocol": "ftp"
+    },
+    "rsync://ftp.halifax.rwth-aachen.de/gentoo/": {
+        "name": "RWTH Aachen University",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "ftp://ftp.ntua.gr/pub/linux/gentoo/": {
+        "name": "National Technical University of Athens",
+        "country": "GR",
+        "protocol": "ftp"
+    },
+    "http://ftp.ntua.gr/pub/linux/gentoo/": {
+        "name": "National Technical University of Athens",
+        "country": "GR",
+        "protocol": "http"
+    },
+    "https://ftp.snt.utwente.nl/pub/os/linux/gentoo": {
+        "name": "Universiteit Twente",
+        "country": "NL",
+        "protocol": "http"
+    },
+    "http://ftp.snt.utwente.nl/pub/os/linux/gentoo": {
+        "name": "Universiteit Twente",
+        "country": "NL",
+        "protocol": "http"
+    },
+    "ftp://ftp.snt.utwente.nl/pub/os/linux/gentoo": {
+        "name": "Universiteit Twente",
+        "country": "NL",
+        "protocol": "ftp"
+    },
+    "rsync://ftp.snt.utwente.nl/gentoo": {
+        "name": "Universiteit Twente",
+        "country": "NL",
+        "protocol": "rsync"
+    },
+    "https://mirror.leaseweb.com/gentoo/": {
+        "name": "LeaseWeb",
+        "country": "NL",
+        "protocol": "http"
+    },
+    "http://mirror.leaseweb.com/gentoo/": {
+        "name": "LeaseWeb",
+        "country": "NL",
+        "protocol": "http"
+    },
+    "rsync://mirror.leaseweb.com/gentoo/": {
+        "name": "LeaseWeb",
+        "country": "NL",
+        "protocol": "rsync"
+    },
+    "rsync://ftp.vectranet.pl/gentoo/": {
+        "name": "Vectranet",
+        "country": "PL",
+        "protocol": "rsync"
+    },
+    "http://ftp.vectranet.pl/gentoo/": {
+        "name": "Vectranet",
+        "country": "PL",
+        "protocol": "http"
+    },
+    "ftp://ftp.vectranet.pl/gentoo/": {
+        "name": "Vectranet",
+        "country": "PL",
+        "protocol": "ftp"
+    },
+    "https://ftp.rnl.tecnico.ulisboa.pt/pub/gentoo/gentoo-distfiles/": {
+        "name": "RNL - T\u00e9cnico Lisboa",
+        "country": "PT",
+        "protocol": "http"
+    },
+    "http://ftp.rnl.tecnico.ulisboa.pt/pub/gentoo/gentoo-distfiles/": {
+        "name": "RNL - T\u00e9cnico Lisboa",
+        "country": "PT",
+        "protocol": "http"
+    },
+    "ftp://ftp.rnl.tecnico.ulisboa.pt/pub/gentoo/gentoo-distfiles/": {
+        "name": "RNL - T\u00e9cnico Lisboa",
+        "country": "PT",
+        "protocol": "ftp"
+    },
+    "rsync://ftp.rnl.tecnico.ulisboa.pt/pub/gentoo/gentoo-distfiles/": {
+        "name": "RNL - T\u00e9cnico Lisboa",
+        "country": "PT",
+        "protocol": "rsync"
+    },
+    "ftp://ftp.dei.uc.pt/pub/linux/gentoo/": {
+        "name": "University of Coimbra",
+        "country": "PT",
+        "protocol": "ftp"
+    },
+    "http://ftp.dei.uc.pt/pub/linux/gentoo/": {
+        "name": "University of Coimbra",
+        "country": "PT",
+        "protocol": "http"
+    },
+    "http://mirrors.xservers.ro/gentoo/": {
+        "name": "xservers.ro Gazduire Web",
+        "country": "RO",
+        "protocol": "http"
+    },
+    "http://ftp.romnet.org/gentoo/": {
+        "name": "Romanian Organization Network",
+        "country": "RO",
+        "protocol": "http"
+    },
+    "ftp://mirror.mdfnet.se/gentoo": {
+        "name": "mdfnet.se",
+        "country": "SE",
+        "protocol": "ftp"
+    },
+    "https://mirror.mdfnet.se/gentoo": {
+        "name": "mdfnet.se",
+        "country": "SE",
+        "protocol": "http"
+    },
+    "https://gentoo.wheel.sk/": {
+        "name": "Wheel.sk",
+        "country": "SK",
+        "protocol": "http"
+    },
+    "http://gentoo.wheel.sk/": {
+        "name": "Wheel.sk",
+        "country": "SK",
+        "protocol": "http"
+    },
+    "ftp://gentoo.wheel.sk/pub/linux/gentoo/": {
+        "name": "Wheel.sk",
+        "country": "SK",
+        "protocol": "ftp"
+    },
+    "http://tux.rainside.sk/gentoo/": {
+        "name": "Rainside.sk",
+        "country": "SK",
+        "protocol": "http"
+    },
+    "ftp://tux.rainside.sk/gentoo/": {
+        "name": "Rainside.sk",
+        "country": "SK",
+        "protocol": "ftp"
+    },
+    "ftp://ftp.linux.org.tr/gentoo/": {
+        "name": "Turkish Linux Users Group - Linux Kullanicilari Dernegi(LKD)",
+        "country": "TR",
+        "protocol": "ftp"
+    },
+    "http://ftp.linux.org.tr/gentoo/": {
+        "name": "Turkish Linux Users Group - Linux Kullanicilari Dernegi(LKD)",
+        "country": "TR",
+        "protocol": "http"
+    },
+    "rsync://ftp.linux.org.tr/gentoo-distfiles/": {
+        "name": "Turkish Linux Users Group - Linux Kullanicilari Dernegi(LKD)",
+        "country": "TR",
+        "protocol": "rsync"
+    },
+    "ftp://mirror.bytemark.co.uk/gentoo/": {
+        "name": "Bytemark Hosting",
+        "country": "UK",
+        "protocol": "ftp"
+    },
+    "https://mirror.bytemark.co.uk/gentoo/": {
+        "name": "Bytemark Hosting",
+        "country": "UK",
+        "protocol": "http"
+    },
+    "http://mirror.bytemark.co.uk/gentoo/": {
+        "name": "Bytemark Hosting",
+        "country": "UK",
+        "protocol": "http"
+    },
+    "rsync://mirror.bytemark.co.uk/gentoo/": {
+        "name": "Bytemark Hosting",
+        "country": "UK",
+        "protocol": "rsync"
+    },
+    "https://www.mirrorservice.org/sites/distfiles.gentoo.org/": {
+        "name": "The UK Mirror Service",
+        "country": "UK",
+        "protocol": "http"
+    },
+    "http://www.mirrorservice.org/sites/distfiles.gentoo.org/": {
+        "name": "The UK Mirror Service",
+        "country": "UK",
+        "protocol": "http"
+    },
+    "ftp://ftp.mirrorservice.org/sites/distfiles.gentoo.org/": {
+        "name": "The UK Mirror Service",
+        "country": "UK",
+        "protocol": "ftp"
+    },
+    "rsync://rsync.mirrorservice.org/distfiles.gentoo.org/": {
+        "name": "The UK Mirror Service",
+        "country": "UK",
+        "protocol": "rsync"
+    },
+    "ftp://ftp.swin.edu.au/gentoo": {
+        "name": "Swinburne University of Technology",
+        "country": "AU",
+        "protocol": "ftp"
+    },
+    "http://ftp.swin.edu.au/gentoo": {
+        "name": "Swinburne University of Technology",
+        "country": "AU",
+        "protocol": "http"
+    },
+    "https://mirrors.163.com/gentoo/": {
+        "name": "Netease.com, Inc.",
+        "country": "CN",
+        "protocol": "http"
+    },
+    "http://mirrors.163.com/gentoo/": {
+        "name": "Netease.com, Inc.",
+        "country": "CN",
+        "protocol": "http"
+    },
+    "https://mirrors.tuna.tsinghua.edu.cn/gentoo": {
+        "name": "Tsinghua University",
+        "country": "CN",
+        "protocol": "http"
+    },
+    "http://gentoo.aditsu.net:8000/": {
+        "name": "aditsu.net",
+        "country": "HK",
+        "protocol": "http"
+    },
+    "https://ftp.jaist.ac.jp/pub/Linux/Gentoo/": {
+        "name": "Japan Advanced Institute of Science and Technology",
+        "country": "JP",
+        "protocol": "http"
+    },
+    "http://ftp.jaist.ac.jp/pub/Linux/Gentoo/": {
+        "name": "Japan Advanced Institute of Science and Technology",
+        "country": "JP",
+        "protocol": "http"
+    },
+    "rsync://ftp.jaist.ac.jp/pub/Linux/Gentoo/": {
+        "name": "Japan Advanced Institute of Science and Technology",
+        "country": "JP",
+        "protocol": "rsync"
+    },
+    "ftp://ftp.jaist.ac.jp/pub/Linux/Gentoo/": {
+        "name": "Japan Advanced Institute of Science and Technology",
+        "country": "JP",
+        "protocol": "ftp"
+    },
+    "rsync://ftp.iij.ad.jp/pub/linux/gentoo/": {
+        "name": "Internet Initiative Japan",
+        "country": "JP",
+        "protocol": "rsync"
+    },
+    "http://ftp.iij.ad.jp/pub/linux/gentoo/": {
+        "name": "Internet Initiative Japan",
+        "country": "JP",
+        "protocol": "http"
+    },
+    "ftp://ftp.iij.ad.jp/pub/linux/gentoo/": {
+        "name": "Internet Initiative Japan",
+        "country": "JP",
+        "protocol": "ftp"
+    },
+    "ftp://mirror.rise.ph/gentoo": {
+        "name": "RISE",
+        "country": "PH",
+        "protocol": "ftp"
+    },
+    "http://mirror.rise.ph/gentoo": {
+        "name": "RISE",
+        "country": "PH",
+        "protocol": "http"
+    },
+    "http://ftp.kaist.ac.kr/pub/gentoo/": {
+        "name": "KAIST",
+        "country": "KR",
+        "protocol": "http"
+    },
+    "ftp://ftp.kaist.ac.kr/gentoo/": {
+        "name": "KAIST",
+        "country": "KR",
+        "protocol": "ftp"
+    },
+    "http://ftp.lanet.kr/pub/gentoo/": {
+        "name": "lanet.kr",
+        "country": "KR",
+        "protocol": "http"
+    },
+    "https://ftp.lanet.kr/pub/gentoo/": {
+        "name": "lanet.kr",
+        "country": "KR",
+        "protocol": "http"
+    },
+    "ftp://ftp.lanet.kr/pub/gentoo/": {
+        "name": "lanet.kr",
+        "country": "KR",
+        "protocol": "ftp"
+    },
+    "http://ftp.daum.net/gentoo/": {
+        "name": "Daum Communications Corp",
+        "country": "KR",
+        "protocol": "http"
+    },
+    "https://mirror.yandex.ru/gentoo-distfiles/": {
+        "name": "Yandex.ru",
+        "country": "RU",
+        "protocol": "http"
+    },
+    "http://mirror.yandex.ru/gentoo-distfiles/": {
+        "name": "Yandex.ru",
+        "country": "RU",
+        "protocol": "http"
+    },
+    "ftp://mirror.yandex.ru/gentoo-distfiles/": {
+        "name": "Yandex.ru",
+        "country": "RU",
+        "protocol": "ftp"
+    },
+    "https://gentoo-mirror.alexxy.name/": {
+        "name": "Alexxy.name",
+        "country": "RU",
+        "protocol": "http"
+    },
+    "http://gentoo-mirror.alexxy.name/": {
+        "name": "Alexxy.name",
+        "country": "RU",
+        "protocol": "http"
+    },
+    "http://gentoo.bloodhost.ru/": {
+        "name": "Bloodhost.ru",
+        "country": "RU",
+        "protocol": "http"
+    },
+    "ftp://gentoo.bloodhost.ru/": {
+        "name": "Bloodhost.ru",
+        "country": "RU",
+        "protocol": "ftp"
+    },
+    "rsync://gentoo.bloodhost.ru/gentoo-distfiles": {
+        "name": "Bloodhost.ru",
+        "country": "RU",
+        "protocol": "rsync"
+    },
+    "http://ftp.twaren.net/Linux/Gentoo/": {
+        "name": "National Center for High-Performance Computing",
+        "country": "TW",
+        "protocol": "http"
+    },
+    "ftp://ftp.twaren.net/Linux/Gentoo/": {
+        "name": "National Center for High-Performance Computing",
+        "country": "TW",
+        "protocol": "ftp"
+    },
+    "https://mirror.isoc.org.il/pub/gentoo/": {
+        "name": "Hamakor FOSS Society",
+        "country": "IL",
+        "protocol": "http"
+    },
+    "http://mirror.isoc.org.il/pub/gentoo/": {
+        "name": "Hamakor FOSS Society",
+        "country": "IL",
+        "protocol": "http"
+    },
+    "https://mirror.ps.kz/gentoo/pub": {
+        "name": "Neo Lab's",
+        "country": "KZ",
+        "protocol": "http"
+    },
+    "http://mirror.ps.kz/gentoo/pub": {
+        "name": "Neo Lab's",
+        "country": "KZ",
+        "protocol": "http"
+    },
+    "ftp://mirror.ps.kz/gentoo/pub": {
+        "name": "Neo Lab's",
+        "country": "KZ",
+        "protocol": "ftp"
+    },
+    "rsync://mirror.ps.kz/gentoo": {
+        "name": "Neo Lab's",
+        "country": "KZ",
+        "protocol": "rsync"
+    }
+}
