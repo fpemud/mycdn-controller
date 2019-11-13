@@ -27,6 +27,7 @@ class McPlugin:
 
     def __init__(self, name, path):
         self.param = param
+        self.mirrorObjList = []
 
         # get metadata.xml file
         metadata_file = os.path.join(path, "metadata.xml")
