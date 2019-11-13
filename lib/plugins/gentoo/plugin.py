@@ -3,6 +3,7 @@
 
 import os
 import re
+import copy
 import shutil
 import threading
 
@@ -15,14 +16,14 @@ class Db:
     def __init__(self):
         selfDir = os.path.dirname(os.path.realpath(__file__))
 
-    if Db.dictOfficial is None:
-        with open(os.path.join(selfDir, "db-official.json")) as f:
-            Db.dictOfficial = json.load(f)
+        if Db.dictOfficial is None:
+            with open(os.path.join(selfDir, "db-official.json")) as f:
+                Db.dictOfficial = json.load(f)
 
-    if Db.dictExtended is None:
-        Db.dictExtended = obj.deepcopy(Db.dictOfficial)
-        with open(os.path.join(selfDir, "db-extended.json")) as f:
-            Db.dictExtended.update(json.load(f))
+        if Db.dictExtended is None:
+            Db.dictExtended = copy.deepcopy(Db.dictOfficial)
+            with open(os.path.join(selfDir, "db-extended.json")) as f:
+                Db.dictExtended.update(json.load(f))
 
     def get(self, extended=False):
         if not extended:
@@ -108,14 +109,13 @@ class Updater:
         self.param = param
         self.api = api
         self.proc = None
-        self.thread = None
 
     def start(self):
         source = Db().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
         logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (self.api.get_sched_datetime()))
         cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
-        self.proc = _Util.shellProc(cmd, self._finishCallback)
+        self.proc = _ShellProc(cmd, self._finishCallback)
         self.api.notify_progress(1)
 
     def stop(self):
@@ -131,26 +131,38 @@ class PortageUpdater:
         self.param = param
         self.api = api
         self.proc = None
-        self.thread = None
 
     def start(self):
-        source = Db().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
+        source = PortageDb().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
         logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (self.api.get_sched_datetime()))
         cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
-        self.proc = _Util.shellProc(cmd, self._finishCallback)
+        self.proc = _ShellProc(cmd, self._finishCallback)
         self.api.notify_progress(1)
 
     def stop(self):
         self.proc.terminate()
 
-    def _finishCallback(self, proc):
+    def _finishCallback(self):
         self.api.notify_progress(100)
 
 
-class _Util:
+class _ShellProc:
 
-    @staticmethod
-    def shellProc(cmd, finishCallback):
-        proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
-        return proc
+    def __init__(self, cmd, exitCallback):
+        targc, targv = GLib.shell_parse_argv(cmd)
+        self.exitCallback = exitCallback
+        self.pid = GLib.spawn_async(targv, flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD)[0]
+        self.pidWatch = GLib.child_watch_add(pid, self._exitCallback)
+
+    def terminate(self):
+        # FIXME
+        pass
+
+    def _exitCallback(self):
+        self.exitCallback()
+        GLib.source_remove(self.pidWatch)
+        self.pidWatch = None
+        os.waitpid(self.pid, 0)
+        GLib.spawn_close_pid(self.pid)
+        self.pid = None

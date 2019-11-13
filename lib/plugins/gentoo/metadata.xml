@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<plugin id="gentoo" version="1.0">
+<plugin id="gentoo">
   <mirror-site id="gentoo">
     <name>Gentoo Source Mirror</name>
     <public-mirror-database>
@@ -9,7 +9,8 @@
     <updater>
       <filename>plugin.py</filename>
       <classname>Updater</classname>
-      <type>periodical</type>
+      <scheduler>periodical</scheduler>
+      <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>
       <protocol>http</protocol>
@@ -25,7 +26,7 @@
     <updater>
       <filename>plugin.py</filename>
       <classname>PortageUpdater</classname>
-      <type>periodical</type>
+      <scheduler>after:gentoo</scheduler>
     </updater>
     <advertiser>
       <protocol>rsync</protocol>
