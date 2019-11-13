@@ -14,5 +14,13 @@ class McParam:
         self.tmpDir = "/tmp/mycdn"
 
         self.pluginsDir = os.path.join(self.libDir, "plugins")
+        self.pluginList = []
 
         self.mainloop = None
+
+    @property
+    def mirrorSiteList(self):
+        ret = []
+        for plugin in self.pluginList:
+            ret += plugin.objMirrorSiteList
+        return ret

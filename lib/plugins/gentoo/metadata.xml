@@ -2,6 +2,7 @@
 <plugin id="gentoo">
   <mirror-site id="gentoo">
     <name>Gentoo Source Mirror</name>
+    <data-directory>gentoo</data-directory>
     <public-mirror-database>
       <filename>plugin.py</filename>
       <classname>Db</classname>
@@ -19,6 +20,7 @@
   </mirror-site>
   <mirror-site id="gentoo-portage">
     <name>Gentoo Portage</name>
+    <data-directory>gentoo-portage</data-directory>
     <public-mirror-database>
       <filename>plugin.py</filename>
       <classname>PortageDb</classname>

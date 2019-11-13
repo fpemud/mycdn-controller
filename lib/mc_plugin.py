@@ -5,29 +5,11 @@ import os
 from mc_util import McUtil
 
 
-class McPluginManager:
-
-    def __init__(self, param):
-        self.param = param
-        self.pluginList = []
-    
-    def loadPlugins(self):
-        for fn in os.listdir(self.etcDir):
-            if not fn.endswith(".conf"):            
-                continue
-            pluginName = fn.replace(".conf", "")
-            pluginPath = os.path.join(self.param.pluginsDir, pluginName)
-            if not os.path.isdir(pluginPath):
-                raise Exception("Invalid configuration file %s" % (fn))
-            pluginObj = McPlugin(pluginName, pluginPath)
-            self.pluginList.append(pluginObj)
-
-
 class McPlugin:
 
     def __init__(self, name, path):
         self.param = param
-        self.objMirrorSiteList = []
+        self.mirrorSiteList = []
 
         # get metadata.xml file
         metadata_file = os.path.join(path, "metadata.xml")
@@ -58,51 +40,73 @@ class McPlugin:
             root = tree.getRootElement()
             self.ID = root.prop("id")
 
-        # create real plugin object
-        self._obj = None
-        if True:
-            filename = os.path.join(path, metadata["filename"])
-            if not os.path.exists(filename):
-                raise Exception("plugin %s has no ")
-            if not os.path.isfile(filename):
-                raise exceptions.PluginFileNotFile(filename)
-            if not os.access(filename, os.R_OK):
-                raise exceptions.PluginFileNotReadable(filename)
+        # create objects
+        child = root.children
+        while child:
+            if child.name == "mirror-site":
+                obj = McMirrorSiteObject(child)
+                self.mirrorSiteList.append(obj)
+            child = child.next
 
-            plugin_class = None
+        # logger
+        self._logger = logging.getLogger(self.ID)
+
+
+class McMirrorSiteObject:
+
+    SCHED_ONESHOT = 0
+    SCHED_PERIODICAL = 1
+    SCHED_PERSIST = 2
+
+    def __init__(self, pluginDir, rootElem):
+        self.dataDir = rootElem.xpath(".//data-directory")[0].text
+
+        # database
+        self.dbObj = None
+        if True:
+            elem = rootElem.xpath(".//public-mirror-database")[0]
+            filename = os.path.join(pluginDir, elem.xpath(".//filename"))
+            classname = elem.xpath(".//classname")
             try:
                 f = open(filename)
                 m = imp.load_module(metadata["filename"][:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
                 plugin_class = getattr(m, metadata["classname"])
             except:
-                raise exceptions.PluginSyntaxError(filename)
-            self._obj = plugin_class()
+                raise Exception("syntax error")
+            self.dbObj = plugin_class()
 
-        # static variables
-        self._app = app                                                 # FIXME
-        self._require_auth = metadata["require_auth"]
-        self._require_selenium = metadata["require_selenium"]
+        # updater
+        self.updaterObj = None
+        self.sched = None
+        self.schedExpr = None
+        if True:
+            elem = rootElem.xpath(".//updater")[0]
 
-        # logger
-        self._logger = logging.getLogger(self.ID)
+            filename = os.path.join(pluginDir, elem.xpath(".//filename"))
+            classname = elem.xpath(".//classname")
+            try:
+                f = open(filename)
+                m = imp.load_module(metadata["filename"][:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+                plugin_class = getattr(m, metadata["classname"])
+            except:
+                raise Exception("syntax error")
+            self.updaterObj = plugin_class()
 
-        # login status
-        self._credential = None
-        self._login_status = None
-        self._login_cookie = None
+            self.sched = elem.xpath(".//scheduler")[0]
+            if sched == "oneshot":
+                sched = McMirrorSite.SCHED_ONESHOT
+            elif sched == "periodical":
+                sched = McMirrorSite.SCHED_PERIODICAL
+            elif sched == "persist":
+                sched = McMirrorSite.SCHED_PERSIST
+            else:
+                assert False
 
-        # search status
-        self._search_status = None
-        self._search_param = None
+            self.schedExpr = elem.xpath("../cron-expression")[0].text
 
-        # search results total count
-        self._results_total_count_lock = threading.Lock()
-        self._results_total_count = None
-        self._results_total_count_changed = None
-
-        # loaded search result
-        self._results_tmp_queue_lock = threading.Lock()
-        self._results_tmp_queue = None
-
-        # loaded result total count
-        self._results_loaded = None     # only used in working thread, no lock needed
+        # advertiser
+        self.advertiseProtocolList = []
+        if True:
+            elem = rootElem.xpath(".//advertiser")[0]
+            for child in elem.children:
+                self.advertiseProtocolList.append(child.text)

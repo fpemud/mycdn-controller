@@ -48,8 +48,8 @@ class McDaemon:
             with open(os.path.join(self.param.tmpDir, "mycdn.pid"), "w") as f:
                 f.write(str(os.getpid()))
 
-            # load objects
-            self._loadObjects()
+            # load plugins
+            self._loadPlugins()
             self.scheduler.add_job(self._refreshMirrorObjects, "date")
 
             # start main loop
@@ -73,19 +73,17 @@ class McDaemon:
         logging.info("SIGTERM received.")
         self.param.mainloop.quit()
         return True
-
-    def _loadObjects(self):
-        # load plugin objects
-        import sources
-        for basename in os.listdir(self.param.sourcesDir):
-            if not basename.endswith(".py"):
+    
+    def _loadPlugins(self):
+        for fn in os.listdir(self.etcDir):
+            if not fn.endswith(".conf"):            
                 continue
-            basename = basename[:-3]        # remove ".py" postfix
-            exec("from sources.%s import SourceObject" % (basename))
-            sobj = eval("sources.%s.SourceObject()" % (basename))
-            self.sourceObjects.append(sobj)
-            self.mirrorObjects[McUtil.objpath(sobj)] = []
-            logging.info("Source \"%s\" loaded." % (sobj.name))
+            pluginName = fn.replace(".conf", "")
+            pluginPath = os.path.join(self.param.pluginsDir, pluginName)
+            if not os.path.isdir(pluginPath):
+                raise Exception("Invalid configuration file %s" % (fn))
+            pluginObj = McPlugin(pluginName, pluginPath)
+            self.pluginList.append(pluginObj)
 
     def _refreshMirrorObjects(self):
         logging.info("Refresh task started.")
