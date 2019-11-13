@@ -28,6 +28,7 @@ if False:
         for elemA in elemTr.xpath(".//a"):
             print(elemA.text)
 
+# parse all mirrors
 mirrorDict = OrderedDict()
 for elemTitle in root.xpath(".//h3"):
     elemTable = elemTitle.getnext()
@@ -49,5 +50,6 @@ for elemTitle in root.xpath(".//h3"):
             "protocol": proto,
         }
 
+# write to database file
 with open(os.path.join(selfDir, "db-official.json"), "w") as f:
     f.write(json.dumps(mirrorDict, indent=4))
