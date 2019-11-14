@@ -28,7 +28,8 @@
     <updater>
       <filename>plugin.py</filename>
       <classname>PortageUpdater</classname>
-      <scheduler>after:gentoo</scheduler>
+      <scheduler>after</scheduler>
+      <ref-mirror-site>gentoo</ref-mirror-site>
     </updater>
     <advertiser>
       <protocol>rsync</protocol>

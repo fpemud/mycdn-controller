@@ -22,5 +22,5 @@ class McParam:
     def mirrorSiteList(self):
         ret = []
         for plugin in self.pluginList:
-            ret += plugin.objMirrorSiteList
+            ret += plugin.mirrorSiteList
         return ret

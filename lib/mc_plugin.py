@@ -38,27 +38,31 @@ class McPlugin:
         metadata = {}
         if True:
             root = tree.getRootElement()
-            self.ID = root.prop("id")
+            self.id = root.prop("id")
 
         # create objects
         child = root.children
         while child:
             if child.name == "mirror-site":
-                obj = McMirrorSiteObject(child)
+                obj = McMirrorSite(child)
                 self.mirrorSiteList.append(obj)
             child = child.next
 
         # logger
-        self._logger = logging.getLogger(self.ID)
+        self._logger = logging.getLogger(self.id)
 
 
-class McMirrorSiteObject:
+class McMirrorSite:
 
     SCHED_ONESHOT = 0
     SCHED_PERIODICAL = 1
-    SCHED_PERSIST = 2
+    SCHED_AFTER = 2
+    SCHED_PERSIST = 3
 
-    def __init__(self, pluginDir, rootElem):
+    def __init__(self, plugin, pluginDir, rootElem):
+        self.plugin = plugin
+        self.id = plugin.id + " " + rootElem.prop("id")
+
         self.dataDir = rootElem.xpath(".//data-directory")[0].text
 
         # database
@@ -78,7 +82,6 @@ class McMirrorSiteObject:
         # updater
         self.updaterObj = None
         self.sched = None
-        self.schedExpr = None
         if True:
             elem = rootElem.xpath(".//updater")[0]
 
@@ -93,16 +96,18 @@ class McMirrorSiteObject:
             self.updaterObj = plugin_class()
 
             self.sched = elem.xpath(".//scheduler")[0]
-            if sched == "oneshot":
-                sched = McMirrorSite.SCHED_ONESHOT
-            elif sched == "periodical":
-                sched = McMirrorSite.SCHED_PERIODICAL
-            elif sched == "persist":
-                sched = McMirrorSite.SCHED_PERSIST
+            if self.sched == "oneshot":
+                self.sched = McMirrorSite.SCHED_ONESHOT
+            elif self.sched == "periodical":
+                self.sched = McMirrorSite.SCHED_PERIODICAL
+                self.schedExpr = elem.xpath("../cron-expression")[0].text
+            elif self.sched == "after":
+                self.sched = McMirrorSite.SCHED_AFTER
+                self.refMirrorSiteId = elem.xpath("../ref-mirror-site")[0].text
+            elif self.sched == "persist":
+                self.sched = McMirrorSite.SCHED_PERSIST
             else:
                 assert False
-
-            self.schedExpr = elem.xpath("../cron-expression")[0].text
 
         # advertiser
         self.advertiseProtocolList = []
