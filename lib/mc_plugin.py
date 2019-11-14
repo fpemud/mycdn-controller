@@ -115,3 +115,26 @@ class McMirrorSite:
             elem = rootElem.xpath(".//advertiser")[0]
             for child in elem.children:
                 self.advertiseProtocolList.append(child.text)
+
+
+class McMirrorSiteUpdaterApi:
+
+    def get_country(self):
+        pass
+    
+    def get_location(self):
+        pass
+
+    def get_data_dir(self):
+        pass
+
+    def get_log_dir(self):
+        # FIXME
+        pass
+
+    def get_sched_datetime(self):
+        pass
+
+    def notify_progress(self):
+        pass
+
