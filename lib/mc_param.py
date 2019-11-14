@@ -18,9 +18,15 @@ class McParam:
 
         self.mainloop = None
 
-    @property
-    def mirrorSiteList(self):
+    def getMirrorSiteList(self):
         ret = []
         for plugin in self.pluginList:
-            ret += plugin.mirrorSiteList
+            ret += plugin.objMirrorSiteList
         return ret
+
+    def getMirrorSite(self, mirrorSiteId):
+        for plugin in self.pluginList:
+            for ms in plugin.objMirrorSiteList:
+                if ms.id == mirrorSiteList:
+                    return ms
+        return None

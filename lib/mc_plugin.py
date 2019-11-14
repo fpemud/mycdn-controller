@@ -56,7 +56,7 @@ class McMirrorSite:
 
     SCHED_ONESHOT = 0
     SCHED_PERIODICAL = 1
-    SCHED_AFTER = 2
+    SCHED_FOLLOW = 2
     SCHED_PERSIST = 3
 
     def __init__(self, plugin, pluginDir, rootElem):
@@ -100,10 +100,10 @@ class McMirrorSite:
                 self.sched = McMirrorSite.SCHED_ONESHOT
             elif self.sched == "periodical":
                 self.sched = McMirrorSite.SCHED_PERIODICAL
-                self.schedExpr = elem.xpath("../cron-expression")[0].text
-            elif self.sched == "after":
-                self.sched = McMirrorSite.SCHED_AFTER
-                self.refMirrorSiteId = elem.xpath("../ref-mirror-site")[0].text
+                self.schedExpr = elem.xpath(".//cron-expression")[0].text
+            elif self.sched == "follow":
+                self.sched = McMirrorSite.SCHED_FOLLOW
+                self.followMirrorSiteId = elem.xpath(".//follow-mirror-site")[0].text
             elif self.sched == "persist":
                 self.sched = McMirrorSite.SCHED_PERSIST
             else:
