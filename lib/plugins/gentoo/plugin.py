@@ -138,15 +138,14 @@ class PortageDb:
 
 class PeriodicalUpdater:
 
-    def __init__(self, param, api):
-        self.param = param
+    def __init__(self, api):
         self.api = api
         self.proc = None
 
-    def start(self):
+    def start(self, schedDatetime):
         source = Db().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
-        logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (self.api.get_sched_datetime()))
+        logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
         cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
         self.proc = _ShellProc(cmd, self._finishCallback)
         self.api.notify_progress(1)
@@ -160,15 +159,14 @@ class PeriodicalUpdater:
 
 class PortagePeridicalUpdater:
 
-    def __init__(self, param, api):
-        self.param = param
+    def __init__(self, api):
         self.api = api
         self.proc = None
 
-    def start(self):
+    def start(self, schedDatetime):
         source = PortageDb().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
-        logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (self.api.get_sched_datetime()))
+        logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (sschedDatetime))
         cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
         self.proc = _ShellProc(cmd, self._finishCallback)
         self.api.notify_progress(1)

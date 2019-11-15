@@ -80,6 +80,7 @@ class McMirrorSite:
             self.dbObj = plugin_class()
 
         # updater
+        self.updaterObjApi = None
         self.updaterObj = None
         self.sched = None
         if True:
@@ -93,7 +94,8 @@ class McMirrorSite:
                 plugin_class = getattr(m, metadata["classname"])
             except:
                 raise Exception("syntax error")
-            self.updaterObj = plugin_class()
+            self.updaterObjApi = McMirrorSiteUpdaterApi(self)
+            self.updaterObj = plugin_class(self.updaterObjApi)
 
             self.sched = elem.xpath(".//scheduler")[0]
             if self.sched == "oneshot":
@@ -119,22 +121,28 @@ class McMirrorSite:
 
 class McMirrorSiteUpdaterApi:
 
+    def __init__(self, mirrorSite):
+        self.mirrorSite = mirrorSite
+        self.mcUpdater = None           # set by McMirrorSiteUpdater
+        self.updateStatus = None        # same as above
+        self.updateDatetime = None      # same as above
+        self.updateProgress = None      # same as above
+
     def get_country(self):
-        pass
+        # FIXME
+        return "CN"
     
     def get_location(self):
-        pass
+        # FIXME
+        return None
 
     def get_data_dir(self):
-        pass
+        return self.parent.dataDir
 
     def get_log_dir(self):
         # FIXME
-        pass
+        return None
 
-    def get_sched_datetime(self):
-        pass
-
-    def notify_progress(self):
-        pass
-
+    def notify_progress(self, progress):
+        assert 0 <= progress <= 100
+        self.mirrorSite._notifyProgress(self, progress)
