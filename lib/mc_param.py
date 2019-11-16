@@ -16,6 +16,12 @@ class McParam:
         self.pluginsDir = os.path.join(self.libDir, "plugins")
         self.pluginList = []
 
+        self.listenIp = "0.0.0.0"
+
+        self.apiPort = 2300
+        self.httpPort = 80      # can be "random"
+        self.ftpPort = 21       # can be "random"
+
         self.updater = None
         self.advertiser = None
         self.apiServer = None

@@ -17,7 +17,7 @@ class McApiServer:
         self.param = param
 
         self.serverSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.serverSock.bind(("0.0.0.0", self.param.apiPort))
+        self.serverSock.bind((self.param.listenIp, self.param.apiPort))
         self.serverSock.listen(5)
         self.serverSock.setblocking(0)
         self.serverSourceId = GLib.io_add_watch(self.serverSock, GLib.IO_IN | _flagError, self._onServerAccept)

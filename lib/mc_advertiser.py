@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
+from mc_util import McUtil
 from mc_util import HttpFileServer
 from mc_util import FtpServer
 
@@ -23,11 +24,15 @@ class McAdvertiser:
 
         self.httpServer = None
         if len(self.httpDirDict) > 0:
-            self.httpServer = HttpFileServer("0.0.0.0", 2299, self.httpDirDict.values(), "/dev/null")
+            if self.param.httpPort == "random":
+                self.param.httpPort = McUtil.getFreeSocketPort("tcp")
+            self.httpServer = HttpFileServer(self.param.listenIp, self.param.httpPort, self.httpDirDict.values(), "/dev/null")
 
         self.ftpServer = None
         if len(self.ftpDirDict) > 0:
-            self.ftpServer = FtpServer("0.0.0.0", 2300, self.ftpDirdict.values(), "/dev/null")
+            if self.param.ftpPort == "random":
+                self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
+            self.ftpServer = FtpServer(self.param.listenIp, self.param.ftpPort, self.ftpDirdict.values(), "/dev/null")
 
     def dispose(self):
         if self.httpServer is not None:

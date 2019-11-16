@@ -381,7 +381,7 @@ class HttpFileServer:
         self._ip = ip
         self._port = port
         self._dirlist = dirList
-        self._logfile = logfile
+        self._logfile = logFile
         self._proc = None
 
     @property
@@ -414,7 +414,7 @@ class FtpServer:
         self._ip = ip
         self._port = port
         self._dirlist = dirList
-        self._logfile = logfile
+        self._logfile = logFile
         self._proc = None
 
     @property
