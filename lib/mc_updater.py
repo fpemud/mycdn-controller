@@ -53,13 +53,19 @@ class McMirrorSiteUpdater:
         msObj = self.param.getMirrorSite(mirrorSiteId)
         return msObj.api.updateStatus
 
-    def _startUpdate(self, mirrorSiteObj, schedDatetime):
-        mirrorSiteObj.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
-        mirrorSiteObj.api.updateDatetime = schedDatetime
-        mirrorSiteObj.api.progress = None
-        mirrorSiteObj.updateObj.start(schedDatetime)
+    def _startUpdate(self, msObj, schedDatetime):
+        msObj.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
+        msObj.api.updateDatetime = schedDatetime
+        msObj.api.progress = 0
+        msObj.updateObj.start(schedDatetime)
+        logging.info("Mirror site %s updating scheduled on %s starts." % (msObj.id, msObj.api.updateDatetime.isoformat()))
 
-    def _notifyProgress(self, mirrorSiteObj, progress):
-        mirrorSiteObj.api.updateProgress = progress
-        if progress == 100:
-            mirrorSiteObj.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+    def _notifyProgress(self, msObj, progress, finished):
+        msObj.api.updateProgress = progress
+        if finished:
+            assert progress == 100
+            msObj.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+            logging.info("Mirror site %s updating finished." % (msObj.id))
+        else:
+            logging.info("Mirror site %s updating progress %d." % (msObj.id, progress))
+

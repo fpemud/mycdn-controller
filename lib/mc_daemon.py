@@ -30,6 +30,7 @@ class McDaemon:
 
             logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
             logging.getLogger().setLevel(logging.INFO)
+            logging.info("Program begins.")
 
             # create mainloop
             self.param.mainloop = GLib.MainLoop()
@@ -40,15 +41,25 @@ class McDaemon:
 
             # load plugins
             self._loadPlugins()
+            logging.info("Plugins loaded: %s" % (",".join(self.param.pluginList)))
 
             # updater
             self.param.updater = McMirrorSiteUpdater(self.param)
+            logging.info("Mirror site updater initialized.")
 
             # advertiser
             self.param.advertiser = McAdvertiser(self.param)
+            logging.info("Advertiser initialized.")
+            if self.param.advertiser.httpServer is not None:
+                logging.info("   HTTP server enableed, listening on port %d." % (self.param.advertiser.httpServer.port))
+            if self.param.advertiser.ftpServer is not None:
+                logging.info("   FTP server enableed, listening on port %d." % (self.param.advertiser.ftpServer.port))
+            if self.param.advertiser.rsyncServer is not None:
+                logging.info("   Rsync server enableed, listening on port %d." % (self.param.advertiser.rsyncServer.port))
 
             # api server
             self.param.apiServer = McApiServer(self.param)
+            logging.info("API server initialized, listening on port %d." % (self.param.apiPort))
 
             # start main loop
             logging.info("Mainloop begins.")

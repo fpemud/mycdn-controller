@@ -142,6 +142,7 @@ class McMirrorSiteUpdaterApi:
         # FIXME
         return None
 
-    def notify_progress(self, progress):
+    def notify_progress(self, progress, finished):
         assert 0 <= progress <= 100
-        self.mirrorSite._notifyProgress(self, progress)
+        assert finished is not None
+        self.mirrorSite._notifyProgress(self, progress, finished)
