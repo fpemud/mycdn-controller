@@ -9,8 +9,9 @@ class McParam:
     def __init__(self):
         self.etcDir = "/etc/mycdn"
         self.libDir = "/usr/lib/mycdn"
-        self.dataDir = "/usr/share/mycdn"
         self.cacheDir = "/var/cache/mycdn"
+        self.runDir = "/run/mycdn"
+        self.logDir = "/var/log/mycdn"
         self.tmpDir = "/tmp/mycdn"
 
         self.pluginsDir = os.path.join(self.libDir, "plugins")

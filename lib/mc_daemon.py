@@ -19,14 +19,10 @@ class McDaemon:
 
     def __init__(self, param):
         self.param = param
-        self.apiServer = None
-        self.scheduler = None
-        self.sourceObjects = []
-        self.helperObjects = dict()         # <helper_name, helper_object>
-        self.mirrorRefreshThreads = dict()  # <source_name, mirror_refresh_thread_list>
-        self.mirrorObjects = dict()         # <source_name, mirror_object_list>
 
     def run(self):
+        McUtil.ensureDir(self.param.logDir)
+        McUtil.mkDirAndClear(self.param.runDir)
         McUtil.mkDirAndClear(self.param.tmpDir)
         try:
             sys.stdout = StdoutRedirector(os.path.join(self.param.tmpDir, "mycdn.out"))
@@ -39,20 +35,20 @@ class McDaemon:
             self.param.mainloop = GLib.MainLoop()
 
             # write pid file
-            with open(os.path.join(self.param.tmpDir, "mycdn.pid"), "w") as f:
+            with open(os.path.join(self.param.runDir, "mycdn.pid"), "w") as f:
                 f.write(str(os.getpid()))
 
             # load plugins
             self._loadPlugins()
 
             # updater
-            self.param.updater = McMirrorSiteUpdater()
+            self.param.updater = McMirrorSiteUpdater(self.param)
 
             # advertiser
-            self.param.advertiser = McAdvertiser()
+            self.param.advertiser = McAdvertiser(self.param)
 
             # api server
-            self.param.apiServer = McApiServer()
+            self.param.apiServer = McApiServer(self.param)
 
             # start main loop
             logging.info("Mainloop begins.")
@@ -67,6 +63,7 @@ class McDaemon:
                 self.param.advertiser.dispose()
             logging.shutdown()
             shutil.rmtree(self.param.tmpDir)
+            shutil.rmtree(self.param.runDir)
 
     def _sigHandlerINT(self, signum):
         logging.info("SIGINT received.")
