@@ -2,6 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import logging
 from mc_util import McUtil
 from mc_util import CronScheduler
 from mc_plugin import McMirrorSite
@@ -68,4 +69,3 @@ class McMirrorSiteUpdater:
             logging.info("Mirror site %s updating finished." % (msObj.id))
         else:
             logging.info("Mirror site %s updating progress %d." % (msObj.id, progress))
-
