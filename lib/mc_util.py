@@ -8,7 +8,7 @@ import fcntl
 import struct
 import shutil
 import random
-import cronitor
+import croniter
 import ipaddress
 import subprocess
 import multiprocessing
@@ -317,7 +317,7 @@ class CronScheduler:
 
     def addJob(self, jobId, cronExpr, jobCallback):
         assert jobId not in self.jobDict
-        self.jobDict[jobId] = (cronitor(cronExpr), jobCallback)
+        self.jobDict[jobId] = (croniter(cronExpr), jobCallback)
         self._refreshTimeout()
 
     def removeJob(self, jobId):

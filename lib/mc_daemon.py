@@ -87,7 +87,7 @@ class McDaemon:
         return True
 
     def _loadPlugins(self):
-        for fn in os.listdir(self.etcDir):
+        for fn in os.listdir(self.param.etcDir):
             if not fn.endswith(".conf"):
                 continue
             pluginName = fn.replace(".conf", "")
