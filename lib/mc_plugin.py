@@ -2,13 +2,14 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
-from mc_util import McUtil
+import imp
+import logging
+import libxml2
 
 
 class McPlugin:
 
     def __init__(self, name, path):
-        self.param = param
         self.mirrorSiteList = []
 
         # get metadata.xml file
@@ -23,28 +24,26 @@ class McPlugin:
         # check metadata.xml file content
         # FIXME
         tree = libxml2.parseFile(metadata_file)
-        if False:
-            dtd = libxml2.parseDTD(None, constants.PATH_PLUGIN_DTD_FILE)
-            ctxt = libxml2.newValidCtxt()
-            messages = []
-            ctxt.setValidityErrorHandler(lambda item, msgs: msgs.append(item), None, messages)
-            if tree.validateDtd(ctxt, dtd) != 1:
-                msg = ""
-                for i in messages:
-                    msg += i
-                raise exceptions.IncorrectPluginMetaFile(metadata_file, msg)
+        # if True:
+        #     dtd = libxml2.parseDTD(None, constants.PATH_PLUGIN_DTD_FILE)
+        #     ctxt = libxml2.newValidCtxt()
+        #     messages = []
+        #     ctxt.setValidityErrorHandler(lambda item, msgs: msgs.append(item), None, messages)
+        #     if tree.validateDtd(ctxt, dtd) != 1:
+        #         msg = ""
+        #         for i in messages:
+        #             msg += i
+        #         raise exceptions.IncorrectPluginMetaFile(metadata_file, msg)
 
-        # get metadata from metadata.xml file
-        metadata = {}
-        if True:
-            root = tree.getRootElement()
-            self.id = root.prop("id")
+        # get data from metadata.xml file
+        root = tree.getRootElement()
+        self.id = root.prop("id")
 
         # create objects
         child = root.children
         while child:
             if child.name == "mirror-site":
-                obj = McMirrorSite(child)
+                obj = McMirrorSite(self, path, child)
                 self.mirrorSiteList.append(obj)
             child = child.next
 
@@ -73,8 +72,8 @@ class McMirrorSite:
             classname = elem.xpath(".//classname")
             try:
                 f = open(filename)
-                m = imp.load_module(metadata["filename"][:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-                plugin_class = getattr(m, metadata["classname"])
+                m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+                plugin_class = getattr(m, classname)
             except:
                 raise Exception("syntax error")
             self.dbObj = plugin_class()
@@ -90,8 +89,8 @@ class McMirrorSite:
             classname = elem.xpath(".//classname")
             try:
                 f = open(filename)
-                m = imp.load_module(metadata["filename"][:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-                plugin_class = getattr(m, metadata["classname"])
+                m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+                plugin_class = getattr(m, classname)
             except:
                 raise Exception("syntax error")
             self.updaterObjApi = McMirrorSiteUpdaterApi(self)
@@ -131,7 +130,7 @@ class McMirrorSiteUpdaterApi:
     def get_country(self):
         # FIXME
         return "CN"
-    
+
     def get_location(self):
         # FIXME
         return None

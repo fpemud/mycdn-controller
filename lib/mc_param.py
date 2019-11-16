@@ -16,6 +16,9 @@ class McParam:
         self.pluginsDir = os.path.join(self.libDir, "plugins")
         self.pluginList = []
 
+        self.updater = None
+        self.advertiser = None
+        self.apiServer = None
         self.mainloop = None
 
     def getMirrorSiteList(self):
@@ -27,6 +30,6 @@ class McParam:
     def getMirrorSite(self, mirrorSiteId):
         for plugin in self.pluginList:
             for ms in plugin.objMirrorSiteList:
-                if ms.id == mirrorSiteList:
+                if ms.id == mirrorSiteId:
                     return ms
         return None

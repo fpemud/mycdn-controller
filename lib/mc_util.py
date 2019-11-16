@@ -8,8 +8,13 @@ import fcntl
 import struct
 import shutil
 import random
+import cronitor
 import ipaddress
 import subprocess
+import multiprocessing
+from datetime import datetime
+from collections import OrderedDict
+from gi.repository import GLib
 from OpenSSL import crypto
 
 
@@ -312,7 +317,7 @@ class CronScheduler:
 
     def addJob(self, jobId, cronExpr, jobCallback):
         assert jobId not in self.jobDict
-        self.jobDict[jobId] = (cronitor(cornExpr), jobCallback)
+        self.jobDict[jobId] = (cronitor(cronExpr), jobCallback)
         self._refreshTimeout()
 
     def removeJob(self, jobId):
@@ -359,7 +364,7 @@ class CronScheduler:
         self.nextDatetime = nextDatetime
         self.nextJobCallbackList = nextJobCallbackList
         self.timeoutHandler = GLib.timeout_add((self.nextDatetime - datetime.now()).total_seconds(),
-                                                self._jobCallback)
+                                               self._jobCallback)
 
     def _jobCallback(self):
         for jobCallback in self.nextJobCallbackList:
@@ -401,7 +406,7 @@ class HttpFileServer:
         self._proc = None
 
 
-class FtpFileServer:
+class FtpServer:
 
     def __init__(self, ip, port, dirList, logFile):
         assert 0 < port < 65536
@@ -424,7 +429,7 @@ class FtpFileServer:
     def start(self):
         assert self._proc is None
         homedir = os.path.dirname(self._dirlist[0])
-        self._proc = multiprocessing.Process(target=LocalFTPd._runFtpDaemon, args=(self._ip, self._port, homedir, self._logfile, ))
+        self._proc = multiprocessing.Process(target=FtpServer._runFtpDaemon, args=(self._ip, self._port, homedir, self._logfile, ))
         self._proc.start()
 
     def stop(self):

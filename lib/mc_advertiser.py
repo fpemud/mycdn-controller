@@ -1,6 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
+from mc_util import HttpFileServer
+from mc_util import FtpServer
+
 
 class McAdvertiser:
 
@@ -24,7 +27,7 @@ class McAdvertiser:
 
         self.ftpServer = None
         if len(self.ftpDirDict) > 0:
-            self.ftpServer = FtpFileServer("0.0.0.0", 2300, self.ftpDirdict.values(), "/dev/null")
+            self.ftpServer = FtpServer("0.0.0.0", 2300, self.ftpDirdict.values(), "/dev/null")
 
     def dispose(self):
         if self.httpServer is not None:

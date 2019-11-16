@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
-from apscheduler.schedulers.background import BackgroundScheduler
+import os
+from mc_util import McUtil
+from mc_util import CronScheduler
+from mc_plugin import McMirrorSite
 
 
 class McMirrorSiteUpdater:
@@ -22,22 +25,22 @@ class McMirrorSiteUpdater:
             # set update status
             ms.api.mcUpdater = self
             if os.path.exists(os.path.join(fullDir, ".uninitialized")):
-                ms.api.updateStatus = McUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
+                ms.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
                 # FIXME
                 assert False
             else:
-                ms.api.updateStatus = McUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+                ms.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
 
             # add job
-            if ms.sched == McMirorSite.SCHED_ONESHOT:
+            if ms.sched == McMirrorSite.SCHED_ONESHOT:
                 assert False
-            elif ms.sched == McMirorSite.SCHED_PERIODICAL:
+            elif ms.sched == McMirrorSite.SCHED_PERIODICAL:
                 self.sched.addJob(ms.id, ms.schedExpr, lambda schedDatetime: self._startUpdate(ms, schedDatetime))
-            elif ms.sched == McMirorSite.SCHED_FOLLOW:
+            elif ms.sched == McMirrorSite.SCHED_FOLLOW:
                 followMsObj = self.param.getMirrorSite(ms.followMirrorSiteId)
-                assert followMirrorSiteId is not None
+                assert followMsObj is not None
                 self.sched.addJob(ms.id, followMsObj.schedExpr, lambda schedDatetime: self._startUpdate(ms, schedDatetime))
-            elif ms.sched == McMirorSite.SCHED_PERSIST:
+            elif ms.sched == McMirrorSite.SCHED_PERSIST:
                 assert False
             else:
                 assert False
@@ -51,7 +54,7 @@ class McMirrorSiteUpdater:
         return msObj.api.updateStatus
 
     def _startUpdate(self, mirrorSiteObj, schedDatetime):
-        mirrorSiteObj.api.updateStatus = McUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
+        mirrorSiteObj.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
         mirrorSiteObj.api.updateDatetime = schedDatetime
         mirrorSiteObj.api.progress = None
         mirrorSiteObj.updateObj.start(schedDatetime)
@@ -59,4 +62,4 @@ class McMirrorSiteUpdater:
     def _notifyProgress(self, mirrorSiteObj, progress):
         mirrorSiteObj.api.updateProgress = progress
         if progress == 100:
-            mirrorSiteObj.api.updateStatus = McUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+            mirrorSiteObj.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
