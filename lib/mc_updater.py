@@ -60,7 +60,7 @@ class McMirrorSiteUpdater:
         api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
         api.updateDatetime = schedDatetime
         api.progress = 0
-        mirrorSiteObj.updaterObj.start(schedDatetime)
+        mirrorSiteObj.updaterObj.update_start(schedDatetime)
         logging.info("Mirror site \"%s\" updating scheduled on \"%s\" starts." % (mirrorSiteObj.id, api.updateDatetime.strftime("%Y-%m-%d %H:%M")))
 
     def _notifyProgress(self, mirrorSiteObj, progress, finished):

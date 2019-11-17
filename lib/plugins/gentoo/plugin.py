@@ -141,15 +141,29 @@ class Updater:
         self.api = api
         self.proc = None
 
-    def start(self, schedDatetime):
+    def init_start(self):
+        assert self.proc is None
+        self._start(None)
+
+    def init_stop(self):
+        self.proc.terminate()
+
+    def update_start(self, schedDatetime):
+        assert self.proc is None
+        self._start(schedDatetime)
+
+    def update_stop(self):
+        self.proc.terminate()
+
+    def _start(self, schedDatetime):
         source = Db().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
-        logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
+        if schedDatetime is None:
+            logFile = os.path.join(self.api.get_log_dir(), "rsync-init.log")
+        else:
+            logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
         cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
         self.proc = _ShellProc(cmd, self._finishCallback)
-
-    def stop(self):
-        self.proc.terminate()
 
     def _finishCallback(self, proc):
         self.api.notify_progress(100)
@@ -161,15 +175,29 @@ class PortageUpdater:
         self.api = api
         self.proc = None
 
-    def start(self, schedDatetime):
-        source = PortageDb().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
+    def init_start(self):
+        assert self.proc is None
+        self._start(None)
+
+    def init_stop(self):
+        self.proc.terminate()
+
+    def update_start(self, schedDatetime):
+        assert self.proc is None
+        self._start(schedDatetime)
+
+    def update_stop(self):
+        self.proc.terminate()
+
+    def _start(self, schedDatetime):
+        source = Db().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
-        logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
+        if schedDatetime is None:
+            logFile = os.path.join(self.api.get_log_dir(), "rsync-init.log")
+        else:
+            logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
         cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
         self.proc = _ShellProc(cmd, self._finishCallback)
-
-    def stop(self):
-        self.proc.terminate()
 
     def _finishCallback(self):
         self.api.notify_progress(100, True)
