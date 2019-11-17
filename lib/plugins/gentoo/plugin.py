@@ -135,7 +135,7 @@ class PortageDb:
         return url
 
 
-class PeriodicalUpdater:
+class Updater:
 
     def __init__(self, api):
         self.api = api
@@ -155,7 +155,7 @@ class PeriodicalUpdater:
         self.api.notify_progress(100)
 
 
-class PortagePeriodicalUpdater:
+class PortageUpdater:
 
     def __init__(self, api):
         self.api = api

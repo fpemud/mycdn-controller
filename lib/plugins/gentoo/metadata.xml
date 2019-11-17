@@ -9,7 +9,7 @@
     </public-mirror-database>
     <updater>
       <filename>plugin.py</filename>
-      <classname>PeriodicalUpdater</classname>
+      <classname>Updater</classname>
       <scheduler>periodical</scheduler>
       <cron-expression>0 */4 * * *</cron-expression>
     </updater>
@@ -27,7 +27,7 @@
     </public-mirror-database>
     <updater>
       <filename>plugin.py</filename>
-      <classname>PortagePeriodicalUpdater</classname>
+      <classname>PortageUpdater</classname>
       <scheduler>follow</scheduler>
       <follow-mirror-site>gentoo</follow-mirror-site>
     </updater>

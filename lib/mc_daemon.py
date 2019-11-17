@@ -103,6 +103,7 @@ class McDaemon:
         return True
 
     def _loadConfig(self):
+        # FIXME
         self.param.cfg = McConfig()
 
     def _loadPlugins(self):
