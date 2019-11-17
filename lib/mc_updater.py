@@ -4,7 +4,7 @@
 import os
 import logging
 from mc_util import McUtil
-from mc_util import CronScheduler
+from mc_util import GLibCronScheduler
 from mc_plugin import McMirrorSite
 
 
@@ -16,7 +16,7 @@ class McMirrorSiteUpdater:
 
     def __init__(self, param):
         self.param = param
-        self.scheduler = CronScheduler()
+        self.scheduler = GLibCronScheduler()
 
         for ms in self.param.getMirrorSiteList():
             # initialize data directory
@@ -36,7 +36,7 @@ class McMirrorSiteUpdater:
             if ms.sched == McMirrorSite.SCHED_ONESHOT:
                 assert False
             elif ms.sched == McMirrorSite.SCHED_PERIODICAL:
-                self.scheduler.addJob(ms.id, ms.schedExpr, lambda x: self._startUpdate(ms, x))
+                self.scheduler.addJob(ms.id, _JobPeriodical(ms))
             elif ms.sched == McMirrorSite.SCHED_FOLLOW:
                 followMsObj = self.param.getMirrorSite(ms.followMirrorSiteId)
                 print(ms.followMirrorSiteId)
@@ -71,3 +71,37 @@ class McMirrorSiteUpdater:
             logging.info("Mirror site \"%s\" updating finished." % (mirrorSiteObj.id))
         else:
             logging.info("Mirror site \"%s\" updating progress %d%%." % (mirrorSiteObj.id, progress))
+
+
+class _JobPeriodical:
+
+    def __init__(self, mirrorSite):
+        self.mirrorSite = mirrorSite
+        self.api = self.mirrorSite.updaterObjApi
+
+    @property
+    def cron_expr(self):
+        return self.mirrorSite.schedExpr
+
+    def is_ready(self):
+        return self.api.updateStatus != McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
+
+    def is_running(self):
+        return self.api.updateStatus == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+
+    def start(self, schedDatetime):
+        self.api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
+        self.api.updateDatetime = schedDatetime
+        self.api.progress = 0
+        self.mirrorSite.updaterObj.update_start(schedDatetime)
+        logging.info("Mirror site \"%s\" updating scheduled on \"%s\" starts." % (self.mirrorSite.id, api.updateDatetime.strftime("%Y-%m-%d %H:%M")))
+
+                
+class _JobFollow:
+
+    def is_ready(self):
+        assert False
+    def is_running(self):
+        assert False
+    def start(self):
+        assert False

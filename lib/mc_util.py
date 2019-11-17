@@ -302,7 +302,15 @@ class StdoutRedirector:
         self.log.flush()
 
 
-class CronScheduler:
+class GLibCronScheduler:
+
+    class Job:
+        def is_ready(self):
+            assert False
+        def is_running(self):
+            assert False
+        def start(self, schedDatetime):
+            assert False
 
     def __init__(self):
         self.jobDict = OrderedDict()       # dict<id,(iter,callback)>
