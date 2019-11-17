@@ -62,14 +62,14 @@ class McMirrorSite:
         self.plugin = plugin
         self.id = plugin.id + " " + rootElem.prop("id")
 
-        self.dataDir = rootElem.xpath(".//data-directory")[0].text
+        self.dataDir = rootElem.xpathEval(".//data-directory")[0].text
 
         # database
         self.dbObj = None
         if True:
-            elem = rootElem.xpath(".//public-mirror-database")[0]
-            filename = os.path.join(pluginDir, elem.xpath(".//filename"))
-            classname = elem.xpath(".//classname")
+            elem = rootElem.xpathEval(".//public-mirror-database")[0]
+            filename = os.path.join(pluginDir, elem.xpathEval(".//filename"))
+            classname = elem.xpathEval(".//classname")
             try:
                 f = open(filename)
                 m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
@@ -83,10 +83,10 @@ class McMirrorSite:
         self.updaterObj = None
         self.sched = None
         if True:
-            elem = rootElem.xpath(".//updater")[0]
+            elem = rootElem.xpathEval(".//updater")[0]
 
-            filename = os.path.join(pluginDir, elem.xpath(".//filename"))
-            classname = elem.xpath(".//classname")
+            filename = os.path.join(pluginDir, elem.xpathEval(".//filename"))
+            classname = elem.xpathEval(".//classname")
             try:
                 f = open(filename)
                 m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
@@ -96,15 +96,15 @@ class McMirrorSite:
             self.updaterObjApi = McMirrorSiteUpdaterApi(self)
             self.updaterObj = plugin_class(self.updaterObjApi)
 
-            self.sched = elem.xpath(".//scheduler")[0]
+            self.sched = elem.xpathEval(".//scheduler")[0]
             if self.sched == "oneshot":
                 self.sched = McMirrorSite.SCHED_ONESHOT
             elif self.sched == "periodical":
                 self.sched = McMirrorSite.SCHED_PERIODICAL
-                self.schedExpr = elem.xpath(".//cron-expression")[0].text
+                self.schedExpr = elem.xpathEval(".//cron-expression")[0].text
             elif self.sched == "follow":
                 self.sched = McMirrorSite.SCHED_FOLLOW
-                self.followMirrorSiteId = elem.xpath(".//follow-mirror-site")[0].text
+                self.followMirrorSiteId = elem.xpathEval(".//follow-mirror-site")[0].text
             elif self.sched == "persist":
                 self.sched = McMirrorSite.SCHED_PERSIST
             else:
@@ -113,7 +113,7 @@ class McMirrorSite:
         # advertiser
         self.advertiseProtocolList = []
         if True:
-            elem = rootElem.xpath(".//advertiser")[0]
+            elem = rootElem.xpathEval(".//advertiser")[0]
             for child in elem.children:
                 self.advertiseProtocolList.append(child.text)
 
