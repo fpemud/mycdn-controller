@@ -147,7 +147,6 @@ class PeriodicalUpdater:
         logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
         cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
         self.proc = _ShellProc(cmd, self._finishCallback)
-        self.api.notify_progress(1)
 
     def stop(self):
         self.proc.terminate()

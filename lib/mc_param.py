@@ -24,9 +24,12 @@ class McParam:
         self.ftpPort = 21       # can be "random"
         self.rsyncPort = 1001   # can be "random"       # FIXME
 
+        self.avahiSupport = True
+
         self.updater = None
         self.advertiser = None
         self.apiServer = None
+        self.avahiObj = None
         self.mainloop = None
 
     def getMirrorSiteList(self):

@@ -448,7 +448,7 @@ class FtpServer:
     @staticmethod
     def _runFtpDaemon(ip, port, homedir, logfile):
         with open(logfile, "a") as f:
-            sys.stdout = f              # redirect stdout into logfile 
+            sys.stdout = f              # redirect stdout into logfile
             sys.stderr = f              # redirect stderr into logfile
             from pyftpdlib.authorizers import DummyAuthorizer
             from pyftpdlib.handlers import FTPHandler
@@ -516,3 +516,152 @@ class RsyncServer:
         self._proc = None
         McUtil.forceDelete(self.rsyncdLockFile)
         McUtil.forceDelete(self.rsyncdCfgFile)
+
+
+class AvahiServiceRegister:
+
+    """
+    Exampe:
+        obj = AvahiServiceRegister()
+        obj.add_service(socket.gethostname(), "_http", 80)
+        obj.start()
+        obj.stop()
+    """
+
+    def __init__(self):
+        self.retryInterval = 30
+        self.serviceList = []
+
+    def add_service(self, service_name, service_type, port):
+        assert isinstance(service_name, str)
+        assert service_type.endswith("._tcp") or service_type.endswith("._udp")
+        assert isinstance(port, int)
+        self.serviceList.append((service_name, service_type, port))
+
+    def start(self):
+        DBusGMainLoop(set_as_default=True)
+
+        self._server = None
+        self._retryCreateServerTimer = None
+        self._entryGroup = None
+        self._retryRegisterServiceTimer = None
+
+        if dbus.SystemBus().name_has_owner("org.freedesktop.Avahi"):
+            self._createServer()
+        self._ownerChangeHandler = dbus.SystemBus().add_signal_receiver(self.onNameOwnerChanged, "NameOwnerChanged", None, None)
+
+    def stop(self):
+        if self._ownerChangeHandler is not None:
+            dbus.SystemBus().remove_signal_receiver(self._ownerChangeHandler)
+            self._ownerChangeHandler = None
+        self._unregisterService()
+        self._releaseServer()
+
+    def onNameOwnerChanged(self, name, old, new):
+        if name == "org.freedesktop.Avahi":
+            if new != "" and old == "":
+                if self._server is None:
+                    self._createServer()
+                else:
+                    # this may happen on some rare case
+                    pass
+            elif new == "" and old != "":
+                self._unregisterService()
+                self._releaseServer()
+            else:
+                assert False
+
+    def _createServer(self):
+        assert self._server is None and self._retryCreateServerTimer is None
+        assert self._entryGroup is None
+        try:
+            self._server = dbus.Interface(dbus.SystemBus().get_object("org.freedesktop.Avahi", "/"), "org.freedesktop.Avahi.Server")
+            if self._server.GetState() == 2:    # avahi.SERVER_RUNNING
+                self._registerService()
+            self._server.connect_to_signal("StateChanged", self.onSeverStateChanged)
+        except:
+            logging.error("Avahi create server failed, retry in %d seconds" % (self.retryInterval), sys.exc_info())
+            self._releaseServer()
+            self._retryCreateServer()
+
+    def _releaseServer(self):
+        assert self._entryGroup is None
+        if self._retryCreateServerTimer is not None:
+            GLib.source_remove(self._retryCreateServerTimer)
+            self._retryCreateServerTimer = None
+        self._server = None
+
+    def onSeverStateChanged(self, state, error):
+        if state == 2:      # avahi.SERVER_RUNNING
+            self._unregisterService()
+            self._registerService()
+        else:
+            self._unregisterService()
+
+    def _registerService(self):
+        assert self._entryGroup is None and self._retryRegisterServiceTimer is None
+        try:
+            self._entryGroup = dbus.Interface(dbus.SystemBus().get_object("org.freedesktop.Avahi", self._server.EntryGroupNew()),
+                                              "org.freedesktop.Avahi.EntryGroup")
+            for serviceName, serviceType, port in self.serviceList:
+                self._entryGroup.AddService(-1,                 # interface = avahi.IF_UNSPEC
+                                            0,                  # protocol = avahi.PROTO_UNSPEC
+                                            dbus.UInt32(0),     # flags
+                                            serviceName,        # name
+                                            serviceType,        # type
+                                            "",                 # domain
+                                            "",                 # host
+                                            dbus.UInt16(port),  # port
+                                            "")                 # txt
+            self._entryGroup.Commit()
+            self._entryGroup.connect_to_signal("StateChanged", self.onEntryGroupStateChanged)
+        except:
+            logging.error("Avahi register service failed, retry in %d seconds" % (self.retryInterval), sys.exc_info())
+            self._unregisterService()
+            self._retryRegisterService()
+
+    def _unregisterService(self):
+        if self._retryRegisterServiceTimer is not None:
+            GLib.source_remove(self._retryRegisterServiceTimer)
+            self._retryRegisterServiceTimer = None
+        if self._entryGroup is not None:
+            try:
+                if self._entryGroup.GetState() != 4:        # avahi.ENTRY_GROUP_FAILURE
+                    self._entryGroup.Reset()
+                    self._entryGroup.Free()
+                    # .Free() has mem leaks?
+                    self._entryGroup._obj._bus = None
+                    self._entryGroup._obj = None
+            except dbus.exceptions.DBusException:
+                pass
+            finally:
+                self._entryGroup = None
+
+    def onEntryGroupStateChanged(self, state, error):
+        if state in [0, 1, 2]:  # avahi.ENTRY_GROUP_UNCOMMITED, avahi.ENTRY_GROUP_REGISTERING, avahi.ENTRY_GROUP_ESTABLISHED
+            pass
+        elif state == 3:        # avahi.ENTRY_GROUP_COLLISION
+            self._unregisterService()
+            self._retryRegisterService()
+        elif state == 4:        # avahi.ENTRY_GROUP_FAILURE
+            assert False
+        else:
+            assert False
+
+    def _retryCreateServer(self):
+        assert self._retryCreateServerTimer is None
+        self._retryCreateServerTimer = GLib.timeout_add_seconds(self.retryInterval, self.__timeoutCreateServer)
+
+    def __timeoutCreateServer(self):
+        self._retryCreateServerTimer = None
+        self._createServer()                    # no exception in self._createServer()
+        return False
+
+    def _retryRegisterService(self):
+        assert self._retryRegisterServiceTimer is None
+        self._retryRegisterServiceTimer = GLib.timeout_add_seconds(self.retryInterval, self.__timeoutRegisterService)
+
+    def __timeoutRegisterService(self):
+        self._retryRegisterServiceTimer = None
+        self._registerService()                 # no exception in self._registerService()
+        return False

@@ -61,6 +61,12 @@ class McDaemon:
             self.param.apiServer = McApiServer(self.param)
             logging.info("API server initialized, listening on port %d." % (self.param.apiPort))
 
+            # register serivce
+            if self.param.avahiSupport:
+                self.param.avahiObj = AvahiServiceRegister()
+                self.param.avahiObj.add_service(socket.gethostname(), "_mycdn._tcp", self.param.apiServer.getPort())
+                self.param.avahiObj.start()
+
             # start main loop
             logging.info("Mainloop begins.")
             GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self._sigHandlerINT, None)
@@ -68,6 +74,10 @@ class McDaemon:
             self.param.mainloop.run()
             logging.info("Mainloop exits.")
         finally:
+            if self.param.avahiObj is not None:
+                self.param.avahiObj.stop()
+            if self.param.apiServer is not None:
+                self.param.apiServer.stop()
             if self.param.updater is not None:
                 self.param.updater.dispose()
             if self.param.advertiser is not None:
