@@ -548,6 +548,7 @@ class AvahiServiceRegister:
         self._retryCreateServerTimer = None
         self._entryGroup = None
         self._retryRegisterServiceTimer = None
+        self._ownerChangeHandler = None
 
         if dbus.SystemBus().name_has_owner("org.freedesktop.Avahi"):
             self._createServer()

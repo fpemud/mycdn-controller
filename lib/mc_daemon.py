@@ -66,7 +66,7 @@ class McDaemon:
             # register serivce
             if self.param.avahiSupport:
                 self.param.avahiObj = AvahiServiceRegister()
-                self.param.avahiObj.add_service(socket.gethostname(), "_mycdn._tcp", self.param.apiServer.getPort())
+                self.param.avahiObj.add_service(socket.gethostname(), "_mycdn._tcp", self.param.apiServer.port)
                 self.param.avahiObj.start()
 
             # start main loop
