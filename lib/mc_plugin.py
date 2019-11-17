@@ -62,7 +62,7 @@ class McMirrorSite:
         self.plugin = plugin
         self.id = plugin.id + " " + rootElem.prop("id")
 
-        self.dataDir = rootElem.xpathEval(".//data-directory")[0].text
+        self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
 
         # database
         self.dbObj = None
@@ -101,10 +101,10 @@ class McMirrorSite:
                 self.sched = McMirrorSite.SCHED_ONESHOT
             elif self.sched == "periodical":
                 self.sched = McMirrorSite.SCHED_PERIODICAL
-                self.schedExpr = elem.xpathEval(".//cron-expression")[0].text
+                self.schedExpr = elem.xpathEval(".//cron-expression")[0].getContent()
             elif self.sched == "follow":
                 self.sched = McMirrorSite.SCHED_FOLLOW
-                self.followMirrorSiteId = elem.xpathEval(".//follow-mirror-site")[0].text
+                self.followMirrorSiteId = elem.xpathEval(".//follow-mirror-site")[0].getContent()
             elif self.sched == "persist":
                 self.sched = McMirrorSite.SCHED_PERSIST
             else:
@@ -115,7 +115,7 @@ class McMirrorSite:
         if True:
             elem = rootElem.xpathEval(".//advertiser")[0]
             for child in elem.children:
-                self.advertiseProtocolList.append(child.text)
+                self.advertiseProtocolList.append(child.getContent())
 
 
 class McMirrorSiteUpdaterApi:
