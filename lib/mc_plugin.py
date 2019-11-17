@@ -9,7 +9,7 @@ import libxml2
 
 class McPlugin:
 
-    def __init__(self, name, path):
+    def __init__(self, param, name, path):
         self.mirrorSiteList = []
 
         # get metadata.xml file
@@ -41,7 +41,7 @@ class McPlugin:
 
         # create objects
         for child in root.xpathEval(".//mirror-site"):
-            obj = McMirrorSite(self, path, child)
+            obj = McMirrorSite(param, self, path, child)
             self.mirrorSiteList.append(obj)
 
         # logger
@@ -55,11 +55,12 @@ class McMirrorSite:
     SCHED_FOLLOW = 2
     SCHED_PERSIST = 3
 
-    def __init__(self, plugin, pluginDir, rootElem):
+    def __init__(self, param, plugin, pluginDir, rootElem):
         self.plugin = plugin
         self.id = plugin.id + " " + rootElem.prop("id")
 
         self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
+        self.dataDir = os.path.join(param.cacheDir, self.dataDir)
 
         # database
         self.dbObj = None
@@ -89,7 +90,7 @@ class McMirrorSite:
                 plugin_class = getattr(m, classname)
             except:
                 raise Exception("syntax error")
-            self.updaterObjApi = McMirrorSiteUpdaterApi(self)
+            self.updaterObjApi = McMirrorSiteUpdaterApi(param, self)
             self.updaterObj = plugin_class(self.updaterObjApi)
 
             self.sched = elem.xpathEval(".//scheduler")[0].getContent()
@@ -117,7 +118,8 @@ class McMirrorSite:
 
 class McMirrorSiteUpdaterApi:
 
-    def __init__(self, mirrorSite):
+    def __init__(self, param, mirrorSite):
+        self.param = param
         self.mirrorSite = mirrorSite
         self.mcUpdater = None           # set by McMirrorSiteUpdater
         self.updateStatus = None        # same as above
@@ -133,13 +135,12 @@ class McMirrorSiteUpdaterApi:
         return None
 
     def get_data_dir(self):
-        return self.parent.dataDir
+        return self.mirrorSite.dataDir
 
     def get_log_dir(self):
-        # FIXME
-        return None
+        return self.param.logDir
 
     def notify_progress(self, progress, finished):
         assert 0 <= progress <= 100
         assert finished is not None
-        self.mirrorSite._notifyProgress(self, progress, finished)
+        self.mcUpdater._notifyProgress(self.mirrorSite, progress, finished)

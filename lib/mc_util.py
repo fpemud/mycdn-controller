@@ -363,8 +363,9 @@ class CronScheduler:
         assert self.nextDatetime is None
         self.nextDatetime = nextDatetime
         self.nextJobCallbackList = nextJobCallbackList
-        interval = (self.nextDatetime - datetime.now()).total_seconds()
-        self.timeoutHandler = GLib.timeout_add(interval, self._jobCallback)
+        interval = int((self.nextDatetime - datetime.now()).total_seconds())
+        print(interval)
+        self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
 
     def _jobCallback(self):
         for jobCallback in self.nextJobCallbackList:
@@ -438,12 +439,12 @@ class FtpServer:
 
     @staticmethod
     def _runFtpDaemon(ip, port, homedir, logfile):
-        from pyftpdlib.authorizers import DummyAuthorizer
-        from pyftpdlib.handlers import FTPHandler
-        from pyftpdlib.servers import FTPServer
         with open(logfile, "a") as f:
-            sys.stdout = f              # redirect stdout into logfile
+            sys.stdout = f              # redirect stdout into logfile 
             sys.stderr = f              # redirect stderr into logfile
+            from pyftpdlib.authorizers import DummyAuthorizer
+            from pyftpdlib.handlers import FTPHandler
+            from pyftpdlib.servers import FTPServer
             handler = FTPHandler
             handler.authorizer = DummyAuthorizer()
             handler.authorizer.add_anonymous(homedir)
@@ -503,7 +504,7 @@ class RsyncServer:
     def stop(self):
         assert self._proc is not None
         self._proc.terminate()
-        self._proc.join()
+        self._proc.wait()
         self._proc = None
         McUtil.forceDelete(self.rsyncdLockFile)
         McUtil.forceDelete(self.rsyncdCfgFile)

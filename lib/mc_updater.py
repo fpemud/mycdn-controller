@@ -36,12 +36,12 @@ class McMirrorSiteUpdater:
             if ms.sched == McMirrorSite.SCHED_ONESHOT:
                 assert False
             elif ms.sched == McMirrorSite.SCHED_PERIODICAL:
-                self.scheduler.addJob(ms.id, ms.schedExpr, lambda schedDatetime: self._startUpdate(ms, schedDatetime))
+                self.scheduler.addJob(ms.id, ms.schedExpr, lambda x: self._startUpdate(ms, x))
             elif ms.sched == McMirrorSite.SCHED_FOLLOW:
                 followMsObj = self.param.getMirrorSite(ms.followMirrorSiteId)
                 print(ms.followMirrorSiteId)
                 assert followMsObj is not None
-                self.scheduler.addJob(ms.id, followMsObj.schedExpr, lambda schedDatetime: self._startUpdate(ms, schedDatetime))
+                self.scheduler.addJob(ms.id, followMsObj.schedExpr, lambda x: self._startUpdate(ms, x))
             elif ms.sched == McMirrorSite.SCHED_PERSIST:
                 assert False
             else:
@@ -55,18 +55,19 @@ class McMirrorSiteUpdater:
         msObj = self.param.getMirrorSite(mirrorSiteId)
         return msObj.updaterObjApi.updateStatus
 
-    def _startUpdate(self, msObj, schedDatetime):
-        msObj.updaterObjApi.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
-        msObj.updaterObjApi.updateDatetime = schedDatetime
-        msObj.updaterObjApi.progress = 0
-        msObj.updateObj.start(schedDatetime)
-        logging.info("Mirror site %s updating scheduled on %s starts." % (msObj.id, msObj.updaterObjApi.updateDatetime.isoformat()))
+    def _startUpdate(self, mirrorSiteObj, schedDatetime):
+        api = mirrorSiteObj.updaterObjApi
+        api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
+        api.updateDatetime = schedDatetime
+        api.progress = 0
+        mirrorSiteObj.updaterObj.start(schedDatetime)
+        logging.info("Mirror site \"%s\" updating scheduled on \"%s\" starts." % (mirrorSiteObj.id, api.updateDatetime.strftime("%Y-%m-%d %H:%M")))
 
-    def _notifyProgress(self, msObj, progress, finished):
-        msObj.updaterObjApi.updateProgress = progress
+    def _notifyProgress(self, mirrorSiteObj, progress, finished):
+        mirrorSiteObj.updaterObjApi.updateProgress = progress
         if finished:
             assert progress == 100
-            msObj.updaterObjApi.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
-            logging.info("Mirror site %s updating finished." % (msObj.id))
+            mirrorSiteObj.updaterObjApi.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+            logging.info("Mirror site \"%s\" updating finished." % (mirrorSiteObj.id))
         else:
-            logging.info("Mirror site %s updating progress %d." % (msObj.id, progress))
+            logging.info("Mirror site \"%s\" updating progress %d%%." % (mirrorSiteObj.id, progress))

@@ -35,7 +35,7 @@ class Db:
         assert protocolList is None or all(x in ["http", "ftp", "rsync"] for x in protocolList)
 
         # select database
-        srcDict = Db.dictOfficial if not extended else Db.dictExteneded
+        srcDict = Db.dictOfficial if not extended else Db.dictExtended
 
         # country out of scope, we don't consider this condition
         if country is not None:
@@ -71,27 +71,27 @@ class PortageDb:
     def __init__(self):
         selfDir = os.path.dirname(os.path.realpath(__file__))
 
-        if Db.dictOfficial is None:
+        if PortageDb.dictOfficial is None:
             with open(os.path.join(selfDir, "db-official.json")) as f:
-                Db.dictOfficial = self._convertDict(json.load(f))
+                PortageDb.dictOfficial = self._convertDict(json.load(f))
 
-        if Db.dictExtended is None:
-            Db.dictExtended = copy.deepcopy(Db.dictOfficial)
+        if PortageDb.dictExtended is None:
+            PortageDb.dictExtended = copy.deepcopy(PortageDb.dictOfficial)
             with open(os.path.join(selfDir, "db-extended.json")) as f:
-                Db.dictExtended.update(self._convertDict(json.load(f)))
+                PortageDb.dictExtended.update(self._convertDict(json.load(f)))
 
     def get(self, extended=False):
         if not extended:
-            return Db.dictOfficial
+            return PortageDb.dictOfficial
         else:
-            return Db.dictExtended
+            return PortageDb.dictExtended
 
     def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
         assert location is None or (country is not None and location is not None)
         assert protocolList is None or protocolList == ["rsync"]
 
         # select database
-        srcDict = Db.dictOfficial if not extended else Db.dictExteneded
+        srcDict = PortageDb.dictOfficial if not extended else PortageDb.dictExtended
 
         # country out of scope, we don't consider this condition
         if country is not None:
@@ -168,13 +168,12 @@ class PortagePeriodicalUpdater:
         logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
         cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
         self.proc = _ShellProc(cmd, self._finishCallback)
-        self.api.notify_progress(1)
 
     def stop(self):
         self.proc.terminate()
 
     def _finishCallback(self):
-        self.api.notify_progress(100)
+        self.api.notify_progress(100, True)
 
 
 class _ShellProc:
@@ -189,7 +188,7 @@ class _ShellProc:
         # FIXME
         pass
 
-    def _exitCallback(self):
+    def _exitCallback(self, dummy1, dummy2):        # FIXME
         self.exitCallback()
         GLib.source_remove(self.pidWatch)
         self.pidWatch = None

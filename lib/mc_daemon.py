@@ -94,5 +94,5 @@ class McDaemon:
             pluginPath = os.path.join(self.param.pluginsDir, pluginName)
             if not os.path.isdir(pluginPath):
                 raise Exception("Invalid configuration file %s" % (fn))
-            pluginObj = McPlugin(pluginName, pluginPath)
+            pluginObj = McPlugin(self.param, pluginName, pluginPath)
             self.param.pluginList.append(pluginObj)
