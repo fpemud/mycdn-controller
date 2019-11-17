@@ -317,7 +317,8 @@ class CronScheduler:
 
     def addJob(self, jobId, cronExpr, jobCallback):
         assert jobId not in self.jobDict
-        self.jobDict[jobId] = (croniter(cronExpr, datetime.now(), datetime), jobCallback)
+        iter = self._createCronIter(cronExpr)
+        self.jobDict[jobId] = (iter, jobCallback)
         self._refreshTimeout()
 
     def removeJob(self, jobId):
@@ -325,19 +326,17 @@ class CronScheduler:
         self._refreshTimeout()
 
     def _refreshTimeout(self):
+        now = datetime.now()
+
         nextDatetime = None
         nextJobCallbackList = []
         for iter, cb in self.jobDict.values():
-            if nextDatetime is None:
-                nextDatetime = iter.get_next()
+            if nextDatetime is None or self._getNextDatetime(now, iter) < nextDatetime:
+                nextDatetime = self._getNextDatetime(now, iter)
                 nextJobCallbackList = [cb]
                 continue
-            if iter.get_next() == nextDatetime:
+            if self._getNextDatetime(now, iter) == nextDatetime:
                 nextJobCallbackList.append(cb)
-                continue
-            if iter.get_next() < nextDatetime:
-                nextDatetime = iter.get_next()
-                nextJobCallbackList = [cb]
                 continue
 
         if nextDatetime is None:
@@ -345,12 +344,12 @@ class CronScheduler:
                 self._clearTimeout()
         else:
             if self.nextDatetime is None:
-                self._setTimeout(nextDatetime, nextJobCallbackList)
+                self._setTimeout(now, nextDatetime, nextJobCallbackList)
             elif nextDatetime == self.nextDatetime:
                 self.nextJobCallbackList = nextJobCallbackList
             else:
                 self._clearTimeout()
-                self._setTimeout(nextDatetime, nextJobCallbackList)
+                self._setTimeout(now, nextDatetime, nextJobCallbackList)
 
     def _clearTimeout(self):
         assert self.nextDatetime is not None
@@ -359,12 +358,11 @@ class CronScheduler:
         self.nextJobCallbackList = None
         self.nextDatetime = None
 
-    def _setTimeout(self, nextDatetime, nextJobCallbackList):
+    def _setTimeout(self, now, nextDatetime, nextJobCallbackList):
         assert self.nextDatetime is None
         self.nextDatetime = nextDatetime
         self.nextJobCallbackList = nextJobCallbackList
-        interval = int((self.nextDatetime - datetime.now()).total_seconds())
-        print(interval)
+        interval = int((self.nextDatetime - now).total_seconds())
         self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
 
     def _jobCallback(self):
@@ -372,6 +370,16 @@ class CronScheduler:
             jobCallback(self.nextDatetime)
         self._refreshTimeout()
         return False
+
+    def _createCronIter(self, cronExpr):
+        iter = croniter(cronExpr, datetime.now(), datetime)
+        iter.get_next()
+        return iter
+
+    def _getNextDatetime(self, curDatetime, croniterIter):
+        while croniterIter.get_current() <= curDatetime:
+            croniterIter.get_next()
+        return croniterIter.get_current()
 
 
 class HttpFileServer:
