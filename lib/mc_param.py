@@ -14,6 +14,8 @@ class McParam:
         self.logDir = "/var/log/mycdn"
         self.tmpDir = "/tmp/mycdn"
 
+        self.cfg = None
+
         self.pluginsDir = os.path.join(self.libDir, "plugins")
         self.pluginList = []
 
@@ -26,6 +28,7 @@ class McParam:
 
         self.avahiSupport = True
 
+        # objects
         self.updater = None
         self.advertiser = None
         self.apiServer = None
@@ -44,3 +47,14 @@ class McParam:
                 if ms.id == mirrorSiteId:
                     return ms
         return None
+
+
+class McConfig:
+
+    def __init__(self):
+        self.bLocalOnly = False
+
+        self.apiPort = None
+        self.httpPort = None        # can be random
+        self.ftpPort = None         # can be random
+        self.rsyncPort = None       # can be random

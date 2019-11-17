@@ -41,6 +41,10 @@ class McDaemon:
             with open(os.path.join(self.param.runDir, "mycdn.pid"), "w") as f:
                 f.write(str(os.getpid()))
 
+            # load config
+            self._loadConfig()
+            logging.info("Configuration loaded.")
+
             # load plugins
             self._loadPlugins()
             logging.info("Plugins loaded: %s" % (",".join([x.id for x in self.param.pluginList])))
@@ -66,7 +70,7 @@ class McDaemon:
             # register serivce
             if self.param.avahiSupport:
                 self.param.avahiObj = AvahiServiceRegister()
-                self.param.avahiObj.add_service(socket.gethostname(), "_mycdn._tcp", self.param.apiServer.port)
+                self.param.avahiObj.add_service(socket.gethostname(), "_mycdn._tcp", self.param.apiPort)
                 self.param.avahiObj.start()
 
             # start main loop
@@ -97,6 +101,9 @@ class McDaemon:
         logging.info("SIGTERM received.")
         self.param.mainloop.quit()
         return True
+
+    def _loadConfig(self):
+        self.param.cfg = McConfig()
 
     def _loadPlugins(self):
         for fn in os.listdir(self.param.etcDir):
