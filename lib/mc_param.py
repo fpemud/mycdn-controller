@@ -22,6 +22,7 @@ class McParam:
         self.apiPort = 2300
         self.httpPort = 80      # can be "random"
         self.ftpPort = 21       # can be "random"
+        self.rsyncPort = 1001   # can be "random"       # FIXME
 
         self.updater = None
         self.advertiser = None
@@ -31,12 +32,12 @@ class McParam:
     def getMirrorSiteList(self):
         ret = []
         for plugin in self.pluginList:
-            ret += plugin.objMirrorSiteList
+            ret += plugin.mirrorSiteList
         return ret
 
     def getMirrorSite(self, mirrorSiteId):
         for plugin in self.pluginList:
-            for ms in plugin.objMirrorSiteList:
+            for ms in plugin.mirrorSiteList:
                 if ms.id == mirrorSiteId:
                     return ms
         return None

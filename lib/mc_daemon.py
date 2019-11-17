@@ -41,7 +41,7 @@ class McDaemon:
 
             # load plugins
             self._loadPlugins()
-            logging.info("Plugins loaded: %s" % (",".join(self.param.pluginList)))
+            logging.info("Plugins loaded: %s" % (",".join([x.id for x in self.param.pluginList])))
 
             # updater
             self.param.updater = McMirrorSiteUpdater(self.param)
@@ -95,4 +95,4 @@ class McDaemon:
             if not os.path.isdir(pluginPath):
                 raise Exception("Invalid configuration file %s" % (fn))
             pluginObj = McPlugin(pluginName, pluginPath)
-            self.pluginList.append(pluginObj)
+            self.param.pluginList.append(pluginObj)

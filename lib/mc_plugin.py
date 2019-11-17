@@ -40,12 +40,9 @@ class McPlugin:
         self.id = root.prop("id")
 
         # create objects
-        child = root.children
-        while child:
-            if child.name == "mirror-site":
-                obj = McMirrorSite(self, path, child)
-                self.mirrorSiteList.append(obj)
-            child = child.next
+        for child in root.xpathEval(".//mirror-site"):
+            obj = McMirrorSite(self, path, child)
+            self.mirrorSiteList.append(obj)
 
         # logger
         self._logger = logging.getLogger(self.id)
@@ -68,8 +65,8 @@ class McMirrorSite:
         self.dbObj = None
         if True:
             elem = rootElem.xpathEval(".//public-mirror-database")[0]
-            filename = os.path.join(pluginDir, elem.xpathEval(".//filename"))
-            classname = elem.xpathEval(".//classname")
+            filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
+            classname = elem.xpathEval(".//classname")[0].getContent()
             try:
                 f = open(filename)
                 m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
@@ -84,9 +81,8 @@ class McMirrorSite:
         self.sched = None
         if True:
             elem = rootElem.xpathEval(".//updater")[0]
-
-            filename = os.path.join(pluginDir, elem.xpathEval(".//filename"))
-            classname = elem.xpathEval(".//classname")
+            filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
+            classname = elem.xpathEval(".//classname")[0].getContent()
             try:
                 f = open(filename)
                 m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
@@ -96,7 +92,7 @@ class McMirrorSite:
             self.updaterObjApi = McMirrorSiteUpdaterApi(self)
             self.updaterObj = plugin_class(self.updaterObjApi)
 
-            self.sched = elem.xpathEval(".//scheduler")[0]
+            self.sched = elem.xpathEval(".//scheduler")[0].getContent()
             if self.sched == "oneshot":
                 self.sched = McMirrorSite.SCHED_ONESHOT
             elif self.sched == "periodical":
@@ -105,6 +101,9 @@ class McMirrorSite:
             elif self.sched == "follow":
                 self.sched = McMirrorSite.SCHED_FOLLOW
                 self.followMirrorSiteId = elem.xpathEval(".//follow-mirror-site")[0].getContent()
+                if " " not in self.followMirrorSiteId:
+                    # add plugin-id prefix if neccessary
+                    self.followMirrorSiteId = self.plugin.id + " " + self.followMirrorSiteId
             elif self.sched == "persist":
                 self.sched = McMirrorSite.SCHED_PERSIST
             else:
@@ -112,10 +111,8 @@ class McMirrorSite:
 
         # advertiser
         self.advertiseProtocolList = []
-        if True:
-            elem = rootElem.xpathEval(".//advertiser")[0]
-            for child in elem.children:
-                self.advertiseProtocolList.append(child.getContent())
+        for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//protocol"):
+            self.advertiseProtocolList.append(child.getContent())
 
 
 class McMirrorSiteUpdaterApi:

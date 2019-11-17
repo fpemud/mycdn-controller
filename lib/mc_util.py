@@ -8,12 +8,12 @@ import fcntl
 import struct
 import shutil
 import random
-import croniter
 import ipaddress
 import subprocess
 import multiprocessing
 from datetime import datetime
 from collections import OrderedDict
+from croniter import croniter
 from gi.repository import GLib
 from OpenSSL import crypto
 
@@ -317,7 +317,7 @@ class CronScheduler:
 
     def addJob(self, jobId, cronExpr, jobCallback):
         assert jobId not in self.jobDict
-        self.jobDict[jobId] = (croniter(cronExpr), jobCallback)
+        self.jobDict[jobId] = (croniter(cronExpr, datetime.now(), datetime), jobCallback)
         self._refreshTimeout()
 
     def removeJob(self, jobId):
@@ -329,14 +329,14 @@ class CronScheduler:
         nextJobCallbackList = []
         for iter, cb in self.jobDict.values():
             if nextDatetime is None:
-                nextDatetime = iter.get_next(datetime)
+                nextDatetime = iter.get_next()
                 nextJobCallbackList = [cb]
                 continue
-            if iter.get_next(datetime) == nextDatetime:
+            if iter.get_next() == nextDatetime:
                 nextJobCallbackList.append(cb)
                 continue
-            if iter.get_next(datetime) < nextDatetime:
-                nextDatetime = iter.get_next(datetime)
+            if iter.get_next() < nextDatetime:
+                nextDatetime = iter.get_next()
                 nextJobCallbackList = [cb]
                 continue
 
@@ -363,8 +363,8 @@ class CronScheduler:
         assert self.nextDatetime is None
         self.nextDatetime = nextDatetime
         self.nextJobCallbackList = nextJobCallbackList
-        self.timeoutHandler = GLib.timeout_add((self.nextDatetime - datetime.now()).total_seconds(),
-                                               self._jobCallback)
+        interval = (self.nextDatetime - datetime.now()).total_seconds()
+        self.timeoutHandler = GLib.timeout_add(interval, self._jobCallback)
 
     def _jobCallback(self):
         for jobCallback in self.nextJobCallbackList:
@@ -396,7 +396,7 @@ class HttpFileServer:
         assert self._proc is None
         homedir = os.path.dirname(self._dirlist[0])
         cmd = "/usr/bin/bozohttpd -b -f -H -I %d -s -X %s 2>%s" % (self._port, homedir, self._logfile)
-        self._proc = subprocess.Popen(cmd, shell=True, universial_newlines=True)
+        self._proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
 
     def stop(self):
         assert self._proc is not None

@@ -27,7 +27,7 @@
     </public-mirror-database>
     <updater>
       <filename>plugin.py</filename>
-      <classname>PortagePerodicalUpdater</classname>
+      <classname>PortagePeriodicalUpdater</classname>
       <scheduler>follow</scheduler>
       <follow-mirror-site>gentoo</follow-mirror-site>
     </updater>

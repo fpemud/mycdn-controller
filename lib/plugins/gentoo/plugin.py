@@ -156,7 +156,7 @@ class PeriodicalUpdater:
         self.api.notify_progress(100)
 
 
-class PortagePeridicalUpdater:
+class PortagePeriodicalUpdater:
 
     def __init__(self, api):
         self.api = api
