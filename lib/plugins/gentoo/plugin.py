@@ -158,7 +158,7 @@ class Updater:
             logFile = os.path.join(self.api.get_log_dir(), "rsync-init.log")
         else:
             logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
-        cmd = "/usr/bin/rsync -a --delete \"%s\" \"%s\"" % (source, dataDir)
+        cmd = "/usr/bin/rsync -a -z --delete \"%s\" \"%s\"" % (source, dataDir)
         self.proc = _ShellProc(cmd, self._finishCallback)
 
     def _finishCallback(self):
