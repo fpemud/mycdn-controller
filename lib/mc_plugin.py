@@ -52,8 +52,7 @@ class McMirrorSite:
 
     SCHED_ONESHOT = 0
     SCHED_PERIODICAL = 1
-    SCHED_FOLLOW = 2
-    SCHED_PERSIST = 3
+    SCHED_PERSIST = 2
 
     def __init__(self, param, plugin, pluginDir, rootElem):
         self.plugin = plugin
@@ -99,12 +98,6 @@ class McMirrorSite:
             elif self.sched == "periodical":
                 self.sched = McMirrorSite.SCHED_PERIODICAL
                 self.schedExpr = elem.xpathEval(".//cron-expression")[0].getContent()
-            elif self.sched == "follow":
-                self.sched = McMirrorSite.SCHED_FOLLOW
-                self.followMirrorSiteId = elem.xpathEval(".//follow-mirror-site")[0].getContent()
-                if " " not in self.followMirrorSiteId:
-                    # add plugin-id prefix if neccessary
-                    self.followMirrorSiteId = self.plugin.id + " " + self.followMirrorSiteId
             elif self.sched == "persist":
                 self.sched = McMirrorSite.SCHED_PERSIST
             else:
@@ -121,10 +114,12 @@ class McMirrorSiteUpdaterApi:
     def __init__(self, param, mirrorSite):
         self.param = param
         self.mirrorSite = mirrorSite
-        self.mcUpdater = None           # set by McMirrorSiteUpdater
-        self.updateStatus = None        # same as above
-        self.updateDatetime = None      # same as above
-        self.updateProgress = None      # same as above
+
+        # set by McMirrorSiteUpdater
+        self.updateStatus = None
+        self.updateDatetime = None
+        self.progress = None
+        self.progressNotifier = None
 
     def get_country(self):
         # FIXME
@@ -143,4 +138,4 @@ class McMirrorSiteUpdaterApi:
     def notify_progress(self, progress, finished):
         assert 0 <= progress <= 100
         assert finished is not None
-        self.mcUpdater._notifyProgress(self.mirrorSite, progress, finished)
+        self.progressNotifier(self.mirrorSite, progress, finished)

@@ -28,8 +28,8 @@
     <updater>
       <filename>plugin.py</filename>
       <classname>PortageUpdater</classname>
-      <scheduler>follow</scheduler>
-      <follow-mirror-site>gentoo</follow-mirror-site>
+      <scheduler>periodical</scheduler>
+      <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>
       <protocol>rsync</protocol>

@@ -285,6 +285,12 @@ class McUtil:
                 s.close()
         return True
 
+    @staticmethod
+    def touchFile(filename):
+        assert not os.path.exists(filename)
+        f = open(filename, 'w')
+        f.close()
+
 
 class StdoutRedirector:
 
@@ -320,81 +326,82 @@ class GLibCronScheduler:
 
     def addJob(self, jobId, cronExpr, jobCallback):
         assert jobId not in self.jobDict
-        iter = self._createCronIter(cronExpr)
-        self.jobDict[jobId] = (iter, jobCallback)
-        self._refreshTimeout()
 
-    def removeJob(self, jobId):
-        del self.jobDict[jobId]
-        self._refreshTimeout()
-
-    def _refreshTimeout(self):
         now = datetime.now()
 
-        nextDatetime = None
-        nextJobCallbackList = []
-        for iter, cb in self.jobDict.values():
-            if nextDatetime is None or self._getNextDatetime(now, iter) < nextDatetime:
-                nextDatetime = self._getNextDatetime(now, iter)
-                nextJobCallbackList = [cb]
+        # add job
+        iter = self._createCronIter(cronExpr, now)
+        self.jobDict[jobId] = (iter, jobCallback)
+
+        # add job or recalcluate timeout if it is first job
+        if self.nextDatetime is not None:
+            now = min(now, self.nextDatetime)
+            if self._getNextDatetime(now, iter) < self.nextDatetime:
+                self._clearTimeout()
+                self._calcTimeout(now)
+            elif self._getNextDatetime(now, iter) == self.nextDatetime:
+                self.nextJobCallbackList.append(jobCallback)
+        else:
+            self._calcTimeout(now)
+
+    def removeJob(self, jobId):
+        assert jobId in self.jobDict
+
+        # remove job
+        iter, jobCallback = self.jobDict[jobId]
+        del self.jobDict[jobId]
+
+        # recalculate timeout if neccessary
+        now = datetime.now()
+        if self.nextDatetime is not None:
+            if jobCallback in self.nextJobCallbackList:
+                self.nextJobCallbackList.remove(jobCallback)
+                if len(self.nextJobCallbackList) == 0:
+                    self._clearTimeout()
+                    self._calcTimeout(now)
+        else:
+            assert False
+
+    def _calcTimeout(self, now):
+        assert self.nextDatetime is None
+
+        for iter, jobCallback in self.jobDict.values():
+            if self.nextDatetime is None or self._getNextDatetime(now, iter) < self.nextDatetime:
+                self.nextDatetime = self._getNextDatetime(now, iter)
+                self.nextJobCallbackList = [jobCallback]
                 continue
-            if self._getNextDatetime(now, iter) == nextDatetime:
-                nextJobCallbackList.append(cb)
+            if self._getNextDatetime(now, iter) == self.nextDatetime:
+                self.nextJobCallbackList.append(jobCallback)
                 continue
 
-        if nextDatetime is None:
-            if self.nextDatetime is not None:
-                self._clearTimeout()
-        else:
-            if self.nextDatetime is None:
-                self._setTimeout(now, nextDatetime, nextJobCallbackList)
-            elif nextDatetime == self.nextDatetime:
-                self.nextJobCallbackList = nextJobCallbackList
-            else:
-                self._clearTimeout()
-                self._setTimeout(now, nextDatetime, nextJobCallbackList)
+        if self.nextDatetime is not None:
+            interval = int((self.nextDatetime - now).total_seconds())
+            self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
 
     def _clearTimeout(self):
         assert self.nextDatetime is not None
+
         GLib.source_remove(self.timeoutHandler)
         self.timeoutHandler = None
         self.nextJobCallbackList = None
         self.nextDatetime = None
 
-    def _setTimeout(self, now, nextDatetime, nextJobCallbackList):
-        assert self.nextDatetime is None
-        self.nextDatetime = nextDatetime
-        self.nextJobCallbackList = nextJobCallbackList
-        interval = int((self.nextDatetime - now).total_seconds())
-        self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
-
     def _jobCallback(self):
         for jobCallback in self.nextJobCallbackList:
             jobCallback(self.nextDatetime)
-        self._refreshTimeout()
+        self._clearTimeout()
+        self._calcTimeout()
         return False
 
-    def _createCronIter(self, cronExpr):
-        iter = croniter(cronExpr, datetime.now(), datetime)
+    def _createCronIter(self, cronExpr, curDatetime):
+        iter = croniter(cronExpr, curDatetime, datetime)
         iter.get_next()
         return iter
 
     def _getNextDatetime(self, curDatetime, croniterIter):
-        while croniterIter.get_current() <= curDatetime:
+        while croniterIter.get_current() < curDatetime:
             croniterIter.get_next()
         return croniterIter.get_current()
-
-
-class GLibCronSchedulerJob:
-
-    def is_ready(self):
-        assert False
-
-    def is_running(self):
-        assert False
-
-    def start(self, schedDatetime):
-        assert False
 
 
 class HttpFileServer:
