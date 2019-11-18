@@ -159,9 +159,13 @@ class Updater:
         else:
             logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
         cmd = "/usr/bin/rsync -a -z --delete \"%s\" \"%s\"" % (source, dataDir)
-        self.proc = _ShellProc(cmd, self._finishCallback)
+        self.proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
 
     def _finishCallback(self):
+        self.api.notify_progress(100, True)
+        self.proc = None
+
+    def _errorCallback(self):
         self.api.notify_progress(100, True)
         self.proc = None
 
@@ -174,7 +178,7 @@ class PortageUpdater(Updater):
 
 class _ShellProc:
 
-    def __init__(self, cmd, exitCallback):
+    def __init__(self, cmd, finishCallback, errorCallback):
         targc, targv = GLib.shell_parse_argv(cmd)
         flags = GLib.SpawnFlags.DO_NOT_REAP_CHILD | GLib.SpawnFlags.CHILD_INHERITS_STDIN | GLib.SpawnFlags.STDOUT_TO_DEV_NULL | GLib.SpawnFlags.STDERR_TO_DEV_NULL
         ret = GLib.spawn_async_with_fds(None,                                           # working_directory
@@ -189,16 +193,22 @@ class _ShellProc:
         if not ret[0]:
             raise Exception("failed to create process")
         self.pid = ret[1]
-        self.exitCallback = exitCallback
+        self.finishCallback = finishCallback
+        self.errorCallback = errorCallback
         self.pidWatch = GLib.child_watch_add(self.pid, self._exitCallback)
 
     def terminate(self):
         # FIXME
         pass
 
-    def _exitCallback(self, dummy1, dummy2):        # FIXME
-        self.exitCallback()
-        GLib.source_remove(self.pidWatch)
-        self.pidWatch = None
-        GLib.spawn_close_pid(self.pid)
-        self.pid = None
+    def _exitCallback(self, status, data):
+        try:
+            GLib.spawn_check_exit_status(status)
+            self.finishCallback()
+        except GLib.GError:
+            self.errorCallback()
+        finally:
+            GLib.source_remove(self.pidWatch)
+            self.pidWatch = None
+            GLib.spawn_close_pid(self.pid)
+            self.pid = None

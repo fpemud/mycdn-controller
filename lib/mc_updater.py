@@ -49,7 +49,11 @@ class McMirrorSiteUpdater:
         api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
         api.progress = 0
         api.progressNotifier = lambda a, b, c: self._notifyProgress("initializing", a, b, c)
-        mirrorSiteObj.updaterObj.init_start()
+        try:
+            mirrorSiteObj.updaterObj.init_start()
+        except:
+            # FIXME, don't know what to do
+            raise
         logging.info("Mirror site \"%s\" initializing starts." % (mirrorSiteObj.id))
 
     def _startUpdate(self, mirrorSiteObj, schedDatetime):
@@ -65,7 +69,11 @@ class McMirrorSiteUpdater:
             api.updateDatetime = schedDatetime
             api.progress = 0
             api.progressNotifier = lambda a, b, c: self._notifyProgress("updating", a, b, c)
-            mirrorSiteObj.updaterObj.update_start(schedDatetime)
+            try:
+                mirrorSiteObj.updaterObj.update_start(schedDatetime)
+            except:
+                # FIXME, don't know what to do
+                raise
             logging.info("Mirror site \"%s\" updating triggered on \"%s\"." % (mirrorSiteObj.id, tstr))
         else:
             assert False
