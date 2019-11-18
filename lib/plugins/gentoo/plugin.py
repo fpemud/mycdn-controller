@@ -191,8 +191,6 @@ class _ShellProc:
         self.pid = ret[1]
         self.exitCallback = exitCallback
         self.pidWatch = GLib.child_watch_add(self.pid, self._exitCallback)
-        print(self.pid)
-        os.waitpid(self.pid, 0)
 
     def terminate(self):
         # FIXME
@@ -202,6 +200,5 @@ class _ShellProc:
         self.exitCallback()
         GLib.source_remove(self.pidWatch)
         self.pidWatch = None
-        os.waitpid(self.pid, 0)
         GLib.spawn_close_pid(self.pid)
         self.pid = None

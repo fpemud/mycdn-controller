@@ -48,7 +48,7 @@ class McMirrorSiteUpdater:
         api = mirrorSiteObj.updaterObjApi
         api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
         api.progress = 0
-        api.progressNotifier = lambda a, b, c: self._notifyProgress("updating", a, b, c)
+        api.progressNotifier = lambda a, b, c: self._notifyProgress("initializing", a, b, c)
         mirrorSiteObj.updaterObj.init_start()
         logging.info("Mirror site \"%s\" initializing starts." % (mirrorSiteObj.id))
 
