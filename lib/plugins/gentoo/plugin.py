@@ -9,33 +9,29 @@ from gi.repository import GLib
 
 class Db:
 
-    dictOfficial = None
-    dictExtended = None
-
     def __init__(self):
         selfDir = os.path.dirname(os.path.realpath(__file__))
 
-        if Db.dictOfficial is None:
-            with open(os.path.join(selfDir, "db-official.json")) as f:
-                Db.dictOfficial = json.load(f)
+        self.dictOfficial = None
+        with open(os.path.join(selfDir, "db-official.json")) as f:
+            self.dictOfficial = json.load(f)
 
-        if Db.dictExtended is None:
-            Db.dictExtended = copy.deepcopy(Db.dictOfficial)
-            with open(os.path.join(selfDir, "db-extended.json")) as f:
-                Db.dictExtended.update(json.load(f))
+        self.dictExtended = copy.deepcopy(self.dictOfficial)
+        with open(os.path.join(selfDir, "db-extended.json")) as f:
+            self.dictExtended.update(json.load(f))
 
     def get(self, extended=False):
         if not extended:
-            return Db.dictOfficial
+            return self.dictOfficial
         else:
-            return Db.dictExtended
+            return self.dictExtended
 
     def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
         assert location is None or (country is not None and location is not None)
         assert protocolList is None or all(x in ["http", "ftp", "rsync"] for x in protocolList)
 
         # select database
-        srcDict = Db.dictOfficial if not extended else Db.dictExtended
+        srcDict = self.dictOfficial if not extended else self.dictExtended
 
         # country out of scope, we don't consider this condition
         if country is not None:
@@ -65,33 +61,29 @@ class Db:
 
 class PortageDb:
 
-    dictOfficial = None
-    dictExtended = None
-
     def __init__(self):
         selfDir = os.path.dirname(os.path.realpath(__file__))
 
-        if PortageDb.dictOfficial is None:
-            with open(os.path.join(selfDir, "db-official.json")) as f:
-                PortageDb.dictOfficial = self._convertDict(json.load(f))
+        self.dictOfficial = None
+        with open(os.path.join(selfDir, "db-official.json")) as f:
+            self.dictOfficial = self._convertDict(json.load(f))
 
-        if PortageDb.dictExtended is None:
-            PortageDb.dictExtended = copy.deepcopy(PortageDb.dictOfficial)
-            with open(os.path.join(selfDir, "db-extended.json")) as f:
-                PortageDb.dictExtended.update(self._convertDict(json.load(f)))
+        self.dictExtended = copy.deepcopy(self.dictOfficial)
+        with open(os.path.join(selfDir, "db-extended.json")) as f:
+            self.dictExtended.update(self._convertDict(json.load(f)))
 
     def get(self, extended=False):
         if not extended:
-            return PortageDb.dictOfficial
+            return self.dictOfficial
         else:
-            return PortageDb.dictExtended
+            return self.dictExtended
 
     def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
         assert location is None or (country is not None and location is not None)
         assert protocolList is None or protocolList == ["rsync"]
 
         # select database
-        srcDict = PortageDb.dictOfficial if not extended else PortageDb.dictExtended
+        srcDict = self.dictOfficial if not extended else self.dictExtended
 
         # country out of scope, we don't consider this condition
         if country is not None:
@@ -137,9 +129,13 @@ class PortageDb:
 
 class Updater:
 
-    def __init__(self, api):
+    def __init__(self, api, gentooOrGentooPortage=True):
         self.api = api
         self.proc = None
+        if gentooOrGentooPortage:
+            self.db = Db()
+        else:
+            self.db = PortageDb()
 
     def init_start(self):
         assert self.proc is None
@@ -156,60 +152,47 @@ class Updater:
         self.proc.terminate()
 
     def _start(self, schedDatetime):
-        source = Db().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
+        source = self.db.query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
         if schedDatetime is None:
             logFile = os.path.join(self.api.get_log_dir(), "rsync-init.log")
         else:
             logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
-        cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
-        self.proc = _ShellProc(cmd, self._finishCallback)
-
-    def _finishCallback(self, proc):
-        self.api.notify_progress(100)
-
-
-class PortageUpdater:
-
-    def __init__(self, api):
-        self.api = api
-        self.proc = None
-
-    def init_start(self):
-        assert self.proc is None
-        self._start(None)
-
-    def init_stop(self):
-        self.proc.terminate()
-
-    def update_start(self, schedDatetime):
-        assert self.proc is None
-        self._start(schedDatetime)
-
-    def update_stop(self):
-        self.proc.terminate()
-
-    def _start(self, schedDatetime):
-        source = Db().query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
-        dataDir = self.api.get_data_dir()
-        if schedDatetime is None:
-            logFile = os.path.join(self.api.get_log_dir(), "rsync-init.log")
-        else:
-            logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
-        cmd = "/usr/bin/rsync -q -a --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
+        cmd = "/usr/bin/rsync -a --delete \"%s\" \"%s\"" % (source, dataDir)
         self.proc = _ShellProc(cmd, self._finishCallback)
 
     def _finishCallback(self):
         self.api.notify_progress(100, True)
+        self.proc = None
+
+
+class PortageUpdater(Updater):
+
+    def __init__(self, api):
+        super().__init__(api, False)
 
 
 class _ShellProc:
 
     def __init__(self, cmd, exitCallback):
         targc, targv = GLib.shell_parse_argv(cmd)
+        flags = GLib.SpawnFlags.DO_NOT_REAP_CHILD | GLib.SpawnFlags.CHILD_INHERITS_STDIN | GLib.SpawnFlags.STDOUT_TO_DEV_NULL | GLib.SpawnFlags.STDERR_TO_DEV_NULL
+        ret = GLib.spawn_async_with_fds(None,                                           # working_directory
+                                        targv,                                          # argv
+                                        None,                                           # envp
+                                        flags,                                          # flags
+                                        None,                                           # child_setup
+                                        None,                                           # user_data
+                                        -1,                                             # stdin_fd
+                                        -1,                                             # stdout_fd
+                                        -1)                                             # stderr_fd
+        if not ret[0]:
+            raise Exception("failed to create process")
+        self.pid = ret[1]
         self.exitCallback = exitCallback
-        self.pid = GLib.spawn_async(targv, flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD)[0]
         self.pidWatch = GLib.child_watch_add(self.pid, self._exitCallback)
+        print(self.pid)
+        os.waitpid(self.pid, 0)
 
     def terminate(self):
         # FIXME

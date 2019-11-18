@@ -84,7 +84,7 @@ class McDaemon:
             if self.param.avahiObj is not None:
                 self.param.avahiObj.stop()
             if self.param.apiServer is not None:
-                self.param.apiServer.stop()
+                self.param.apiServer.dispose()
             if self.param.updater is not None:
                 self.param.updater.dispose()
             if self.param.advertiser is not None:
