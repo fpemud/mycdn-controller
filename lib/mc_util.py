@@ -304,14 +304,6 @@ class StdoutRedirector:
 
 class GLibCronScheduler:
 
-    class Job:
-        def is_ready(self):
-            assert False
-        def is_running(self):
-            assert False
-        def start(self, schedDatetime):
-            assert False
-
     def __init__(self):
         self.jobDict = OrderedDict()       # dict<id,(iter,callback)>
         self.nextDatetime = None
@@ -391,6 +383,18 @@ class GLibCronScheduler:
         while croniterIter.get_current() <= curDatetime:
             croniterIter.get_next()
         return croniterIter.get_current()
+
+
+class GLibCronSchedulerJob:
+
+    def is_ready(self):
+        assert False
+
+    def is_running(self):
+        assert False
+
+    def start(self, schedDatetime):
+        assert False
 
 
 class HttpFileServer:

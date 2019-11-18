@@ -5,6 +5,7 @@ import os
 import logging
 from mc_util import McUtil
 from mc_util import GLibCronScheduler
+from mc_util import GLibCronSchedulerJobBase
 from mc_plugin import McMirrorSite
 
 
@@ -36,12 +37,12 @@ class McMirrorSiteUpdater:
             if ms.sched == McMirrorSite.SCHED_ONESHOT:
                 assert False
             elif ms.sched == McMirrorSite.SCHED_PERIODICAL:
-                self.scheduler.addJob(ms.id, _JobPeriodical(ms))
+                self.scheduler.addJob(ms.id, ms.schedExpr, _JobPeriodical(ms))
             elif ms.sched == McMirrorSite.SCHED_FOLLOW:
                 followMsObj = self.param.getMirrorSite(ms.followMirrorSiteId)
                 print(ms.followMirrorSiteId)
                 assert followMsObj is not None
-                self.scheduler.addJob(ms.id, followMsObj.schedExpr, lambda x: self._startUpdate(ms, x))
+                self.scheduler.addJob(ms.id, followMsObj.schedExpr, _JobPeriodical(ms))
             elif ms.sched == McMirrorSite.SCHED_PERSIST:
                 assert False
             else:
@@ -73,15 +74,11 @@ class McMirrorSiteUpdater:
             logging.info("Mirror site \"%s\" updating progress %d%%." % (mirrorSiteObj.id, progress))
 
 
-class _JobPeriodical:
+class _JobPeriodical(GLibCronSchedulerJob):
 
     def __init__(self, mirrorSite):
         self.mirrorSite = mirrorSite
         self.api = self.mirrorSite.updaterObjApi
-
-    @property
-    def cron_expr(self):
-        return self.mirrorSite.schedExpr
 
     def is_ready(self):
         return self.api.updateStatus != McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
