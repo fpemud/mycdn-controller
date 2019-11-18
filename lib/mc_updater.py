@@ -77,7 +77,7 @@ class McMirrorSiteUpdater:
         if finished:
             assert progress == 100
             if what == "initializing":
-                os.unlink(self._initFlagFile(mirrorSiteObj))
+                McUtil.forceDelete(self._initFlagFile(mirrorSiteObj))
                 self._addScheduleJob(mirrorSiteObj)
             mirrorSiteObj.updaterObjApi.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" %s finished." % (mirrorSiteObj.id, what))
