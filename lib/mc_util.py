@@ -390,7 +390,7 @@ class GLibCronScheduler:
         for jobCallback in self.nextJobCallbackList:
             jobCallback(self.nextDatetime)
         self._clearTimeout()
-        self._calcTimeout()
+        self._calcTimeout(datetime.now())           # self._calcTimeout(self.nextDatetime) is stricter but less robust
         return False
 
     def _createCronIter(self, cronExpr, curDatetime):
