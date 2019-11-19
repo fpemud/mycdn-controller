@@ -4,6 +4,7 @@
 import os
 import sys
 import dbus
+import math
 import fcntl
 import struct
 import shutil
@@ -375,7 +376,8 @@ class GLibCronScheduler:
                 continue
 
         if self.nextDatetime is not None:
-            interval = int((self.nextDatetime - now).total_seconds())
+            interval = math.ceil((self.nextDatetime - now).total_seconds())
+            assert interval > 0
             self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
 
     def _clearTimeout(self):
