@@ -158,7 +158,7 @@ class Updater:
             logFile = os.path.join(self.api.get_log_dir(), "rsync-init.log")
         else:
             logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
-        cmd = "/usr/bin/rsync -a -z --delete \"%s\" \"%s\"" % (source, dataDir)
+        cmd = "/usr/bin/rsync -a -z --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
         self.proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
 
     def _finishCallback(self):
@@ -179,17 +179,8 @@ class PortageUpdater(Updater):
 class _ShellProc:
 
     def __init__(self, cmd, finishCallback, errorCallback):
-        targc, targv = GLib.shell_parse_argv(cmd)
-        flags = GLib.SpawnFlags.DO_NOT_REAP_CHILD | GLib.SpawnFlags.CHILD_INHERITS_STDIN | GLib.SpawnFlags.STDOUT_TO_DEV_NULL | GLib.SpawnFlags.STDERR_TO_DEV_NULL
-        ret = GLib.spawn_async_with_fds(None,                                           # working_directory
-                                        targv,                                          # argv
-                                        None,                                           # envp
-                                        flags,                                          # flags
-                                        None,                                           # child_setup
-                                        None,                                           # user_data
-                                        -1,                                             # stdin_fd
-                                        -1,                                             # stdout_fd
-                                        -1)                                             # stderr_fd
+        targc, targv = GLib.shell_parse_argv("/bin/sh -c \"%s\"" % (cmd))
+        ret = GLib.spawn_async(targv, flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD)
         if not ret[0]:
             raise Exception("failed to create process")
         self.pid = ret[1]
@@ -212,3 +203,16 @@ class _ShellProc:
             self.pidWatch = None
             GLib.spawn_close_pid(self.pid)
             self.pid = None
+
+
+
+# flags = GLib.SpawnFlags.DO_NOT_REAP_CHILD | GLib.SpawnFlags.CHILD_INHERITS_STDIN | GLib.SpawnFlags.STDOUT_TO_DEV_NULL | GLib.SpawnFlags.STDERR_TO_DEV_NULL
+# ret = GLib.spawn_async_with_fds(None,                                           # working_directory
+#                                 targv,                                          # argv
+#                                 None,                                           # envp
+#                                 flags,                                          # flags
+#                                 None,                                           # child_setup
+#                                 None,                                           # user_data
+#                                 -1,                                             # stdin_fd
+#                                 -1,                                             # stdout_fd
+#                                 -1)                                             # stderr_fd
