@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin id="driveoff-drivepack">
+  <mirror-site id="driveoff-drivepack">
+    <name>Driveoff Driver Pack</name>
+    <data-directory>driveofff-drivepack</data-directory>
+    <updater>
+      <filename>plugin.py</filename>
+      <classname>Updater</classname>
+      <scheduler>periodical</scheduler>
+      <cron-expression>0 0 * * 0</cron-expression>
+    </updater>
+    <advertiser>
+      <protocol>http</protocol>
+      <protocol>ftp</protocol>
+    </advertiser>
+  </mirror-site>
+</plugin>

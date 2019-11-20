@@ -3,15 +3,25 @@
 
 import os
 import imp
-import logging
 import libxml2
 
 
-class McPlugin:
+class McPluginManager:
 
-    def __init__(self, param, name, path):
-        self.mirrorSiteList = []
+    def __init__(self, param):
+        self.param = param
 
+    def loadPlugins(self):
+        for fn in os.listdir(self.param.etcDir):
+            if not fn.endswith(".conf"):
+                continue
+            pluginName = fn.replace(".conf", "")
+            pluginPath = os.path.join(self.param.pluginsDir, pluginName)
+            if not os.path.isdir(pluginPath):
+                raise Exception("Invalid configuration file %s" % (fn))
+            self._load(self.param, pluginName, pluginPath)
+
+    def _load(self, name, path):
         # get metadata.xml file
         metadata_file = os.path.join(path, "metadata.xml")
         if not os.path.exists(metadata_file):
@@ -39,13 +49,35 @@ class McPlugin:
         root = tree.getRootElement()
         self.id = root.prop("id")
 
-        # create objects
+        # create McPublicMirrorDatabase objects
+        for child in root.xpathEval(".//public-mirror-database"):
+            obj = McPublicMirrorDatabase(param, self, path, child)
+            assert obj.id not in [x.id for x in self.param.McPublicMirrorDatabase]     # FIXME
+            self.param.publicMirrorDatabaseList.append(obj)
+
+        # create McMirrorSite objects
         for child in root.xpathEval(".//mirror-site"):
             obj = McMirrorSite(param, self, path, child)
-            self.mirrorSiteList.append(obj)
+            assert obj.id not in [x.id for x in self.param.mirrorSiteList]             # FIXME
+            self.param.mirrorSiteList.append(obj)
 
-        # logger
-        self._logger = logging.getLogger(self.id)
+        self.param.pluginList.append(pluginName)
+
+
+class McPublicMirrorDatabase:
+
+    def __init__(self, param, plugin, pluginDir, rootElem):
+        self.dbObj = None
+        if True:
+            filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
+            classname = elem.xpathEval(".//classname")[0].getContent()
+            try:
+                f = open(filename)
+                m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+                plugin_class = getattr(m, classname)
+            except:
+                raise Exception("syntax error")
+            self.dbObj = plugin_class()
 
 
 class McMirrorSite:
@@ -56,24 +88,10 @@ class McMirrorSite:
 
     def __init__(self, param, plugin, pluginDir, rootElem):
         self.plugin = plugin
-        self.id = plugin.id + " " + rootElem.prop("id")
+        self.id = rootElem.prop("id")
 
         self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
         self.dataDir = os.path.join(param.cacheDir, self.dataDir)
-
-        # database
-        self.dbObj = None
-        if True:
-            elem = rootElem.xpathEval(".//public-mirror-database")[0]
-            filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
-            classname = elem.xpathEval(".//classname")[0].getContent()
-            try:
-                f = open(filename)
-                m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-                plugin_class = getattr(m, classname)
-            except:
-                raise Exception("syntax error")
-            self.dbObj = plugin_class()
 
         # updater
         self.updaterObjApi = None

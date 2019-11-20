@@ -9,6 +9,7 @@ class McParam:
     def __init__(self):
         self.etcDir = "/etc/mycdn"
         self.libDir = "/usr/lib/mycdn"
+        self.pluginsDir = os.path.join(self.libDir, "plugins")
         self.cacheDir = "/var/cache/mycdn"
         self.runDir = "/run/mycdn"
         self.logDir = "/var/log/mycdn"
@@ -16,8 +17,9 @@ class McParam:
 
         self.cfg = None
 
-        self.pluginsDir = os.path.join(self.libDir, "plugins")
         self.pluginList = []
+        self.publicMirrorDatabaseList = []
+        self.mirrorSiteList = []
 
         self.listenIp = "0.0.0.0"
 
@@ -29,24 +31,12 @@ class McParam:
         self.avahiSupport = True
 
         # objects
-        self.updater = None
-        self.advertiser = None
+        self.mainloop = None
+        self.pluginManager = None
         self.apiServer = None
         self.avahiObj = None
-        self.mainloop = None
-
-    def getMirrorSiteList(self):
-        ret = []
-        for plugin in self.pluginList:
-            ret += plugin.mirrorSiteList
-        return ret
-
-    def getMirrorSite(self, mirrorSiteId):
-        for plugin in self.pluginList:
-            for ms in plugin.mirrorSiteList:
-                if ms.id == mirrorSiteId:
-                    return ms
-        return None
+        self.updater = None
+        self.advertiser = None
 
 
 class McConfig:

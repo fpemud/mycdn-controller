@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin id="gentoo">
+  <public-mirror-database id="gentoo">
+    <filename>plugin.py</filename>
+    <classname>Db</classname>
+  </public-mirror-database>
+  <public-mirror-database id="gentoo-portage">
+    <filename>plugin.py</filename>
+    <classname>PortageDb</classname>
+  </public-mirror-database>
   <mirror-site id="gentoo">
     <name>Gentoo Source Mirror</name>
     <data-directory>gentoo</data-directory>
-    <public-mirror-database>
-      <filename>plugin.py</filename>
-      <classname>Db</classname>
-    </public-mirror-database>
     <updater>
       <filename>plugin.py</filename>
       <classname>Updater</classname>
@@ -21,10 +25,6 @@
   <mirror-site id="gentoo-portage">
     <name>Gentoo Portage</name>
     <data-directory>gentoo-portage</data-directory>
-    <public-mirror-database>
-      <filename>plugin.py</filename>
-      <classname>PortageDb</classname>
-    </public-mirror-database>
     <updater>
       <filename>plugin.py</filename>
       <classname>PortageUpdater</classname>

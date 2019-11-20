@@ -18,7 +18,7 @@ class McMirrorSiteUpdater:
         self.param = param
         self.scheduler = GLibCronScheduler()
 
-        for ms in self.param.getMirrorSiteList():
+        for ms in self.param.mirrorSiteList:
             # initialize data directory
             fullDir = os.path.join(self.param.cacheDir, ms.dataDir)
             if not os.path.exists(fullDir):
@@ -41,8 +41,10 @@ class McMirrorSiteUpdater:
         self.scheduler = None
 
     def getMirrorSiteUpdateStatus(self, mirrorSiteId):
-        msObj = self.param.getMirrorSite(mirrorSiteId)
-        return msObj.updaterObjApi.updateStatus
+        for ms in self.param.mirrorSiteList:
+            if ms.id == mirrorSiteId:
+                return ms.updateObjApi.updateStatus
+        assert False
 
     def _startInit(self, mirrorSiteObj):
         api = mirrorSiteObj.updaterObjApi

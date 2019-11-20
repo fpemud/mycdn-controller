@@ -154,11 +154,8 @@ class Updater:
     def _start(self, schedDatetime):
         source = self.db.query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
-        if schedDatetime is None:
-            logFile = os.path.join(self.api.get_log_dir(), "rsync-init.log")
-        else:
-            logFile = os.path.join(self.api.get_log_dir(), "rsync-%s.log" % (schedDatetime))
-        cmd = "/usr/bin/rsync -a -z --delete \"%s\" \"%s\" >\"%s\" 2>&1" % (source, dataDir, logFile)
+        logFile = os.path.join(self.api.get_log_dir(), "rsync.log")
+        cmd = "/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (source, dataDir, logFile)
         self.proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
 
     def _finishCallback(self):
