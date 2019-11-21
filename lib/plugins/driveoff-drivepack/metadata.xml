@@ -4,6 +4,7 @@
     <name>Driveoff Driver Pack</name>
     <data-directory>driveofff-drivepack</data-directory>
     <updater>
+      <executable-init></executable-init>
       <filename>plugin.py</filename>
       <classname>Updater</classname>
       <scheduler>periodical</scheduler>

@@ -122,6 +122,65 @@ class Updater:
         self.linkDict = None
 
 
+class _UpdateThread(threading.Thread):
+
+    def __init__(self, api):
+        self.api = api
+        self.progress = 0
+        self.stop = False
+
+    def run(self):
+        logFile = os.path.join(self.api.get_log_dir(), "wget.log")
+
+        # fetch web pages
+        # retrived from "http://driveroff.net/category/dp", it's in russian, do use google webpage translator
+        linkDict = OrderedDict()
+        i = 1
+        while True:
+            url = "http://www.gigabase.com/folder/cbcv8AZeKsHjAkenvVrjPQBB?page=%d" % (i)
+            root = _Util.getWebPageElementTree(url)
+            found = False
+            for elem in root.xpath(".//a"):
+                if elem.text is None:
+                    continue
+                if not elem.text.startswith("DP_"):
+                    continue
+                m = re.match("(DP_.*)_([0-9]+)\\.7z", elem.text)
+                if m.group(1) in self.linkDict:
+                    if m.group(2) < self.linkDict[m.group(1)][1]:
+                        continue
+                linkDict[m.group(1)] = (m.group(0), m.group(2), elem.attrib["href"])
+                found = True
+            if not found:
+                break
+            i += 1
+
+        # download driver pack file one by one
+        i = 0
+        for prefix, v in linkDict.items():
+            filename, timeStr, url = v
+            fullfn = os.path.join(self.api.get_data_dir(), filename)
+
+            # check if file is cached
+            if os.path.exists(fullfn):
+                continue
+
+            # get real download url, gigabase sucks
+            downloadUrl = None
+            if True:
+                for elem in _Util.getWebPageElementTree(url).xpath(".//a"):
+                    if elem.text == "Download file":
+                        downloadUrl = elem.attrib["href"]
+                        break
+                assert downloadUrl is not None
+
+            # download
+            self.wgetProc = _GLibWgetProc(downloadUrl, self.api.get_data_dir(), filename, logFile, self._downloadOneFileCallback)
+
+
+
+
+
 class _GLibWgetProc:
 
     def __init__(self, url, dir, filename, logFile, endCallback):
