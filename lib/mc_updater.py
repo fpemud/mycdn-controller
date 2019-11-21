@@ -5,7 +5,6 @@ import os
 import logging
 from mc_util import McUtil
 from mc_util import GLibCronScheduler
-from mc_plugin import McMirrorSite
 
 
 class McMirrorSiteUpdater:
@@ -95,14 +94,40 @@ class McMirrorSiteUpdater:
             logging.info("Mirror site \"%s\" %s progress %d%%." % (mirrorSiteObj.id, what, progress))
 
     def _initFlagFile(self, mirrorSiteObj):
-        return os.path.join(self.param.cacheDir, mirrorSiteObj.dataDir, ".uninitialized")
+        return os.path.join(self.param.cacheDir, mirrorSiteObj.dataDir + ".uninitialized")
 
     def _addScheduleJob(self, mirrorSiteObj):
-        if mirrorSiteObj.sched == McMirrorSite.SCHED_ONESHOT:
-            assert False
-        elif mirrorSiteObj.sched == McMirrorSite.SCHED_PERIODICAL:
-            self.scheduler.addJob(mirrorSiteObj.id, mirrorSiteObj.schedExpr, lambda a: self._startUpdate(mirrorSiteObj, a))
-        elif mirrorSiteObj.sched == McMirrorSite.SCHED_PERSIST:
-            assert False
-        else:
-            assert False
+        self.scheduler.addJob(mirrorSiteObj.id, mirrorSiteObj.schedExpr, lambda a: self._startUpdate(mirrorSiteObj, a))
+
+
+class McMirrorSiteUpdaterApi:
+
+    def __init__(self, param, mirrorSite):
+        self.param = param
+        self.mirrorSite = mirrorSite
+
+        # set by McMirrorSiteUpdater
+        self.updateStatus = None
+        self.updateDatetime = None
+        self.progress = None
+        self.progressNotifier = None
+
+    def get_country(self):
+        # FIXME
+        return "CN"
+
+    def get_location(self):
+        # FIXME
+        return None
+
+    def get_data_dir(self):
+        return self.mirrorSite.dataDir
+
+    def get_log_dir(self):
+        return self.param.logDir
+
+    def notify_progress(self, progress, finished):
+        assert 0 <= progress <= 100
+        assert finished is not None
+        self.progressNotifier(self.mirrorSite, progress, finished)
+

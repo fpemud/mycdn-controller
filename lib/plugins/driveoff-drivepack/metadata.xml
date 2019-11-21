@@ -4,11 +4,10 @@
     <name>Driveoff Driver Pack</name>
     <data-directory>driveofff-drivepack</data-directory>
     <updater>
-      <executable-init></executable-init>
       <filename>plugin.py</filename>
       <classname>Updater</classname>
-      <scheduler>periodical</scheduler>
       <cron-expression>0 0 * * 0</cron-expression>
+      <use-worker-process>true</use-worker-process>
     </updater>
     <advertiser>
       <protocol>http</protocol>

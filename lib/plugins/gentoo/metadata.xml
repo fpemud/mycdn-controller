@@ -14,7 +14,6 @@
     <updater>
       <filename>plugin.py</filename>
       <classname>Updater</classname>
-      <scheduler>periodical</scheduler>
       <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>
@@ -28,7 +27,6 @@
     <updater>
       <filename>plugin.py</filename>
       <classname>PortageUpdater</classname>
-      <scheduler>periodical</scheduler>
       <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>

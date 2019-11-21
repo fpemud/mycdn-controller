@@ -4,6 +4,7 @@
 import os
 import imp
 import libxml2
+from mc_updater import McMirrorSiteUpdaterApi
 
 
 class McPluginManager:
@@ -56,7 +57,7 @@ class McPluginManager:
 
         # create McMirrorSite objects
         for child in root.xpathEval(".//mirror-site"):
-            obj = McMirrorSite(self.param, self, path, child)
+            obj = McMirrorSite(self.param, path, child)
             assert obj.id not in [x.id for x in self.param.mirrorSiteList]             # FIXME
             self.param.mirrorSiteList.append(obj)
 
@@ -82,12 +83,7 @@ class McPublicMirrorDatabase:
 
 class McMirrorSite:
 
-    SCHED_ONESHOT = 0
-    SCHED_PERIODICAL = 1
-    SCHED_PERSIST = 2
-
-    def __init__(self, param, plugin, pluginDir, rootElem):
-        self.plugin = plugin
+    def __init__(self, param, pluginDir, rootElem):
         self.id = rootElem.prop("id")
 
         self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
@@ -96,9 +92,19 @@ class McMirrorSite:
         # updater
         self.updaterObjApi = None
         self.updaterObj = None
-        self.sched = None
+        self.schedExpr = None
+        self.useWorkerProc = None
         if True:
             elem = rootElem.xpathEval(".//updater")[0]
+
+            self.schedExpr = elem.xpathEval(".//cron-expression")[0].getContent()
+
+            ret = elem.xpathEval("../use-worker-process")
+            if len(ret) > 0 and ret[0].getContent() == "true":
+                self.useWorkerProc = True
+            else:
+                self.useWorkerProc = False
+
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
             try:
@@ -110,50 +116,46 @@ class McMirrorSite:
             self.updaterObjApi = McMirrorSiteUpdaterApi(param, self)
             self.updaterObj = plugin_class(self.updaterObjApi)
 
-            self.sched = elem.xpathEval(".//scheduler")[0].getContent()
-            if self.sched == "oneshot":
-                self.sched = McMirrorSite.SCHED_ONESHOT
-            elif self.sched == "periodical":
-                self.sched = McMirrorSite.SCHED_PERIODICAL
-                self.schedExpr = elem.xpathEval(".//cron-expression")[0].getContent()
-            elif self.sched == "persist":
-                self.sched = McMirrorSite.SCHED_PERSIST
-            else:
-                assert False
-
         # advertiser
         self.advertiseProtocolList = []
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//protocol"):
             self.advertiseProtocolList.append(child.getContent())
 
 
-class McMirrorSiteUpdaterApi:
+class TemplatePublicMirrorDatabase:
 
-    def __init__(self, param, mirrorSite):
-        self.param = param
-        self.mirrorSite = mirrorSite
+    def get(self, extended=False):
+        assert False
+    
+    def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
+        assert False
 
-        # set by McMirrorSiteUpdater
-        self.updateStatus = None
-        self.updateDatetime = None
-        self.progress = None
-        self.progressNotifier = None
 
-    def get_country(self):
-        # FIXME
-        return "CN"
+class TemplateMirrorSiteUpdater:
 
-    def get_location(self):
-        # FIXME
-        return None
+    def __init__(self, api):
+        assert False
 
-    def get_data_dir(self):
-        return self.mirrorSite.dataDir
+    def init_start(self):
+        assert False
 
-    def get_log_dir(self):
-        return self.param.logDir
+    def init_stop(self):
+        assert False
 
-    def notify_progress(self, progress, finished):
-        assert 0 <= progress <= 100
-        assert finished is not None
-        self.progressNotifier(self.mirrorSite, progress, finished)
+    def update_start(self):
+        assert False
+
+    def update_stop(self):
+        assert False
+
+
+class TemplateMirrorSiteUpdaterInWorkerProcess:
+
+    def __init__(self, api):
+        assert False
+
+    def init(self):
+        assert False
+
+    def update(self):
+        assert False
