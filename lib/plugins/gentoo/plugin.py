@@ -202,7 +202,6 @@ class _ShellProc:
             self.pid = None
 
 
-
 # flags = GLib.SpawnFlags.DO_NOT_REAP_CHILD | GLib.SpawnFlags.CHILD_INHERITS_STDIN | GLib.SpawnFlags.STDOUT_TO_DEV_NULL | GLib.SpawnFlags.STDERR_TO_DEV_NULL
 # ret = GLib.spawn_async_with_fds(None,                                           # working_directory
 #                                 targv,                                          # argv

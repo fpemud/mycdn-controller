@@ -12,7 +12,7 @@ from mc_util import McUtil
 from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
 from mc_param import McConfig
-from mc_plugin import McPlugin
+from mc_plugin import McPluginManager
 from mc_api_server import McApiServer
 from mc_updater import McMirrorSiteUpdater
 from mc_advertiser import McAdvertiser

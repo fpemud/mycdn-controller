@@ -47,21 +47,21 @@ class McPluginManager:
 
         # get data from metadata.xml file
         root = tree.getRootElement()
-        self.id = root.prop("id")
 
         # create McPublicMirrorDatabase objects
         for child in root.xpathEval(".//public-mirror-database"):
-            obj = McPublicMirrorDatabase(param, self, path, child)
+            obj = McPublicMirrorDatabase(self.param, self, path, child)
             assert obj.id not in [x.id for x in self.param.McPublicMirrorDatabase]     # FIXME
             self.param.publicMirrorDatabaseList.append(obj)
 
         # create McMirrorSite objects
         for child in root.xpathEval(".//mirror-site"):
-            obj = McMirrorSite(param, self, path, child)
+            obj = McMirrorSite(self.param, self, path, child)
             assert obj.id not in [x.id for x in self.param.mirrorSiteList]             # FIXME
             self.param.mirrorSiteList.append(obj)
 
-        self.param.pluginList.append(pluginName)
+        # record plugin id
+        self.param.pluginList.append(root.prop("id"))
 
 
 class McPublicMirrorDatabase:
@@ -69,8 +69,8 @@ class McPublicMirrorDatabase:
     def __init__(self, param, plugin, pluginDir, rootElem):
         self.dbObj = None
         if True:
-            filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
-            classname = elem.xpathEval(".//classname")[0].getContent()
+            filename = os.path.join(pluginDir, rootElem.xpathEval(".//filename")[0].getContent())
+            classname = rootElem.xpathEval(".//classname")[0].getContent()
             try:
                 f = open(filename)
                 m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
