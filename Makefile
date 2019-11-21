@@ -12,10 +12,10 @@ install:
 	install -d -m 0755 "$(DESTDIR)/$(prefix)/sbin"
 	install -m 0755 mycdn-daemon "$(DESTDIR)/$(prefix)/sbin"
 
-	install -d -m 0755 "$(DESTDIR)/$(prefix)/lib/mycdn"
-	cp -r lib/* "$(DESTDIR)/$(prefix)/lib/mycdn"
-	find "$(DESTDIR)/$(prefix)/lib/mycdn" -type f | xargs chmod 644
-	find "$(DESTDIR)/$(prefix)/lib/mycdn" -type d | xargs chmod 755
+	install -d -m 0755 "$(DESTDIR)/$(prefix)/lib64/mycdn"
+	cp -r lib/* "$(DESTDIR)/$(prefix)/lib64/mycdn"
+	find "$(DESTDIR)/$(prefix)/lib64/mycdn" -type f | xargs chmod 644
+	find "$(DESTDIR)/$(prefix)/lib64/mycdn" -type d | xargs chmod 755
 
 	install -d -m 0755 "$(DESTDIR)/etc/mycdn"
 	cp -r etc/* "$(DESTDIR)/etc/mycdn"
@@ -28,7 +28,7 @@ uninstall:
 	rm -f "$(DESTDIR)/$(prefix)/bin/mycdn"
 	rm -f "$(DESTDIR)/$(prefix)/sbin/mycdn-daemon"
 	rm -f "$(DESTDIR)/$(prefix)/lib/systemd/system/mycdn-daemon.service"
-	rm -rf "$(DESTDIR)/$(prefix)/lib/mycdn"
+	rm -rf "$(DESTDIR)/$(prefix)/lib64/mycdn"
 	rm -rf "$(DESTDIR)/etc/mycdn"
 
 .PHONY: all clean install uninstall
