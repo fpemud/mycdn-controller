@@ -86,6 +86,7 @@ class McMirrorSite:
     def __init__(self, param, pluginDir, rootElem):
         self.id = rootElem.prop("id")
 
+        # data directory
         self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
         self.dataDir = os.path.join(param.cacheDir, self.dataDir)
 

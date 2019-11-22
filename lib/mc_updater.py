@@ -9,68 +9,47 @@ from mc_util import GLibCronScheduler
 
 class McMirrorSiteUpdater:
 
-    MIRROR_SITE_UPDATE_STATUS_INIT = 0
-    MIRROR_SITE_UPDATE_STATUS_IDLE = 1
-    MIRROR_SITE_UPDATE_STATUS_SYNC = 2
-
     def __init__(self, param):
         self.param = param
         self.scheduler = GLibCronScheduler()
-        self.updateProxyDict = dict()
+        self.updateProxyDict = dict()           # dict<mirror-site-id,update-proxy-object>
 
         for ms in self.param.mirrorSiteList:
-            proxy = _UpdateProxyMirrorSite(self, ms)
-            self.updateProxyDict[ms] = proxy
-
             # initialize data directory
             fullDir = os.path.join(self.param.cacheDir, ms.dataDir)
             if not os.path.exists(fullDir):
                 os.makedirs(fullDir)
                 McUtil.touchFile(self._initFlagFile(ms))
-                proxy.initStart()
-                continue
 
-            # initialize data
             if os.path.exists(self._initFlagFile(ms)):
+                # initialize data
+                proxy = _UpdateProxyMirrorSite(ms, self._notifyProgress, _UpdateProxyMirrorSite.STATUS_INIT)
                 proxy.initStart()
-                continue
+            else:
+                # add update job
+                proxy = _UpdateProxyMirrorSite(ms, self._notifyProgress, _UpdateProxyMirrorSite.STATUS_IDLE)
+                self._addScheduleJob(ms, proxy)
 
-            # add job
-            ms.updaterObjApi.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
-            self._addScheduleJob(ms)
+            # record proxy object
+            self.updateProxyDict[ms.id] = proxy
 
     def dispose(self):
         self.scheduler.dispose()
         self.scheduler = None
 
     def getMirrorSiteUpdateStatus(self, mirrorSiteId):
-        for ms in self.param.mirrorSiteList:
-            if ms.id == mirrorSiteId:
-                return ms.updateObjApi.updateStatus
-        assert False
-
-    def _startInit(self, mirrorSiteObj):
-        api = mirrorSiteObj.updaterObjApi
-        api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
-        api.progress = 0
-        api.progressNotifier = lambda a, b, c: self._notifyProgress("initializing", a, b, c)
-        try:
-            mirrorSiteObj.updaterObj.init_start()
-        except:
-            # FIXME, don't know what to do
-            raise
-        logging.info("Mirror site \"%s\" initializing starts." % (mirrorSiteObj.id))
+        return self.updateProxyDict[mirrorSiteId].status
 
     def _startUpdate(self, mirrorSiteObj, schedDatetime):
         api = mirrorSiteObj.updaterObjApi
         tstr = schedDatetime.strftime("%Y-%m-%d %H:%M")
 
-        if api.updateStatus == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT:
+        if api.status == McMirrorSiteUpdater.STATUS_INIT:
             assert False
-        elif api.updateStatus == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC:
+        elif api.status == McMirrorSiteUpdater.STATUS_SYNC:
             logging.info("Mirror site \"%s\" updating ignored on \"%s\", last update is not finished." % (mirrorSiteObj.id, tstr))
-        elif api.updateStatus == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE:
-            api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC
+        elif api.status == McMirrorSiteUpdater.STATUS_IDLE:
+            api.status = McMirrorSiteUpdater.STATUS_SYNC
             api.updateDatetime = schedDatetime
             api.progress = 0
             api.progressNotifier = lambda a, b, c: self._notifyProgress("updating", a, b, c)
@@ -83,30 +62,37 @@ class McMirrorSiteUpdater:
         else:
             assert False
 
-    def _notifyProgress(self, what, mirrorSiteObj, progress, success):
-        assert what in ["initializing", "updating"]
-
+    def _notifyInitProgress(self, mirrorSiteObj, progress, success):
         mirrorSiteObj.updaterObjApi.progress = progress
         if progress == 100:
             assert success is not None
-            mirrorSiteObj.updaterObjApi.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+            mirrorSiteObj.updaterObjApi.status = McMirrorSiteUpdater.STATUS_IDLE
             if success:
-                if what == "initializing":
-                    McUtil.forceDelete(self._initFlagFile(mirrorSiteObj))
-                    self._addScheduleJob(mirrorSiteObj)
-                logging.info("Mirror site \"%s\" %s finished." % (mirrorSiteObj.id, what))
+                McUtil.forceDelete(self._initFlagFile(mirrorSiteObj))
+                self._addScheduleJob(mirrorSiteObj)
+                logging.info("Mirror site \"%s\" initialization finished." % (mirrorSiteObj.id))
             else:
-                if what == "initializing":
-                    self._addScheduleJob(mirrorSiteObj)
-                logging.info("Mirror site \"%s\" %s failed." % (mirrorSiteObj.id, what))
+                self._addScheduleJob(mirrorSiteObj)
+                logging.info("Mirror site \"%s\" initialization failed." % (mirrorSiteObj.id))
         else:
-            logging.info("Mirror site \"%s\" %s progress %d%%." % (mirrorSiteObj.id, what, progress))
+            logging.info("Mirror site \"%s\" initialize progress %d%%." % (mirrorSiteObj.id, progress))
+
+    def _notifyUpdateProgress(self, mirrorSiteObj, progress, success):
+        mirrorSiteObj.updaterObjApi.progress = progress
+        if progress == 100:
+            assert success is not None
+            if success:
+                logging.info("Mirror site \"%s\" update finished." % (mirrorSiteObj.id))
+            else:
+                logging.info("Mirror site \"%s\" update failed." % (mirrorSiteObj.id))
+        else:
+            logging.info("Mirror site \"%s\" update progress %d%%." % (mirrorSiteObj.id, progress))
 
     def _initFlagFile(self, mirrorSiteObj):
         return os.path.join(self.param.cacheDir, mirrorSiteObj.dataDir + ".uninitialized")
 
     def _addScheduleJob(self, mirrorSite, updateProxy):
-        self.scheduler.addJob(mirrorSite.id, mirrorSite.schedExpr, lambda a: updateProxy.updateStart(mirrorSite, a))
+        self.scheduler.addJob(mirrorSite.id, mirrorSite.schedExpr, updateProxy.updateStart)
 
 
 class McMirrorSiteUpdaterApi:
@@ -114,12 +100,7 @@ class McMirrorSiteUpdaterApi:
     def __init__(self, param, mirror_site):
         self.param = param
         self.mirrorSite = mirror_site
-
-        # set by McMirrorSiteUpdater
-        self.updateStatus = None
-        self.updateDatetime = None
-        self.progress = None
-        self.progressNotifier = None
+        self.progressNotifier = None    # set by UpdateProxy object
 
     def get_country(self):
         # FIXME
@@ -137,29 +118,43 @@ class McMirrorSiteUpdaterApi:
 
     def notify_progress(self, progress, is_success):
         assert 0 <= progress <= 100
-        self.progressNotifier(self.mirrorSite, progress, is_success)
+        self.progressNotifier(progress, is_success)
 
 
 class _UpdateProxyMirrorSite:
 
-    def __init__(self, parent, mirrorSite):
-        self.parent = parent
+    STATUS_INIT = 0
+    STATUS_IDLE = 1
+    STATUS_SYNC = 2
+    STATUS_ERROR = 3
+
+    def __init__(self, mirrorSite, status, initProgressCallback, updateProgressCallback):
+        assert status in [self.STATUS_INIT, self.STATUS_IDLE]
+
         self.mirrorSite = mirrorSite
+        self.status = status
+        self.initProgressCallback = initProgressCallback
+        self.updateProgressCallback = updateProgressCallback
+
+        # set by McMirrorSiteUpdater
+        self.schedDatetime = None
+        self.progress = None
 
     def initStart(self):
-        api = self.mirrorSiteObj.updaterObjApi
-        api.updateStatus = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
-        api.progress = 0
-        api.progressNotifier = lambda a, b, c: self.parent._notifyProgress("initializing", a, b, c)
+        self.status = self.STATUS_INIT
+        self.schedDatetime = None
+        self.progress = 0
+        self.mirrorSite.api.progressNotifier = self._initProgressCallback
         try:
             self.mirrorSiteObj.updaterObj.init_start()
+            logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSiteObj.id))
         except:
-            # FIXME, don't know what to do
-            raise
-        logging.info("Mirror site \"%s\" initializing starts." % (self.mirrorSiteObj.id))
+            self._resetStatus(self.STATUS_ERROR)
+            logging.error("Mirror site \"%s\" initialization failed." % (self.mirrorSiteObj.id))
+            # raise
 
     def initStop(self):
-        pass
+        self.mirrorSiteObj.updaterObj.init_stop()
 
     def updateStart(self):
         pass
@@ -167,12 +162,44 @@ class _UpdateProxyMirrorSite:
     def updateStop(self):
         pass
 
+    def _initProgressCallback(self, progress, bSuccess):
+        if progress == 100:
+            self.status = McMirrorSiteUpdater.STATUS_IDLE
+            self.schedDatetime = None
+            self.progress = None
+            self.mirrorSite.api.progressNotifier = None
+        self.initProgressCallback(progress, bSuccess)
 
-class _UpdateProxyMirrorSiteInWorkerProcess:
+
+
+        if progress == 100:
+            assert success is not None
+            mirrorSiteObj.updaterObjApi.status = McMirrorSiteUpdater.STATUS_IDLE
+            if success:
+                McUtil.forceDelete(self._initFlagFile(mirrorSiteObj))
+                self._addScheduleJob(mirrorSiteObj)
+                logging.info("Mirror site \"%s\" initialization finished." % (mirrorSiteObj.id))
+            else:
+                self._addScheduleJob(mirrorSiteObj)
+                logging.info("Mirror site \"%s\" initialization failed." % (mirrorSiteObj.id))
+        else:
+            logging.info("Mirror site \"%s\" initialize progress %d%%." % (mirrorSiteObj.id, progress))
+
+
+
+
+    def _resetStatus(self, status):
+        assert status in [self.STATUS_IDLE, self.STATUS_ERROR]
+        self.status = status
+        self.schedDatetime = None
+        self.progress = None
+        self.mirrorSite.api.progressNotifier = None
+
+
+class _UpdateProxyMirrorSiteInWorkerProcess(_UpdateProxyMirrorSite):
 
     def __init__(self, parent, mirrorSite):
-        self.parent = parent
-        self.mirrorSite = mirrorSite
+        super().__init__(parent, mirrorSite)
 
     def initStart(self):
         pass
