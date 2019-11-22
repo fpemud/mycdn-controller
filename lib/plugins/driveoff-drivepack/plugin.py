@@ -109,7 +109,7 @@ class Updater:
             self.urlOpener = None
             self.linkDict = None
         else:
-            self.api.notify_progress(100 * count // len(self.linkDict), False)
+            self.api.notify_progress(100 * count // len(self.linkDict))
             self._downloadOneFile()
 
     def _stop(self):
