@@ -5,7 +5,9 @@ import os
 import io
 import re
 import gzip
-import lxml
+import time
+import subprocess
+import lxml.html
 import urllib.request
 
 
@@ -46,7 +48,7 @@ class Updater:
                 found = True
             if not found:
                 break
-            self._api.progress_changed(self.PROGRESS_STAGE_1 * i / self.MAX_PAGE)
+            self._api.progress_changed(self.PROGRESS_STAGE_1 * i // self.MAX_PAGE)
         self._api.progress_changed(self.PROGRESS_STAGE_1)
 
         # download driver pack file one by one
@@ -72,12 +74,12 @@ class Updater:
 
             # download
             logFile = os.path.join(self._api.get_log_dir(), "wget.log")
-            _Util.shell("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (fullfn + ".tmp", downloadUrl, logFile))
+            _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (fullfn + ".tmp", downloadUrl, logFile))
             os.rename(fullfn + ".tmp", fullfn)
             fnSet.add(filename)
 
             # report progress
-            self._api.progress_changed(self.PROGRESS_STAGE_1 + self.PROGRESS_STAGE_2 * i / total)
+            self._api.progress_changed(self.PROGRESS_STAGE_1 + self.PROGRESS_STAGE_2 * i // total)
 
         # clear old files in cache
         for fn in (set(os.listdir(self._api.get_data_dir())) - fnSet):
@@ -108,6 +110,20 @@ class _Util:
                     pass                                # retry 3 times
                 else:
                     raise
+
+    @staticmethod
+    def shellCall(cmd):
+        # call command with shell to execute backstage job
+        # scenarios are the same as FmUtil.cmdCall
+
+        ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             shell=True, universal_newlines=True)
+        if ret.returncode > 128:
+            # for scenario 1, caller's signal handler has the oppotunity to get executed during sleep
+            time.sleep(1.0)
+        if ret.returncode != 0:
+            ret.check_returncode()
+        return ret.stdout.rstrip()
 
 
 # class _GLibWgetProc:

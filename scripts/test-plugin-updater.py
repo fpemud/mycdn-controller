@@ -8,6 +8,7 @@ import libxml2
 from datetime import datetime
 from gi.repository import GLib
 sys.path.append("/usr/lib64/mycdn")
+from mc_util import McUtil
 from mc_util import DynObject
 
 
@@ -96,7 +97,13 @@ mirrorSiteId = sys.argv[2]
 param = FakeParam()
 mainloop = GLib.MainLoop()
 dataDir, runtime, updater = loadUpdater(param, mainloop, pluginDir, mirrorSiteId)
-if os.path.exists(os.path.join(dataDir, ".uninitialized")):
+initFlagFile = os.path.join(dataDir, ".uninitialized")
+
+if not os.path.exists(dataDir):
+    os.makedirs(dataDir)
+    McUtil.touchFile(initFlagFile)
+
+if os.path.exists(initFlagFile):
     print("init start begin")
     api = createInitApi(param, dataDir, runtime)
     if runtime == "glib-mainloop":
