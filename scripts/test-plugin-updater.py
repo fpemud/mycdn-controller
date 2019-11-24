@@ -15,7 +15,7 @@ class FakeParam:
 
     def __init__(self):
         self.etcDir = "/etc/mycdn"
-        self.libDir = "/usr/lib/mycdn"
+        self.libDir = "/usr/lib64/mycdn"
         self.cacheDir = "/var/cache/mycdn"
         self.runDir = "/run/mycdn"
         self.logDir = "/var/log/mycdn"
