@@ -31,7 +31,7 @@ class McMirrorSiteUpdater:
                 McUtil.touchFile(_initFlagFile(param, ms))
 
             # record updater object
-            self.updaterDict[ms.id] = _OneMirrorSiteUpdater(ms)
+            self.updaterDict[ms.id] = _OneMirrorSiteUpdater(self, ms)
 
     def dispose(self):
         for msId, updater in self.updaterDict.items():
@@ -49,8 +49,8 @@ class McMirrorSiteUpdater:
 
 class _OneMirrorSiteUpdater:
 
-    def __init__(self, param, parent, mirrorSite):
-        self.param = param
+    def __init__(self, parent, mirrorSite):
+        self.param = parent.param
         self.parent = parent
         self.mirrorSite = mirrorSite
 
