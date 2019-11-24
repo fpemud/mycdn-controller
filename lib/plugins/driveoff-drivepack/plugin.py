@@ -17,21 +17,16 @@ from gi.repository import Soup
 
 class Updater:
 
-    def __init__(self, api):
+    def __init__(self):
         self.api = api
         self.linkDict = None
         self.urlOpener = None
         self.wgetProc = None
 
-    def init_start(self):
-        assert self.linkDict is None
+    def init(self, api):
         self._getLinkDict()
 
-    def init_stop(self):
-        assert self.linkDict is not None
-        self._stop()
-
-    def update_start(self, schedDatetime):
+    def update(self, api):
         assert self.linkDict is None
         self._getLinkDict()
 

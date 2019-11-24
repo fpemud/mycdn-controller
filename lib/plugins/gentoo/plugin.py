@@ -131,40 +131,40 @@ class Updater:
 
     def __init__(self, gentooOrGentooPortage=True):
         if gentooOrGentooPortage:
-            self.db = Db()
+            self._db = Db()
         else:
-            self.db = PortageDb()
+            self._db = PortageDb()
 
     def init_start(self, api):
-        self.api = api
+        self._api = api
         self._start(None)
 
     def init_stop(self):
-        self.proc.terminate()
+        self._proc.terminate()
 
     def update_start(self, api):
-        self.api = api
+        self._api = api
         self._start(api)
 
     def update_stop(self):
-        self.proc.terminate()
+        self._proc.terminate()
 
     def _start(self, api):
-        source = self.db.query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
-        dataDir = self.api.get_data_dir()
-        logFile = os.path.join(self.api.get_log_dir(), "rsync.log")
+        source = self._db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
+        dataDir = self._api.get_data_dir()
+        logFile = os.path.join(self._api.get_log_dir(), "rsync.log")
         cmd = "/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (source, dataDir, logFile)
-        self.proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
+        self._proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
 
     def _finishCallback(self):
-        self.api.progress_changed(100)
-        del self.proc
-        del self.api
+        self._api.progress_changed(100)
+        del self._proc
+        del self._api
 
     def _errorCallback(self):
-        self.api.progress_changed(100, "error")
-        del self.proc
-        del self.api
+        self._api.progress_changed(100, "error")
+        del self._proc
+        del self._api
 
 
 class PortageUpdater(Updater):
@@ -177,8 +177,7 @@ class _ShellProc:
 
     def __init__(self, cmd, finishCallback, errorCallback):
         targc, targv = GLib.shell_parse_argv("/bin/sh -c \"%s\"" % (cmd))
-        ret = GLib.spawn_async(targv, flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD)
-        self.pid = ret[0]
+        self.pid = GLib.spawn_async(targv, flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD)[0]
         self.finishCallback = finishCallback
         self.errorCallback = errorCallback
         self.pidWatch = GLib.child_watch_add(self.pid, self._exitCallback)
@@ -210,3 +209,6 @@ class _ShellProc:
 #                                 -1,                                             # stdin_fd
 #                                 -1,                                             # stdout_fd
 #                                 -1)                                             # stderr_fd
+# if not ret[0]:
+#     raise Exception("failed")
+# self.pid = ret[1]
