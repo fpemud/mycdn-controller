@@ -69,6 +69,8 @@ class McPluginManager:
 class McPublicMirrorDatabase:
 
     def __init__(self, param, plugin, pluginDir, rootElem):
+        self.id = rootElem.prop("id")
+
         self.dbObj = None
         if True:
             filename = os.path.join(pluginDir, rootElem.xpathEval(".//filename")[0].getContent())
