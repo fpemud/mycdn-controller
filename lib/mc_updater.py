@@ -36,9 +36,9 @@ class McMirrorSiteUpdater:
     def dispose(self):
         for msId, updater in self.updaterDict.items():
             if updater.status == self.MIRROR_SITE_UPDATE_STATUS_INITING:
-                updater.init_stop()
+                updater.initStop()
             elif updater.status == self.MIRROR_SITE_UPDATE_STATUS_SYNCING:
-                updater.update_stop()
+                updater.updateStop()
         # FIXME, should use g_main_context_iteration to wait them to stop
         self.scheduler.dispose()
         self.invoker.dispose()
