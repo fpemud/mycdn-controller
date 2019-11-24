@@ -137,19 +137,19 @@ class Updater:
 
     def init_start(self, api):
         self._api = api
-        self._start(None)
+        self._start()
 
     def init_stop(self):
         self._proc.terminate()
 
     def update_start(self, api):
         self._api = api
-        self._start(api)
+        self._start()
 
     def update_stop(self):
         self._proc.terminate()
 
-    def _start(self, api):
+    def _start(self):
         source = self._db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
         dataDir = self._api.get_data_dir()
         logFile = os.path.join(self._api.get_log_dir(), "rsync.log")
@@ -169,8 +169,8 @@ class Updater:
 
 class PortageUpdater(Updater):
 
-    def __init__(self, api):
-        super().__init__(api, False)
+    def __init__(self):
+        super().__init__(False)
 
 
 class _ShellProc:
