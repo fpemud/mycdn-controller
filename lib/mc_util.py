@@ -309,6 +309,31 @@ class StdoutRedirector:
         self.log.flush()
 
 
+class DynObject:
+    # an object that can contain abitrary dynamically created properties and methods
+    pass
+
+
+class GLibIdleInvoker:
+
+    def __init__(self):
+        self.sourceList = []
+
+    def dispose(self):
+        for source in sourceList:
+            GLib.source_remove(source)
+        self.sourceList = []
+
+    def add(func, *args):
+        source = GLib.idle_add(self._idleCallback, source, func, *args)
+        self.sourceList.append(source)
+
+    def _idleCallback(source, func, *args):
+        self.source_remove(source)
+        func(*args)
+        return False
+
+
 class GLibCronScheduler:
 
     def __init__(self):

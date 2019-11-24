@@ -4,7 +4,6 @@
 import os
 import imp
 import libxml2
-from mc_updater import McMirrorSiteUpdaterApi
 
 
 class McPluginManager:
@@ -91,7 +90,6 @@ class McMirrorSite:
         self.dataDir = os.path.join(param.cacheDir, self.dataDir)
 
         # updater
-        self.updaterObjApi = None
         self.updaterObj = None
         self.schedExpr = None
         self.useWorkerProc = None
@@ -99,12 +97,15 @@ class McMirrorSite:
             elem = rootElem.xpathEval(".//updater")[0]
 
             self.schedExpr = elem.xpathEval(".//cron-expression")[0].getContent()
+            # FIXME: add check
 
-            ret = elem.xpathEval("../use-worker-process")
-            if len(ret) > 0 and ret[0].getContent() == "true":
-                self.useWorkerProc = True
+            ret = elem.xpathEval(".//runtime")
+            if len(ret) > 0:
+                self.runtime = ret[0].getContent()
+                # FIXME: add check
+                assert False
             else:
-                self.useWorkerProc = False
+                self.runtime = "glib-mainloop"
 
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
@@ -114,14 +115,15 @@ class McMirrorSite:
                 plugin_class = getattr(m, classname)
             except:
                 raise Exception("syntax error")
-            self.updaterObjApi = McMirrorSiteUpdaterApi(param, self)
-            self.updaterObj = plugin_class(self.updaterObjApi)
+            self.updaterObj = plugin_class()
 
         # advertiser
         self.advertiseProtocolList = []
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//protocol"):
             self.advertiseProtocolList.append(child.getContent())
 
+
+## public-mirror-database #####################################################
 
 class TemplatePublicMirrorDatabase:
 
@@ -132,31 +134,82 @@ class TemplatePublicMirrorDatabase:
         assert False
 
 
+## mirror-site ################################################################
+
 class TemplateMirrorSiteUpdater:
 
-    def __init__(self, api):
-        assert False
-
-    def init_start(self):
+    def init_start(self, api):
         assert False
 
     def init_stop(self):
         assert False
 
-    def update_start(self):
+    def update_start(self, api):
         assert False
 
     def update_stop(self):
         assert False
 
 
-class TemplateMirrorSiteUpdaterInWorkerProcess:
+class TemmplateMirrorSiteUpdaterInitApi:
 
-    def __init__(self, api):
+    def get_country(self):
         assert False
 
-    def init(self):
+    def get_location(self):
         assert False
 
-    def update(self):
+    def get_data_dir(self):
         assert False
+
+    def get_log_dir(self):
+        assert False
+
+    def progress_changed(progress, exc_info=None):
+        assert False
+
+
+class TemmplateMirrorSiteUpdaterUpdateApi(TemmplateMirrorSiteUpdaterInitApi):
+
+    def get_sched_datetime(self):
+        assert False
+
+
+class TemplateMirrorSiteUpdaterRuntimeThread:
+
+    def init(self, api):
+        assert False
+
+    def update(self, api):
+        assert False
+
+
+class TemmplateMirrorSiteUpdaterRuntimeThreadInitApi(TemmplateMirrorSiteUpdaterInitApi):
+
+    def is_stopped(self):
+        assert False
+
+
+class TemmplateMirrorSiteUpdaterRuntimeThreadUpdateApi(TemmplateMirrorSiteUpdaterInitApi):
+
+    def is_stopped(self):
+        assert False
+
+
+class TemplateMirrorSiteUpdaterRuntimeProcess:
+
+    def init(self, api):
+        assert False
+
+    def update(self, api):
+        assert False
+
+
+class TemmplateMirrorSiteUpdaterRuntimeProcessInitApi(TemmplateMirrorSiteUpdaterInitApi):
+    # stop by SIGTERM signal
+    pass
+
+
+class TemmplateMirrorSiteUpdaterRuntimeProcessUpdateApi(TemmplateMirrorSiteUpdaterInitApi):
+    # stop by SIGTERM signal
+    pass

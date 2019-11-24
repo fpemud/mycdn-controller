@@ -7,7 +7,7 @@
       <filename>plugin.py</filename>
       <classname>Updater</classname>
       <cron-expression>0 0 * * 0</cron-expression>
-      <use-worker-process>true</use-worker-process>
+      <runtime>process</runtime>
     </updater>
     <advertiser>
       <protocol>http</protocol>

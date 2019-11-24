@@ -137,16 +137,16 @@ class Updater:
         else:
             self.db = PortageDb()
 
-    def init_start(self):
+    def init_start(self, notify_progress):
         assert self.proc is None
         self._start(None)
 
     def init_stop(self):
         self.proc.terminate()
 
-    def update_start(self, schedDatetime):
+    def update_start(self, sched_datetime):
         assert self.proc is None
-        self._start(schedDatetime)
+        self._start(sched_datetime)
 
     def update_stop(self):
         self.proc.terminate()
