@@ -66,8 +66,8 @@ class _OneMirrorSiteUpdater:
 
         self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INTING
         try:
-            api = self._createInitApi()
-            self.mirrorSite.updaterObj.init_start(api)
+            self.progress = 0
+            self.mirrorSite.updaterObj.init_start(self._createInitApi())
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_ERROR
@@ -80,6 +80,7 @@ class _OneMirrorSiteUpdater:
 
     def initProgressCallback(self, progress, exc_info):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
+        assert progress >= self.progress
 
         if exc_info is not None:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_ERROR
@@ -88,12 +89,15 @@ class _OneMirrorSiteUpdater:
 
         if progress == 100:
             McUtil.forceDelete(_initFlagFile(self.mirrorSite))
+            del self.progress
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             self.parent.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             return
 
-        logging.info("Mirror site \"%s\" initialization progress %d%%." % (self.mirrorSite.id, progress))
+        if progress > self.progress:
+            self.progress = progress
+            logging.info("Mirror site \"%s\" initialization progress %d%%." % (self.mirrorSite.id, self.progress))
 
     def updateStart(self, schedDatetime):
         assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING]
@@ -104,8 +108,8 @@ class _OneMirrorSiteUpdater:
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
             try:
-                api = self._createUpdateApi(schedDatetime)
-                self.mirrorSite.updaterObj.update_start(api)
+                self.progress = 0
+                self.mirrorSite.updaterObj.update_start(self._createUpdateApi(schedDatetime))
                 logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, tstr))
             except:
                 self._resetStatus(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
@@ -118,6 +122,7 @@ class _OneMirrorSiteUpdater:
 
     def updateProgressCallback(self, progress, exc_info):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
+        assert progress >= self.progress
 
         if exc_info is not None:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
@@ -125,11 +130,14 @@ class _OneMirrorSiteUpdater:
             return
 
         if progress == 100:
+            del self.progress
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
             return
 
-        logging.info("Mirror site \"%s\" update progress %d%%." % (self.mirrorSite.id, progress))
+        if progress > self.progress:
+            self.progress = progress
+            logging.info("Mirror site \"%s\" update progress %d%%." % (self.mirrorSite.id, self.progress))
 
     def _createInitApi(self):
         api = DynObject()
