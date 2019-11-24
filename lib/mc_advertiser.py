@@ -15,7 +15,7 @@ class McAdvertiser:
         self.httpDirDict = dict()       # dict<mirror-site-id,data-dir>
         self.ftpDirDict = dict()        # dict<mirror-site-id,data-dir>
         self.rsyncDirDict = dict()     # dict<mirror-site-id,data-dir>
-        for ms in self.param.mirrorsiteList:
+        for ms in self.param.mirrorSiteList:
             for proto in ms.advertiseProtocolList:
                 if proto == "http":
                     self.httpDirDict[ms.id] = ms.dataDir
