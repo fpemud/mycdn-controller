@@ -178,9 +178,7 @@ class _ShellProc:
     def __init__(self, cmd, finishCallback, errorCallback):
         targc, targv = GLib.shell_parse_argv("/bin/sh -c \"%s\"" % (cmd))
         ret = GLib.spawn_async(targv, flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD)
-        if not ret[0]:
-            raise Exception("failed to create process")
-        self.pid = ret[1]
+        self.pid = ret[0]
         self.finishCallback = finishCallback
         self.errorCallback = errorCallback
         self.pidWatch = GLib.child_watch_add(self.pid, self._exitCallback)
