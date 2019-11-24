@@ -57,29 +57,23 @@ class Updater:
         for prefix, v in linkDict.items():
             filename, timeStr, url = v
             fullfn = os.path.join(self._api.get_data_dir(), filename)
+            if not os.path.exists(fullfn):
+                # get real download url, gigabase sucks
+                downloadUrl = None
+                if True:
+                    for elem in _Util.getWebPageElementTree(url).xpath(".//a"):
+                        if elem.text == "Download file":
+                            downloadUrl = elem.attrib["href"]
+                            break
+                    assert downloadUrl is not None
 
-            # check if file is cached
-            if os.path.exists(fullfn):
-                fnSet.add(filename)
-                continue
-
-            # get real download url, gigabase sucks
-            downloadUrl = None
-            if True:
-                for elem in _Util.getWebPageElementTree(url).xpath(".//a"):
-                    if elem.text == "Download file":
-                        downloadUrl = elem.attrib["href"]
-                        break
-                assert downloadUrl is not None
-
-            # download
-            logFile = os.path.join(self._api.get_log_dir(), "wget.log")
-            _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (fullfn + ".tmp", downloadUrl, logFile))
-            os.rename(fullfn + ".tmp", fullfn)
+                # download
+                logFile = os.path.join(self._api.get_log_dir(), "wget.log")
+                _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (fullfn + ".tmp", downloadUrl, logFile))
+                os.rename(fullfn + ".tmp", fullfn)
             fnSet.add(filename)
-
-            # report progress
             self._api.progress_changed(self.PROGRESS_STAGE_1 + self.PROGRESS_STAGE_2 * i // total)
+            i += 1
 
         # clear old files in cache
         for fn in (set(os.listdir(self._api.get_data_dir())) - fnSet):
