@@ -4,6 +4,8 @@
 import os
 import imp
 import libxml2
+import threading
+from gi.repository import GLib
 
 
 class McPluginManager:
@@ -109,13 +111,26 @@ class McMirrorSite:
 
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
-            try:
-                f = open(filename)
-                m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-                plugin_class = getattr(m, classname)
-            except:
-                raise Exception("syntax error")
-            self.updaterObj = plugin_class()
+            while True:
+                if self.runtime == "glib-mainloop":
+                    try:
+                        f = open(filename)
+                        m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+                        plugin_class = getattr(m, classname)
+                    except:
+                        raise Exception("syntax error")
+                    self.updaterObj = plugin_class()
+                    break
+
+                if self.runtime == "thread":
+                    self.updaterObj = _UpdaterObjProxyRuntimeThread(filename, classname)
+                    break
+
+                if self.runtime == "process":
+                    self.updaterObj = _UpdaterObjProxyRuntimeProcess(param, filename, classname)
+                    break
+
+                assert False
 
         # advertiser
         self.advertiseProtocolList = []
@@ -123,18 +138,88 @@ class McMirrorSite:
             self.advertiseProtocolList.append(child.getContent())
 
 
-## public-mirror-database #####################################################
+class _UpdaterObjProxyRuntimeThread(threading.Thread):
+
+    def __init__(self, filename, classname):
+        super().__init__()
+        try:
+            f = open(filename)
+            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+            plugin_class = getattr(m, classname)
+        except:
+            raise Exception("syntax error")
+        self.realUpdaterObj = plugin_class()
+
+    def init_start(self, api):
+        self.__prepareRun(api, self.realUpdaterObj.init)
+        self.start()
+
+    def init_stop(self):
+        self.stopped = True
+
+    def update_start(self, api):
+        self.__prepareRun(api, self.realUpdaterObj.update)
+        self.start()
+
+    def update_stop(self):
+        self.stopped = True
+
+    def run(self):
+        self.targetFunc(self.api)
+
+    def __prepare(self, api, targetFunc):
+        self.targetFunc = targetFunc
+        self.stopped = False
+        self.realProgressChanged = api.progress_changed
+        self.api = api
+        self.api.is_stopped = lambda: self.stopped
+        self.api.progress_changed = lambda progress, exc_info: GLib.idle_add(self._progress_changed, progress, exc_info)
+
+    def __unprepare(self):
+        del self.api
+        del self.readProgressChanged
+        del self.stopped
+        del self.targetFunc
+
+    def _progress_changed(self, progress, exc_info=None):
+        self.realProgressChanged(progress, exc_info)
+        if exc_info is not None or progress == 100:
+            self.__unprepare()
+        return False
+
+
+class _UpdaterObjProxyRuntimeProcess:
+
+    def __init__(self, param, filename, classname):
+        self.param = param
+        self.filename = filename
+        self.classname = classname
+
+    def init_start(self, api):
+        assert False
+
+    def init_stop(self):
+        assert False
+
+    def update_start(self, api):
+        assert False
+
+    def update_stop(self):
+        assert False
+
+
+# public-mirror-database ######################################################
 
 class TemplatePublicMirrorDatabase:
 
     def get(self, extended=False):
         assert False
-    
+
     def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
         assert False
 
 
-## mirror-site ################################################################
+# mirror-site #################################################################
 
 class TemplateMirrorSiteUpdater:
 

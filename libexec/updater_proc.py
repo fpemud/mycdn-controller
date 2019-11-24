@@ -2,31 +2,45 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import sys
+sys.path.append('/usr/lib64/mycdn')
+from mc_util import DynObject
+
+def main():
 
 
-class McMirrorSiteUpdaterApiProcess:
 
-    def __init__(self):
-        self.dataDir = sys.argv[1]
-        self.logDir = sys.argv[2]
 
-    def get_country(self):
-        # FIXME
-        return "CN"
 
-    def get_location(self):
-        # FIXME
-        return None
 
-    def get_data_dir(self):
-        return self.dataDir
+def _createInitApi(self):
+    api = DynObject()
+    api.get_country = lambda: "CN"
+    api.get_localtion = lambda: None
+    api.get_data_dir = lambda: self.mirrorSite.dataDir
+    api.get_log_dir = lambda: self.param.logDir
+    api.progress_changed = self.initProgressCallback
+    return api
 
-    def get_log_dir(self):
-        return self.logDir
-
-    def notify_progress(self, progress, exc_info=None):
-        assert False
+def _createUpdateApi(self):
+    api = DynObject()
+    api.get_country = lambda: "CN"
+    api.get_localtion = lambda: None
+    api.get_data_dir = lambda: self.mirrorSite.dataDir
+    api.get_log_dir = lambda: self.param.logDir
+    api.progress_changed = self.initProgressCallback
+    return api
 
 
 if __name__ == "__main__":
     assert False
+
+
+
+
+        try:
+            f = open(filename)
+            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+            plugin_class = getattr(m, classname)
+        except:
+            raise Exception("syntax error")
+        self.realUpdaterObj = plugin_class()

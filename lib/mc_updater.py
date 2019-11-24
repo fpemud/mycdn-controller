@@ -11,8 +11,8 @@ from mc_util import GLibCronScheduler
 
 class McMirrorSiteUpdater:
 
-    MIRROR_SITE_UPDATE_STATUS_INIT  = 0
-    MIRROR_SITE_UPDATE_STATUS_INITING  = 1
+    MIRROR_SITE_UPDATE_STATUS_INIT = 0
+    MIRROR_SITE_UPDATE_STATUS_INITING = 1
     MIRROR_SITE_UPDATE_STATUS_IDLE = 2
     MIRROR_SITE_UPDATE_STATUS_SYNCING = 3
     MIRROR_SITE_UPDATE_STATUS_ERROR = 4
@@ -21,7 +21,7 @@ class McMirrorSiteUpdater:
         self.param = param
         self.invoker = GLibIdleInvoker()
         self.scheduler = GLibCronScheduler()
-        self.updaterDict = dict()           # dict<mirror-site-id,update-proxy-object>
+        self.updaterDict = dict()           # dict<mirror-site-id,updater-object>
 
         for ms in self.param.mirrorSiteList:
             # initialize data directory
@@ -34,6 +34,12 @@ class McMirrorSiteUpdater:
             self.updaterDict[ms.id] = _OneMirrorSiteUpdater(ms)
 
     def dispose(self):
+        for msId, updater in self.updaterDict.items():
+            if updater.status == self.MIRROR_SITE_UPDATE_STATUS_INITING:
+                updater.init_stop()
+            elif updater.status == self.MIRROR_SITE_UPDATE_STATUS_SYNCING:
+                updater.update_stop()
+        # FIXME, should use g_main_context_iteration to wait them to stop
         self.scheduler.dispose()
         self.invoker.dispose()
 
@@ -60,7 +66,7 @@ class _OneMirrorSiteUpdater:
 
         self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INTING
         try:
-            api = self._createApi("init")
+            api = self._createInitApi()
             self.mirrorSite.updaterObj.init_start(api)
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except:
@@ -87,8 +93,7 @@ class _OneMirrorSiteUpdater:
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             return
 
-        self.progress = progress
-        logging.info("Mirror site \"%s\" initialization progress %d%%." % (mirrorSite.id, self.progress))
+        logging.info("Mirror site \"%s\" initialization progress %d%%." % (self.mirrorSite.id, progress))
 
     def updateStart(self, schedDatetime):
         assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING]
@@ -99,7 +104,7 @@ class _OneMirrorSiteUpdater:
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
             try:
-                api = self._createApi("update", schedDatetime)
+                api = self._createUpdateApi(schedDatetime)
                 self.mirrorSite.updaterObj.update_start(api)
                 logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, tstr))
             except:
@@ -124,32 +129,25 @@ class _OneMirrorSiteUpdater:
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
             return
 
-        self.progress = progress
-        logging.info("Mirror site \"%s\" update progress %d%%." % (self.mirrorSite.id, self.progress))
+        logging.info("Mirror site \"%s\" update progress %d%%." % (self.mirrorSite.id, progress))
 
-    def _createApi(self, apiType, schedDatetime=None):
+    def _createInitApi(self):
         api = DynObject()
-        api.get_country = lambda: return "CN"
-        api.get_localtion = lambda: return None
-        api.get_data_dir = lambda: return self.mirrorSite.dataDir
-        api.get_log_dir = lambda: return self.param.logDir
+        api.get_country = lambda: "CN"
+        api.get_localtion = lambda: None
+        api.get_data_dir = lambda: self.mirrorSite.dataDir
+        api.get_log_dir = lambda: self.param.logDir
+        api.progress_changed = self.initProgressCallback
+        return api
 
-        if self.mirrorSite.runtime == "glib-mainloop":
-            if apiType == "init":
-                assert schedDatetime is None
-                api.progress_changed = self.initProgressCallback
-            elif apiType == "update":
-                api.get_sched_datetime = lambda: return schedDatetime
-                api.progress_changed = self.updateProgressCallback
-            else:
-                assert False
-        elif self.mirrorSite.runtime == "thread":
-            assert False
-        elif self.mirrorSite.runtime == "process":
-            assert False
-        else:
-            assert False
-        
+    def _createUpdateApi(self, schedDatetime):
+        api = DynObject()
+        api.get_country = lambda: "CN"
+        api.get_localtion = lambda: None
+        api.get_data_dir = lambda: self.mirrorSite.dataDir
+        api.get_log_dir = lambda: self.param.logDir
+        api.get_sched_datetime = lambda: schedDatetime
+        api.progress_changed = self.updateProgressCallback
         return api
 
 

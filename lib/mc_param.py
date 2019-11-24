@@ -8,8 +8,10 @@ class McParam:
 
     def __init__(self):
         self.etcDir = "/etc/mycdn"
-        self.libDir = "/usr/lib/mycdn"
+        self.libDir = "/usr/lib64/mycdn"
         self.pluginsDir = os.path.join(self.libDir, "plugins")
+        self.libexecDir = "/usr/libexec/mycdn"
+        self.updaterExe = os.path.join(self.libexecDir, "updater_proc.py")
         self.cacheDir = "/var/cache/mycdn"
         self.runDir = "/run/mycdn"
         self.logDir = "/var/log/mycdn"

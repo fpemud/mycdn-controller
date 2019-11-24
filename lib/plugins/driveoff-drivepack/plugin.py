@@ -7,6 +7,7 @@ import re
 import gi
 import gzip
 import lxml
+import threading
 import urllib.request
 from collections import OrderedDict
 gi.require_version("Soup", "2.4")

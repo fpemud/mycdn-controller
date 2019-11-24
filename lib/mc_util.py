@@ -317,19 +317,17 @@ class DynObject:
 class GLibIdleInvoker:
 
     def __init__(self):
-        self.sourceList = []
+        pass
 
     def dispose(self):
-        for source in sourceList:
-            GLib.source_remove(source)
-        self.sourceList = []
+        # there's should be a source list tracking all the idle sources
+        # the source list should be released when disposing
+        pass
 
-    def add(func, *args):
-        source = GLib.idle_add(self._idleCallback, source, func, *args)
-        self.sourceList.append(source)
+    def add(self, func, *args):
+        GLib.idle_add(self._idleCallback, func, *args)
 
-    def _idleCallback(source, func, *args):
-        self.source_remove(source)
+    def _idleCallback(self, func, *args):
         func(*args)
         return False
 

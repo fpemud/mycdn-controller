@@ -12,41 +12,41 @@ class FakeParam:
     def __init__(self):
         self.etcDir = "/etc/mycdn"
         self.libDir = "/usr/lib/mycdn"
-        self.pluginsDir = os.path.join(self.libDir, "plugins")
         self.cacheDir = "/var/cache/mycdn"
         self.runDir = "/run/mycdn"
         self.logDir = "/var/log/mycdn"
         self.tmpDir = "/tmp/mycdn"
 
 
-class FakeUpdaterApi:
-
-    def __init__(self, mainloop, dataDir, logDir):
-        self.mainloop = mainloop
-        self.dataDir = dataDir
-        self.logDir = logDir
-
-    def get_country(self):
-        return "CN"
-
-    def get_location(self):
-        return None
-
-    def get_data_dir(self):
-        return self.dataDir
-
-    def get_log_dir(self):
-        return self.logDir
-
-    def notify_progress(self, progress, exc_info=None):
+def createInitApi(param, dataDir, runtime):
+    api = DynObject()
+    api.get_country = lambda: "CN"
+    api.get_localtion = lambda: None
+    api.get_data_dir = lambda: return dataDir
+    api.get_log_dir = lambda: return param.logDir
+    api.progress_changed = lambda progress, exc_info=None:
         print("progress %s, %s" % (progress, exc_info))
-        if progress == 100:
+        if progress == 100 and runtime == "glib-mainloop":
             mainloop.quit()
+    return api
 
 
-def loadUpdater(mainloop, path, mirrorSiteId):
-    param = FakeParam()
+def createUpdateApi(self, dataDir, runtime):
+    schedDatetime = datetime.now()
+    api = DynObject()
+    api.get_country = lambda: "CN"
+    api.get_localtion = lambda: None
+    api.get_data_dir = lambda: return dataDir
+    api.get_log_dir = lambda: return param.logDir
+    api.get_sched_datetime = lambda: schedDatetime
+    api.progress_changed = lambda progress, exc_info=None:
+        print("progress %s, %s" % (progress, exc_info))
+        if progress == 100 and runtime == "glib-mainloop":
+            mainloop.quit()
+    return api
 
+
+def loadUpdater(param, mainloop, path, mirrorSiteId):
     # get metadata.xml file
     metadata_file = os.path.join(path, "metadata.xml")
     if not os.path.exists(metadata_file):
@@ -60,9 +60,14 @@ def loadUpdater(mainloop, path, mirrorSiteId):
     root = libxml2.parseFile(metadata_file).getRootElement()
     for child in root.xpathEval(".//mirror-site"):
         dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
-        apiObj = FakeUpdaterApi(dataDir, param.logDir)
 
         elem = rootElem.xpathEval(".//updater")[0]
+
+        runtime = "glib-mainloop"
+        if len(elem.xpathEval(".//runtime")) > 0:
+            runtime = elem.xpathEval(".//runtime")[0].getContent()
+            assert runtime in ["thread", "process"]
+
         filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
         classname = elem.xpathEval(".//classname")[0].getContent()
         try:
@@ -71,7 +76,8 @@ def loadUpdater(mainloop, path, mirrorSiteId):
             plugin_class = getattr(m, classname)
         except:
             raise Exception("syntax error")
-        return plugin_class(apiObj)
+
+        return dataDir, runtime, plugin_class()
 
     return None
 
@@ -83,15 +89,34 @@ if len(sys.argv) < 3:
 pluginDir = sys.argv[1]
 mirrorSiteId = sys.argv[2]
 
+param = FakeParam()
 mainloop = GLib.MainLoop()
-updater = loadUpdater(mainloop, pluginDir, mirrorSiteId)
-if os.path.exists(os.path.join(updater.api.dataDir, ".uninitialized")):
+dataDir, runtime, updater = loadUpdater(param, mainloop, pluginDir, mirrorSiteId)
+if os.path.exists(os.path.join(dataDir, ".uninitialized")):
     print("init start begin")
-    updater.init_start()
+    api = createInitApi(dataDir, runtime)
+    if runtime == "glib-mainloop":
+        updater.init_start(api)
+    elif runtime == "thread":
+        api.is_stopped = lambda: False
+        updater.init(api)
+    elif runtime == "process":
+        updater.init(api)
+    else:
+        assert False
     print("init start end")
 else:
     print("update start begin")
-    updater.update_start()
+    api = createUpdateApi(dataDir, runtime)
+    if runtime == "glib-mainloop":
+        updater.update_start(api)
+    elif runtime == "thread":
+        api.is_stopped = lambda: False
+        updater.update(api)
+    elif runtime == "process":
+        updater.update(api)
+    else:
+        assert False
     print("update start end")
 
 mainloop.run()
