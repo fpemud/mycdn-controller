@@ -64,7 +64,7 @@ class _OneMirrorSiteUpdater:
     def initStart(self):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
 
-        self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INTING
+        self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
         try:
             self.progress = 0
             self.mirrorSite.updaterObj.init_start(self._createInitApi())

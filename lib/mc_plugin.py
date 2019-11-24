@@ -107,7 +107,6 @@ class McMirrorSite:
             if len(ret) > 0:
                 self.runtime = ret[0].getContent()
                 # FIXME: add check
-                assert False
             else:
                 self.runtime = "glib-mainloop"
 
