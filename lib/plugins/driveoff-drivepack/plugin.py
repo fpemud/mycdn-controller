@@ -15,7 +15,7 @@ class Updater:
 
     MAX_PAGE = 10
     PROGRESS_STAGE_1 = 20
-    PREOGRES_STAGE_2 = 79
+    PROGRESS_STAGE_2 = 79
 
     def init(self, api):
         self._api = api
