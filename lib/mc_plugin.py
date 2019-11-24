@@ -53,7 +53,7 @@ class McPluginManager:
         # create McPublicMirrorDatabase objects
         for child in root.xpathEval(".//public-mirror-database"):
             obj = McPublicMirrorDatabase(self.param, self, path, child)
-            assert obj.id not in [x.id for x in self.param.McPublicMirrorDatabase]     # FIXME
+            assert obj.id not in [x.id for x in self.param.publicMirrorDatabaseList]   # FIXME
             self.param.publicMirrorDatabaseList.append(obj)
 
         # create McMirrorSite objects
