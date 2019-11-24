@@ -129,29 +129,27 @@ class PortageDb:
 
 class Updater:
 
-    def __init__(self, api, gentooOrGentooPortage=True):
-        self.api = api
-        self.proc = None
+    def __init__(self, gentooOrGentooPortage=True):
         if gentooOrGentooPortage:
             self.db = Db()
         else:
             self.db = PortageDb()
 
-    def init_start(self, notify_progress):
-        assert self.proc is None
+    def init_start(self, api):
+        self.api = api
         self._start(None)
 
     def init_stop(self):
         self.proc.terminate()
 
-    def update_start(self, sched_datetime):
-        assert self.proc is None
-        self._start(sched_datetime)
+    def update_start(self, api):
+        self.api = api
+        self._start(api)
 
     def update_stop(self):
         self.proc.terminate()
 
-    def _start(self, schedDatetime):
+    def _start(self, api):
         source = self.db.query(self.api.get_country(), self.api.get_location(), ["rsync"], True)[0]
         dataDir = self.api.get_data_dir()
         logFile = os.path.join(self.api.get_log_dir(), "rsync.log")
@@ -159,12 +157,14 @@ class Updater:
         self.proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
 
     def _finishCallback(self):
-        self.api.notify_progress(100)
-        self.proc = None
+        self.api.progress_changed(100)
+        del self.proc
+        del self.api
 
     def _errorCallback(self):
-        self.api.notify_progress(100)
-        self.proc = None
+        self.api.progress_changed(100, "error")
+        del self.proc
+        del self.api
 
 
 class PortageUpdater(Updater):

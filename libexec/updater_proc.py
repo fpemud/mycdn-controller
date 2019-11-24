@@ -15,7 +15,7 @@ def main():
 def _createInitApi(self):
     api = DynObject()
     api.get_country = lambda: "CN"
-    api.get_localtion = lambda: None
+    api.get_location = lambda: None
     api.get_data_dir = lambda: self.mirrorSite.dataDir
     api.get_log_dir = lambda: self.param.logDir
     api.progress_changed = self.initProgressCallback
@@ -24,7 +24,7 @@ def _createInitApi(self):
 def _createUpdateApi(self):
     api = DynObject()
     api.get_country = lambda: "CN"
-    api.get_localtion = lambda: None
+    api.get_location = lambda: None
     api.get_data_dir = lambda: self.mirrorSite.dataDir
     api.get_log_dir = lambda: self.param.logDir
     api.progress_changed = self.initProgressCallback

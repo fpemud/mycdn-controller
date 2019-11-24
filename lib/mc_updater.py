@@ -134,7 +134,7 @@ class _OneMirrorSiteUpdater:
     def _createInitApi(self):
         api = DynObject()
         api.get_country = lambda: "CN"
-        api.get_localtion = lambda: None
+        api.get_location = lambda: None
         api.get_data_dir = lambda: self.mirrorSite.dataDir
         api.get_log_dir = lambda: self.param.logDir
         api.progress_changed = self.initProgressCallback
@@ -143,7 +143,7 @@ class _OneMirrorSiteUpdater:
     def _createUpdateApi(self, schedDatetime):
         api = DynObject()
         api.get_country = lambda: "CN"
-        api.get_localtion = lambda: None
+        api.get_location = lambda: None
         api.get_data_dir = lambda: self.mirrorSite.dataDir
         api.get_log_dir = lambda: self.param.logDir
         api.get_sched_datetime = lambda: schedDatetime

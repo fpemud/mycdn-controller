@@ -4,7 +4,11 @@
 import os
 import sys
 import imp
+import libxml2
+from datetime import datetime
+from gi.repository import GLib
 sys.path.append("/usr/lib64/mycdn")
+from mc_util import DynObject
 
 
 class FakeParam:
@@ -18,31 +22,31 @@ class FakeParam:
         self.tmpDir = "/tmp/mycdn"
 
 
+def _progress_changed(progress, exc_info=None):
+    print("progress %s, %s" % (progress, exc_info))
+    if progress == 100 and runtime == "glib-mainloop":
+        mainloop.quit()
+
+
 def createInitApi(param, dataDir, runtime):
     api = DynObject()
     api.get_country = lambda: "CN"
-    api.get_localtion = lambda: None
-    api.get_data_dir = lambda: return dataDir
-    api.get_log_dir = lambda: return param.logDir
-    api.progress_changed = lambda progress, exc_info=None:
-        print("progress %s, %s" % (progress, exc_info))
-        if progress == 100 and runtime == "glib-mainloop":
-            mainloop.quit()
+    api.get_location = lambda: None
+    api.get_data_dir = lambda: dataDir
+    api.get_log_dir = lambda: param.logDir
+    api.progress_changed = _progress_changed
     return api
 
 
-def createUpdateApi(self, dataDir, runtime):
+def createUpdateApi(param, dataDir, runtime):
     schedDatetime = datetime.now()
     api = DynObject()
     api.get_country = lambda: "CN"
-    api.get_localtion = lambda: None
-    api.get_data_dir = lambda: return dataDir
-    api.get_log_dir = lambda: return param.logDir
+    api.get_location = lambda: None
+    api.get_data_dir = lambda: dataDir
+    api.get_log_dir = lambda: param.logDir
     api.get_sched_datetime = lambda: schedDatetime
-    api.progress_changed = lambda progress, exc_info=None:
-        print("progress %s, %s" % (progress, exc_info))
-        if progress == 100 and runtime == "glib-mainloop":
-            mainloop.quit()
+    api.progress_changed = _progress_changed
     return api
 
 
@@ -61,7 +65,7 @@ def loadUpdater(param, mainloop, path, mirrorSiteId):
     for child in root.xpathEval(".//mirror-site"):
         dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
 
-        elem = rootElem.xpathEval(".//updater")[0]
+        elem = root.xpathEval(".//updater")[0]
 
         runtime = "glib-mainloop"
         if len(elem.xpathEval(".//runtime")) > 0:
@@ -94,7 +98,7 @@ mainloop = GLib.MainLoop()
 dataDir, runtime, updater = loadUpdater(param, mainloop, pluginDir, mirrorSiteId)
 if os.path.exists(os.path.join(dataDir, ".uninitialized")):
     print("init start begin")
-    api = createInitApi(dataDir, runtime)
+    api = createInitApi(param, dataDir, runtime)
     if runtime == "glib-mainloop":
         updater.init_start(api)
     elif runtime == "thread":
@@ -107,7 +111,7 @@ if os.path.exists(os.path.join(dataDir, ".uninitialized")):
     print("init start end")
 else:
     print("update start begin")
-    api = createUpdateApi(dataDir, runtime)
+    api = createUpdateApi(param, dataDir, runtime)
     if runtime == "glib-mainloop":
         updater.update_start(api)
     elif runtime == "thread":
