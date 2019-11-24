@@ -21,7 +21,7 @@ class McPluginManager:
             pluginPath = os.path.join(self.param.pluginsDir, pluginName)
             if not os.path.isdir(pluginPath):
                 raise Exception("Invalid configuration file %s" % (fn))
-            self._load(self.param, pluginName, pluginPath)
+            self._load(pluginName, pluginPath)
 
     def _load(self, name, path):
         # get metadata.xml file
