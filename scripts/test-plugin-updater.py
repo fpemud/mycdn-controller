@@ -38,8 +38,8 @@ class FakeUpdaterApi:
     def get_log_dir(self):
         return self.logDir
 
-    def notify_progress(self, progress, finished):
-        print("progress %s, %d" % (progress, finished))
+    def notify_progress(self, progress, exc_info=None):
+        print("progress %s, %s" % (progress, exc_info))
         if progress == 100:
             mainloop.quit()
 

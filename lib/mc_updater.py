@@ -73,9 +73,9 @@ class McMirrorSiteUpdaterApi:
     def get_log_dir(self):
         return self.param.logDir
 
-    def notify_progress(self, progress, is_success):
+    def notify_progress(self, progress, exc_info=None):
         assert 0 <= progress <= 100
-        self.progressNotifier(progress, is_success)
+        self.progressNotifier(progress, exc_info)
 
 
 class _UpdateProxyMirrorSite:

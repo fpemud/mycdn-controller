@@ -24,7 +24,7 @@ class McMirrorSiteUpdaterApiProcess:
     def get_log_dir(self):
         return self.logDir
 
-    def notify_progress(self, progress, finished):
+    def notify_progress(self, progress, exc_info=None):
         assert False
 
 

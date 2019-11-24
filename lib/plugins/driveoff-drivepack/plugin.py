@@ -104,7 +104,7 @@ class Updater:
             for fn in (set(os.listdir(self.api.get_data_dir())) - fnSet):
                 fullfn = os.path.join(self.api.get_data_dir(), fn)
                 os.unlink(fullfn)
-            self.api.notify_progress(100, True)
+            self.api.notify_progress(100)
             self.wgetProc = None
             self.urlOpener = None
             self.linkDict = None

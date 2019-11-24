@@ -159,11 +159,11 @@ class Updater:
         self.proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
 
     def _finishCallback(self):
-        self.api.notify_progress(100, True)
+        self.api.notify_progress(100)
         self.proc = None
 
     def _errorCallback(self):
-        self.api.notify_progress(100, True)
+        self.api.notify_progress(100)
         self.proc = None
 
 
