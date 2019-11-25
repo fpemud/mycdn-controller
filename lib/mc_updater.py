@@ -3,6 +3,7 @@
 
 import os
 import logging
+from gi.repository import GLib
 from mc_util import McUtil
 from mc_util import DynObject
 from mc_util import GLibIdleInvoker
@@ -16,6 +17,8 @@ class McMirrorSiteUpdater:
     MIRROR_SITE_UPDATE_STATUS_IDLE = 2
     MIRROR_SITE_UPDATE_STATUS_SYNCING = 3
     MIRROR_SITE_UPDATE_STATUS_ERROR = 4
+
+    MIRROR_SITE_RE_INIT_INTERVAL = 60
 
     def __init__(self, param):
         self.param = param
@@ -70,8 +73,9 @@ class _OneMirrorSiteUpdater:
             self.mirrorSite.updaterObj.init_start(self._createInitApi())
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except:
-            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_ERROR
-            logging.error("Mirror site \"%s\" initialization failed." % (self.mirrorSite.id), exc_info=True)
+            self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
+            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
+            logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL), exc_info=True)
 
     def initStop(self):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
@@ -83,8 +87,9 @@ class _OneMirrorSiteUpdater:
         assert progress >= self.progress
 
         if exc_info is not None:
-            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_ERROR
-            logging.error("Mirror site \"%s\" initialization failed." % (self.mirrorSite.id), exc_info)
+            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
+            self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
+            logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL), exc_info=True)
             return
 
         if progress == 100:
@@ -157,6 +162,11 @@ class _OneMirrorSiteUpdater:
         api.get_sched_datetime = lambda: schedDatetime
         api.progress_changed = self.updateProgressCallback
         return api
+
+    def _reInitCallback(self):
+        del self.reInitHandler
+        self.initStart()
+        return False
 
 
 def _initFlagFile(param, mirrorSite):
