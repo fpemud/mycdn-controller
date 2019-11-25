@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<plugin id="driveoff-drivepack">
-  <file-mirror id="driveoff-drivepack">
-    <name>Driveoff Driver Pack</name>
-    <data-directory>driveofff-drivepack</data-directory>
+<plugin id="aosp">
+  <public-mirror-database id="aosp">
+    <filename>plugin.py</filename>
+    <classname>Database</classname>
+  </public-mirror-database>
+  <git-mirror id="aosp">
+    <name>AOSP</name>
+    <data-directory>aosp</data-directory>
     <updater>
       <filename>plugin.py</filename>
       <classname>Updater</classname>
@@ -13,5 +17,5 @@
       <protocol>http</protocol>
       <protocol>ftp</protocol>
     </advertiser>
-  </file-mirror>
+  </git-mirror>
 </plugin>
