@@ -21,7 +21,7 @@ class McMirrorSiteUpdater:
         self.param = param
         self.invoker = GLibIdleInvoker()
         self.scheduler = GLibCronScheduler()
-        self.updaterDict = dict()           # dict<mirror-site-id,updater-object>
+        self.updaterDict = dict()           # dict<mirror-id,updater-object>
 
         for ms in self.param.mirrorSiteList:
             # initialize data directory

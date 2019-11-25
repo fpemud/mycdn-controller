@@ -57,7 +57,7 @@ class Updater:
         for prefix, v in linkDict.items():
             filename, timeStr, url = v
             fullfn = os.path.join(self._api.get_data_dir(), filename)
-            if not os.path.exists(fullfn):
+            if not os.path.exists(fullfn) or _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
                 # get real download url, gigabase sucks
                 downloadUrl = None
                 if True:
@@ -118,6 +118,14 @@ class _Util:
         if ret.returncode != 0:
             ret.check_returncode()
         return ret.stdout.rstrip()
+
+    @staticmethod
+    def shellCallWithRetCode(cmd):
+        ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             shell=True, universal_newlines=True)
+        if ret.returncode > 128:
+            time.sleep(1.0)
+        return (ret.returncode, ret.stdout.rstrip())
 
 
 # class _GLibWgetProc:

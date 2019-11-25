@@ -57,7 +57,7 @@ class McPluginManager:
             self.param.publicMirrorDatabaseList.append(obj)
 
         # create McMirrorSite objects
-        for child in root.xpathEval(".//mirror-site"):
+        for child in root.xpathEval(".//file-mirror"):
             obj = McMirrorSite(self.param, path, child)
             assert obj.id not in [x.id for x in self.param.mirrorSiteList]             # FIXME
             self.param.mirrorSiteList.append(obj)
@@ -220,7 +220,7 @@ class TemplatePublicMirrorDatabase:
         assert False
 
 
-# mirror-site #################################################################
+# file-mirror #################################################################
 
 class TemplateMirrorSiteUpdater:
 

@@ -63,7 +63,7 @@ def loadUpdater(param, mainloop, path, mirrorSiteId):
 
     # create Updater object
     root = libxml2.parseFile(metadata_file).getRootElement()
-    for child in root.xpathEval(".//mirror-site"):
+    for child in root.xpathEval(".//file-mirror"):
         dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
 
         elem = root.xpathEval(".//updater")[0]
@@ -88,7 +88,7 @@ def loadUpdater(param, mainloop, path, mirrorSiteId):
 
 
 if len(sys.argv) < 3:
-    print("syntax: test-plugin-updater.py <plugin-directory> <mirror-site-id>")
+    print("syntax: test-plugin-updater.py <plugin-directory> <file-mirror-id>")
     sys.exit(1)
 
 pluginDir = sys.argv[1]

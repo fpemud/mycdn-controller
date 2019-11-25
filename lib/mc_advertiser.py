@@ -12,9 +12,9 @@ class McAdvertiser:
     def __init__(self, param):
         self.param = param
 
-        self.httpDirDict = dict()       # dict<mirror-site-id,data-dir>
-        self.ftpDirDict = dict()        # dict<mirror-site-id,data-dir>
-        self.rsyncDirDict = dict()     # dict<mirror-site-id,data-dir>
+        self.httpDirDict = dict()       # dict<mirror-id,data-dir>
+        self.ftpDirDict = dict()        # dict<mirror-id,data-dir>
+        self.rsyncDirDict = dict()      # dict<mirror-id,data-dir>
         for ms in self.param.mirrorSiteList:
             for proto in ms.advertiseProtocolList:
                 if proto == "http":

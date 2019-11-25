@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin id="driveoff-drivepack">
-  <mirror-site id="driveoff-drivepack">
+  <file-mirror id="driveoff-drivepack">
     <name>Driveoff Driver Pack</name>
     <data-directory>driveofff-drivepack</data-directory>
     <updater>
@@ -13,5 +13,5 @@
       <protocol>http</protocol>
       <protocol>ftp</protocol>
     </advertiser>
-  </mirror-site>
+  </file-mirror>
 </plugin>
