@@ -192,6 +192,8 @@ class _ShellProc:
             self.finishCallback()
         except GLib.GError:
             self.errorCallback()
+        except Exception as e:
+            print("error" + str(e))
         finally:
             GLib.source_remove(self.pidWatch)
             self.pidWatch = None
