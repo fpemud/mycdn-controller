@@ -93,7 +93,7 @@ class _OneMirrorSiteUpdater:
             return
 
         if progress == 100:
-            McUtil.forceDelete(_initFlagFile(self.mirrorSite))
+            McUtil.forceDelete(_initFlagFile(self.param, self.mirrorSite))
             del self.progress
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             self.parent.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
