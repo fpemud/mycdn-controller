@@ -162,7 +162,7 @@ class Updater:
         del self._api
 
     def _errorCallback(self):
-        self._api.progress_changed(100, "error")
+        self._api.progress_changed(100)
         del self._proc
         del self._api
 
