@@ -152,14 +152,14 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
         self.realUpdaterObj = plugin_class()
 
     def init_start(self, api):
-        self.__prepareRun(api, self.realUpdaterObj.init)
+        self.__prepare(api, self.realUpdaterObj.init)
         self.start()
 
     def init_stop(self):
         self.stopped = True
 
     def update_start(self, api):
-        self.__prepareRun(api, self.realUpdaterObj.update)
+        self.__prepare(api, self.realUpdaterObj.update)
         self.start()
 
     def update_stop(self):
