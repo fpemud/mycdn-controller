@@ -82,7 +82,7 @@ class _OneMirrorSiteUpdater:
 
         self.mirrorSite.updaterObj.init_stop()
 
-    def initProgressCallback(self, progress, exc_info):
+    def initProgressCallback(self, progress, exc_info=None):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
         assert progress >= self.progress
 
@@ -125,7 +125,7 @@ class _OneMirrorSiteUpdater:
 
         self.mirrorSite.updaterObj.update_stop()
 
-    def updateProgressCallback(self, progress, exc_info):
+    def updateProgressCallback(self, progress, exc_info=None):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
         assert progress >= self.progress
 
