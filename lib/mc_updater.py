@@ -82,6 +82,8 @@ class _OneMirrorSiteUpdater:
 
     def initProgressCallback(self, progress):
         assert progress >= self.progress
+        if progress == self.progress:
+            return
 
         if progress == 100:
             McUtil.forceDelete(_initFlagFile(self.param, self.mirrorSite))
@@ -89,9 +91,7 @@ class _OneMirrorSiteUpdater:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             self.parent.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
-            return
-
-        if progress > self.progress:
+        else:
             self.progress = progress
             logging.info("Mirror site \"%s\" initialization progress %d%%." % (self.mirrorSite.id, self.progress))
 
@@ -120,14 +120,14 @@ class _OneMirrorSiteUpdater:
 
     def updateProgressCallback(self, progress):
         assert progress >= self.progress
+        if progress == self.progress:
+            return
 
         if progress == 100:
             del self.progress
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
-            return
-
-        if progress > self.progress:
+        else:
             self.progress = progress
             logging.info("Mirror site \"%s\" update progress %d%%." % (self.mirrorSite.id, self.progress))
 
