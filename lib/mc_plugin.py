@@ -170,15 +170,17 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
         try:
             self.targetFunc(self.api)
         except:
-            self.api.progress_changed(100, sys.exc_info())
+            self.api.error_occured(sys.exc_info())
 
     def __prepare(self, api, targetFunc):
         self.targetFunc = targetFunc
         self.stopped = False
         self.realProgressChanged = api.progress_changed
+        self.realErrorOccured = api.error_occured
         self.api = api
         self.api.is_stopped = lambda: self.stopped
-        self.api.progress_changed = lambda progress, exc_info: GLib.idle_add(self._progress_changed, progress, exc_info)
+        self.api.progress_changed = lambda progress: GLib.idle_add(self._progress_changed, progress)
+        self.api.error_occured = lambda exc_info: GLib.idle_add(self._error_occured, exc_info)
 
     def __unprepare(self):
         del self.api
@@ -186,10 +188,15 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
         del self.stopped
         del self.targetFunc
 
-    def _progress_changed(self, progress, exc_info=None):
-        self.realProgressChanged(progress, exc_info)
-        if exc_info is not None or progress == 100:
+    def _progress_changed(self, progress):
+        self.realProgressChanged(progress)
+        if progress == 100:
             self.__unprepare()
+        return False
+
+    def _error_occured(self, exc_info):
+        self.realErrorOccured(exc_info)
+        self.__unprepare()
         return False
 
 
@@ -256,6 +263,9 @@ class TemmplateMirrorSiteUpdaterInitApi:
         assert False
 
     def progress_changed(progress, exc_info=None):
+        assert False
+
+    def error_occured(exc_info):
         assert False
 
 

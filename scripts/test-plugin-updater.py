@@ -23,9 +23,15 @@ class FakeParam:
         self.tmpDir = "/tmp/mycdn"
 
 
-def _progress_changed(progress, exc_info=None):
-    print("progress %s, %s" % (progress, exc_info))
+def _progress_changed(progress):
+    print("progress %s" % (progress))
     if progress == 100 and runtime == "glib-mainloop":
+        mainloop.quit()
+
+
+def _error_occured(exc_info):
+    print("error %s" % (str(exc_info)))
+    if runtime == "glib-mainloop":
         mainloop.quit()
 
 
@@ -36,6 +42,7 @@ def createInitApi(param, dataDir, runtime):
     api.get_data_dir = lambda: dataDir
     api.get_log_dir = lambda: param.logDir
     api.progress_changed = _progress_changed
+    api.error_occured = _error_occured
     return api
 
 
@@ -48,6 +55,7 @@ def createUpdateApi(param, dataDir, runtime):
     api.get_log_dir = lambda: param.logDir
     api.get_sched_datetime = lambda: schedDatetime
     api.progress_changed = _progress_changed
+    api.error_occured = _error_occured
     return api
 
 
