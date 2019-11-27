@@ -4,7 +4,6 @@
 import os
 import sys
 import imp
-import time
 import libxml2
 import threading
 from gi.repository import GLib
@@ -141,10 +140,9 @@ class McMirrorSite:
             self.advertiseProtocolList.append(child.getContent())
 
 
-class _UpdaterObjProxyRuntimeThread(threading.Thread):
+class _UpdaterObjProxyRuntimeThread:
 
     def __init__(self, filename, classname):
-        super().__init__()
         try:
             f = open(filename)
             m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
@@ -154,32 +152,36 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
         self.realUpdaterObj = plugin_class()
 
     def init_start(self, api):
-        self.__prepare(api, self.realUpdaterObj.init)
-        self.start()
+        self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
+        self.threadObj.start()
 
     def init_stop(self):
-        self.stopped = True
+        self.threadObj.stopped = True
 
     def update_start(self, api):
-        self.__prepare(api, self.realUpdaterObj.update)
-        self.start()
+        self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
+        self.threadObj.start()
 
     def update_stop(self):
-        self.stopped = True
+        self.threadObj.stopped = True
 
-    def run(self):
-        try:
-            self.targetFunc(self.api)
-            if hasattr(self, "api") and self.api is not None:
-                self.api.progress_changed(100)
-        except:
-            if hasattr(self, "api") and self.api is not None:
-                self.api.error_occured(sys.exc_info())
-        finally:
-            while hasattr(self, "api"):
-                time.sleep(1.0)
+    def _progressChangedIdleHandler(self, progress):
+        if progress == 100:
+            self.threadObj = None
+        self.realProgressChanged(progress)
+        return False
 
-    def __prepare(self, api, targetFunc):
+    def _errorOccuredIdleHandler(self, exc_info):
+        self.threadObj = None
+        self.realErrorOccured(exc_info)
+        return False
+
+
+class _UpdaterObjProxyRuntimeThreadImpl(threading.Thread):
+
+    def __init__(self, parent, api, targetFunc):
+        super().__init__()
+        self.parent = parent
         self.targetFunc = targetFunc
         self.stopped = False
         self.realProgressChanged = api.progress_changed
@@ -189,32 +191,23 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
         self.api.progress_changed = lambda progress: self._progressChanged(progress)
         self.api.error_occured = lambda exc_info: self._errorOccured(exc_info)
 
-    def __unprepare(self):
-        del self.api
-        del self.realErrorOccured
-        del self.realProgressChanged
-        del self.stopped
-        del self.targetFunc
+    def run(self):
+        try:
+            self.targetFunc(self.api)
+            if self.api is not None:
+                self.api.progress_changed(100)
+        except:
+            if self.api is not None:
+                self.api.error_occured(sys.exc_info())
 
     def _progressChanged(self, progress):
         if progress == 100:
             self.api = None
-        GLib.idle_add(self._progressChangedIdleHandler, progress)
+        GLib.idle_add(self.parent._progressChangedIdleHandler, progress)
 
     def _errorOccured(self, exc_info):
         self.api = None
-        GLib.idle_add(self._errorOccuredIdleHandler, exc_info)
-
-    def _progressChangedIdleHandler(self, progress):
-        self.realProgressChanged(progress)
-        if progress == 100:
-            self.__unprepare()
-        return False
-
-    def _errorOccuredIdleHandler(self, exc_info):
-        self.realErrorOccured(exc_info)
-        self.__unprepare()
-        return False
+        GLib.idle_add(self.parent._errorOccuredIdleHandler, exc_info)
 
 
 class _UpdaterObjProxyRuntimeProcess:
