@@ -18,14 +18,12 @@ class Updater:
     PROGRESS_STAGE_2 = 79
 
     def init(self, api):
-        self._api = api
-        self._doWork()
+        self._doWork(api)
 
     def update(self, api):
-        self._api = api
-        self._doWork()
+        self._doWork(api)
 
-    def _doWork(self):
+    def _doWork(self, api):
         linkDict = dict()
         fnSet = set()
 
@@ -48,15 +46,15 @@ class Updater:
                 found = True
             if not found:
                 break
-            self._api.progress_changed(self.PROGRESS_STAGE_1 * i // self.MAX_PAGE)
-        self._api.progress_changed(self.PROGRESS_STAGE_1)
+            api.progress_changed(self.PROGRESS_STAGE_1 * i // self.MAX_PAGE)
+        api.progress_changed(self.PROGRESS_STAGE_1)
 
         # download driver pack file one by one
         i = 1
         total = len(linkDict)
         for prefix, v in linkDict.items():
             filename, timeStr, url = v
-            fullfn = os.path.join(self._api.get_data_dir(), filename)
+            fullfn = os.path.join(api.get_data_dir(), filename)
             if not os.path.exists(fullfn) or _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
                 # get real download url, gigabase sucks
                 downloadUrl = None
@@ -68,20 +66,20 @@ class Updater:
                     assert downloadUrl is not None
 
                 # download
-                logFile = os.path.join(self._api.get_log_dir(), "wget.log")
+                logFile = os.path.join(api.get_log_dir(), "wget.log")
                 _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (fullfn + ".tmp", downloadUrl, logFile))
                 os.rename(fullfn + ".tmp", fullfn)
             fnSet.add(filename)
-            self._api.progress_changed(self.PROGRESS_STAGE_1 + self.PROGRESS_STAGE_2 * i // total)
+            api.progress_changed(self.PROGRESS_STAGE_1 + self.PROGRESS_STAGE_2 * i // total)
             i += 1
 
         # clear old files in cache
-        for fn in (set(os.listdir(self._api.get_data_dir())) - fnSet):
-            fullfn = os.path.join(self._api.get_data_dir(), fn)
+        for fn in (set(os.listdir(api.get_data_dir())) - fnSet):
+            fullfn = os.path.join(api.get_data_dir(), fn)
             os.unlink(fullfn)
 
         # report full progress
-        self._api.progress_changed(100)
+        api.progress_changed(100)
 
 
 class _Util:
