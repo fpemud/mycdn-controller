@@ -161,8 +161,8 @@ class Updater:
         del self._proc
         del self._api
 
-    def _errorCallback(self):
-        self._api.progress_changed(100)
+    def _errorCallback(self, exc_info):
+        self._api.notify_error(exc_info)
         del self._proc
         del self._api
 
@@ -190,10 +190,8 @@ class _ShellProc:
         try:
             GLib.spawn_check_exit_status(status)
             self.finishCallback()
-        except GLib.GError:
-            self.errorCallback()
-        except Exception as e:
-            print("error" + str(e))
+        except:
+            self.errorCallback(sys.exc_info())
         finally:
             GLib.source_remove(self.pidWatch)
             self.pidWatch = None
