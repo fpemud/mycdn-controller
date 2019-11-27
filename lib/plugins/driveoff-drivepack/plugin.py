@@ -39,9 +39,6 @@ class Updater:
                 if not elem.text.startswith("DP_"):
                     continue
                 m = re.match("(DP_.*)_([0-9]+)\\.7z", elem.text)
-                if m.group(1) in linkDict:
-                    if m.group(2) < linkDict[m.group(1)][1]:
-                        continue
                 linkDict[m.group(1)] = (m.group(0), m.group(2), elem.attrib["href"])
                 found = True
             if not found:
@@ -77,6 +74,13 @@ class Updater:
         for fn in (set(os.listdir(api.get_data_dir())) - fnSet):
             fullfn = os.path.join(api.get_data_dir(), fn)
             os.unlink(fullfn)
+
+        # recheck files
+        # it seems sometimes wget download only partial files but there's no error
+        for fn in fnSet:
+            fullfn = os.path.join(api.get_data_dir(), fn)
+            if _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
+                raise Exception("file %s is not valid, strange?!")
 
         # report full progress
         api.progress_changed(100)

@@ -105,7 +105,7 @@ mirrorSiteId = sys.argv[2]
 param = FakeParam()
 mainloop = GLib.MainLoop()
 dataDir, runtime, updater = loadUpdater(param, mainloop, pluginDir, mirrorSiteId)
-initFlagFile = os.path.join(dataDir, ".uninitialized")
+initFlagFile = dataDir + ".uninitialized"
 
 if not os.path.exists(dataDir):
     os.makedirs(dataDir)
