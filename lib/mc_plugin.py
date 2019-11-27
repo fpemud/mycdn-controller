@@ -176,7 +176,7 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
             if hasattr(self, "api") and self.api is not None:
                 self.api.error_occured(sys.exc_info())
         finally:
-            while hasattr(self. "api"):
+            while hasattr(self, "api"):
                 time.sleep(1.0)
 
     def __prepare(self, api, targetFunc):
