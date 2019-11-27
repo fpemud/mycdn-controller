@@ -143,6 +143,9 @@ class McMirrorSite:
 class _UpdaterObjProxyRuntimeThread:
 
     def __init__(self, filename, classname):
+        self.threadObj = None
+        self.realProgressChanged = None
+        self.realErrorOccured = None
         try:
             f = open(filename)
             m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
@@ -152,6 +155,8 @@ class _UpdaterObjProxyRuntimeThread:
         self.realUpdaterObj = plugin_class()
 
     def init_start(self, api):
+        self.realProgressChanged = api.progress_changed
+        self.realErrorOccured = api.error_occured
         self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
         self.threadObj.start()
 
@@ -159,6 +164,8 @@ class _UpdaterObjProxyRuntimeThread:
         self.threadObj.stopped = True
 
     def update_start(self, api):
+        self.realProgressChanged = api.progress_changed
+        self.realErrorOccured = api.error_occured
         self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
         self.threadObj.start()
 
@@ -166,14 +173,18 @@ class _UpdaterObjProxyRuntimeThread:
         self.threadObj.stopped = True
 
     def _progressChangedIdleHandler(self, progress):
+        self.realProgressChanged(progress)
         if progress == 100:
             self.threadObj = None
-        self.realProgressChanged(progress)
+            self.realErrorOccured = None
+            self.realProgressChanged = None
         return False
 
     def _errorOccuredIdleHandler(self, exc_info):
-        self.threadObj = None
         self.realErrorOccured(exc_info)
+        self.threadObj = None
+        self.realErrorOccured = None
+        self.realProgressChanged = None
         return False
 
 
@@ -184,8 +195,6 @@ class _UpdaterObjProxyRuntimeThreadImpl(threading.Thread):
         self.parent = parent
         self.targetFunc = targetFunc
         self.stopped = False
-        self.realProgressChanged = api.progress_changed
-        self.realErrorOccured = api.error_occured
         self.api = api
         self.api.is_stopped = lambda: self.stopped
         self.api.progress_changed = lambda progress: self._progressChanged(progress)
