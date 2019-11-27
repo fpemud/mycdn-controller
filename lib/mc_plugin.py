@@ -192,7 +192,7 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
     def __unprepare(self):
         del self.api
         del self.realErrorOccured
-        del self.readProgressChanged
+        del self.realProgressChanged
         del self.stopped
         del self.targetFunc
 
