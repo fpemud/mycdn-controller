@@ -163,7 +163,7 @@ class Updater:
         del self._api
 
     def _errorCallback(self, exc_info):
-        self._api.notify_error(exc_info)
+        self._api.error_occured(exc_info)
         del self._proc
         del self._api
 
