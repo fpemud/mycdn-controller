@@ -80,7 +80,7 @@ class Updater:
         for fn in fnSet:
             fullfn = os.path.join(api.get_data_dir(), fn)
             if _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
-                raise Exception("file %s is not valid, strange?!")
+                raise Exception("file %s is not valid, strange?!" % (fn))
 
         # report full progress
         api.progress_changed(100)
