@@ -2,6 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import sys
 import imp
 import libxml2
 import threading
@@ -166,7 +167,10 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
         self.stopped = True
 
     def run(self):
-        self.targetFunc(self.api)
+        try:
+            self.targetFunc(self.api)
+        except:
+            self.api.progress_changed(100, sys.exc_info())
 
     def __prepare(self, api, targetFunc):
         self.targetFunc = targetFunc
