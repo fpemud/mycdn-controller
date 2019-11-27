@@ -171,6 +171,9 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
             self.targetFunc(self.api)
         except:
             self.api.error_occured(sys.exc_info())
+        finally:
+            # check self.api.progress_changed(100) or self.api.error_occured() is called
+            assert self.api is None
 
     def __prepare(self, api, targetFunc):
         self.targetFunc = targetFunc
@@ -183,7 +186,7 @@ class _UpdaterObjProxyRuntimeThread(threading.Thread):
         self.api.error_occured = lambda exc_info: GLib.idle_add(self._error_occured, exc_info)
 
     def __unprepare(self):
-        del self.api
+        self.api = None
         del self.readProgressChanged
         del self.stopped
         del self.targetFunc

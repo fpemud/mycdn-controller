@@ -14,9 +14,11 @@ class McMirrorSiteUpdater:
 
     MIRROR_SITE_UPDATE_STATUS_INIT = 0
     MIRROR_SITE_UPDATE_STATUS_INITING = 1
-    MIRROR_SITE_UPDATE_STATUS_IDLE = 2
-    MIRROR_SITE_UPDATE_STATUS_SYNCING = 3
-    MIRROR_SITE_UPDATE_STATUS_ERROR = 4
+    MIRROR_SITE_UPDATE_STATUS_INIT_FAIL = 2
+    MIRROR_SITE_UPDATE_STATUS_IDLE = 3
+    MIRROR_SITE_UPDATE_STATUS_SYNCING = 4
+    MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL = 5
+    MIRROR_SITE_UPDATE_STATUS_ERROR = 6
 
     MIRROR_SITE_RE_INIT_INTERVAL = 60
 
@@ -65,8 +67,6 @@ class _OneMirrorSiteUpdater:
             self.parent.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
 
     def initStart(self):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
-
         self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
         try:
             self.progress = 0
@@ -74,16 +74,13 @@ class _OneMirrorSiteUpdater:
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except:
             self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
-            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
+            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL
             logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL), exc_info=True)
 
     def initStop(self):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
-
         self.mirrorSite.updaterObj.init_stop()
 
     def initProgressCallback(self, progress):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
         assert progress >= self.progress
 
         if progress == 100:
@@ -100,13 +97,11 @@ class _OneMirrorSiteUpdater:
 
     def initErrorCallback(self, exc_info):
         del self.progress
-        self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
+        self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL
         self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
         logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL), exc_info=True)
 
     def updateStart(self, schedDatetime):
-        assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING]
-
         tstr = schedDatetime.strftime("%Y-%m-%d %H:%M")
         if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
             logging.info("Mirror site \"%s\" updating ignored on \"%s\", last update is not finished." % (self.mirrorSite.id, tstr))
@@ -117,16 +112,13 @@ class _OneMirrorSiteUpdater:
                 self.mirrorSite.updaterObj.update_start(self._createUpdateApi(schedDatetime))
                 logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, tstr))
             except:
-                self._resetStatus(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
+                self._resetStatus(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL)
                 logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info=True)
 
     def updateStop(self):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
-
         self.mirrorSite.updaterObj.update_stop()
 
     def updateProgressCallback(self, progress):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
         assert progress >= self.progress
 
         if progress == 100:
@@ -141,7 +133,7 @@ class _OneMirrorSiteUpdater:
 
     def updateErrorCallback(self, exc_info):
         del self.progress
-        self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+        self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL
         logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info)
 
     def _createInitApi(self):
