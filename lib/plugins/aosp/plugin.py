@@ -14,10 +14,11 @@ import urllib.request
 class Database:
 
     def __init__(self):
-        self.db = [
-            "": {
-            },
-        ]
+        # self.db = [
+        #     "": {
+        #     },
+        # ]
+        pass
 
     def get(self, extended=False):
         if not extended:

@@ -69,9 +69,32 @@ def loadUpdater(param, mainloop, path, mirrorSiteId):
     if not os.access(metadata_file, os.R_OK):
         raise Exception("metadata.xml for plugin %s is invalid" % (name))
 
-    # create Updater object
     root = libxml2.parseFile(metadata_file).getRootElement()
+
+    # create Updater object
     for child in root.xpathEval(".//file-mirror"):
+        dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
+
+        elem = root.xpathEval(".//updater")[0]
+
+        runtime = "glib-mainloop"
+        if len(elem.xpathEval(".//runtime")) > 0:
+            runtime = elem.xpathEval(".//runtime")[0].getContent()
+            assert runtime in ["thread", "process"]
+
+        filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
+        classname = elem.xpathEval(".//classname")[0].getContent()
+        try:
+            f = open(filename)
+            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+            plugin_class = getattr(m, classname)
+        except:
+            raise Exception("syntax error")
+
+        return dataDir, runtime, plugin_class()
+
+    # create Updater object
+    for child in root.xpathEval(".//git-mirror"):
         dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
 
         elem = root.xpathEval(".//updater")[0]
