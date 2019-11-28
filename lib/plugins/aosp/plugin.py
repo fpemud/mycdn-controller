@@ -5,6 +5,7 @@ import os
 import io
 import gzip
 import time
+import certifi
 import subprocess
 import lxml.html
 import urllib.request
@@ -87,7 +88,7 @@ class _Util:
     def getWebPageElementTree(url):
         for i in range(0, 3):
             try:
-                resp = urllib.request.urlopen(url)
+                resp = urllib.request.urlopen(url, timeout=60, cafile=certifi.where())
                 if resp.info().get('Content-Encoding') is None:
                     fakef = resp
                 elif resp.info().get('Content-Encoding') == 'gzip':

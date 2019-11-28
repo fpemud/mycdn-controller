@@ -14,7 +14,7 @@ from collections import OrderedDict
 selfDir = os.path.dirname(os.path.realpath(__file__))
 
 url = "https://www.gentoo.org/downloads/mirrors"
-resp = urllib.request.urlopen(url, cafile=certifi.where())
+resp = urllib.request.urlopen(url, timeout=60, cafile=certifi.where())
 root = lxml.html.parse(resp)
 
 # we don't use region information currently
