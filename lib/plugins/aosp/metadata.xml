@@ -14,7 +14,8 @@
       <runtime>thread</runtime>
     </updater>
     <advertiser>
-      <protocol>git</protocol>
+      <!--<protocol>git</protocol>-->
+      <protocol>http</protocol>
     </advertiser>
   </git-mirror>
 </plugin>
