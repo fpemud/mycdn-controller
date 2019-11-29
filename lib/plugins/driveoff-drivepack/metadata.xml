@@ -2,7 +2,7 @@
 <plugin id="driveoff-drivepack">
   <file-mirror id="driveoff-drivepack">
     <name>Driveoff Driver Pack</name>
-    <data-directory>driveofff-drivepack</data-directory>
+    <data-directory>driveoff-drivepack</data-directory>
     <updater>
       <filename>plugin.py</filename>
       <classname>Updater</classname>
