@@ -134,7 +134,7 @@ class _OneMirrorSiteUpdater:
     def updateErrorCallback(self, exc_info):
         del self.progress
         self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL
-        logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info)
+        logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info=exc_info)
 
     def _createInitApi(self):
         api = DynObject()

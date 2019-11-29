@@ -628,7 +628,7 @@ class AvahiServiceRegister:
                 self._registerService()
             self._server.connect_to_signal("StateChanged", self.onSeverStateChanged)
         except:
-            logging.error("Avahi create server failed, retry in %d seconds" % (self.retryInterval), sys.exc_info())
+            logging.error("Avahi create server failed, retry in %d seconds" % (self.retryInterval), exc_info=True)
             self._releaseServer()
             self._retryCreateServer()
 
@@ -664,7 +664,7 @@ class AvahiServiceRegister:
             self._entryGroup.Commit()
             self._entryGroup.connect_to_signal("StateChanged", self.onEntryGroupStateChanged)
         except:
-            logging.error("Avahi register service failed, retry in %d seconds" % (self.retryInterval), sys.exc_info())
+            logging.error("Avahi register service failed, retry in %d seconds" % (self.retryInterval), exc_info=True)
             self._unregisterService()
             self._retryRegisterService()
 
