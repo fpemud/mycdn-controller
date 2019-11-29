@@ -1,10 +1,10 @@
 [Unit]
-Description=MyCDN service
+Description=mirrors daemon service
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/mycdn-daemon
+ExecStart=/usr/sbin/mirrors
 
 [Install]
 WantedBy=multi-user.target

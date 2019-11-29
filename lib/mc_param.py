@@ -7,15 +7,15 @@ import os
 class McParam:
 
     def __init__(self):
-        self.etcDir = "/etc/mycdn"
-        self.libDir = "/usr/lib64/mycdn"
+        self.etcDir = "/etc/mirrors"
+        self.libDir = "/usr/lib64/mirrors"
         self.pluginsDir = os.path.join(self.libDir, "plugins")
-        self.libexecDir = "/usr/libexec/mycdn"
+        self.libexecDir = "/usr/libexec/mirrors"
         self.updaterExe = os.path.join(self.libexecDir, "updater_proc.py")
-        self.cacheDir = "/var/cache/mycdn"
-        self.runDir = "/run/mycdn"
-        self.logDir = "/var/log/mycdn"
-        self.tmpDir = "/tmp/mycdn"
+        self.cacheDir = "/var/cache/mirrors"
+        self.runDir = "/run/mirrors"
+        self.logDir = "/var/log/mirrors"
+        self.tmpDir = "/tmp/mirrors"
 
         self.cfg = None
 
@@ -39,14 +39,3 @@ class McParam:
         self.avahiObj = None
         self.updater = None
         self.advertiser = None
-
-
-class McConfig:
-
-    def __init__(self):
-        self.bLocalOnly = False
-
-        self.apiPort = None
-        self.httpPort = None        # can be random
-        self.ftpPort = None         # can be random
-        self.rsyncPort = None       # can be random

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FILES="./mycdn"
+FILES="./mirrors"
 LIBFILES=""
 LIBFILES="${LIBFILES} $(find ./lib -name '*.py' | tr '\n' ' ')"
 

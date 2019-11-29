@@ -7,7 +7,7 @@ import imp
 import libxml2
 from datetime import datetime
 from gi.repository import GLib
-sys.path.append("/usr/lib64/mycdn")
+sys.path.append("/usr/lib64/mirrors")
 from mc_util import McUtil
 from mc_util import DynObject
 
@@ -15,12 +15,12 @@ from mc_util import DynObject
 class FakeParam:
 
     def __init__(self):
-        self.etcDir = "/etc/mycdn"
-        self.libDir = "/usr/lib64/mycdn"
-        self.cacheDir = "/var/cache/mycdn"
-        self.runDir = "/run/mycdn"
-        self.logDir = "/var/log/mycdn"
-        self.tmpDir = "/tmp/mycdn"
+        self.etcDir = "/etc/mirrors"
+        self.libDir = "/usr/lib64/mirrors"
+        self.cacheDir = "/var/cache/mirrors"
+        self.runDir = "/run/mirrors"
+        self.logDir = "/var/log/mirrors"
+        self.tmpDir = "/tmp/mirrors"
 
 
 def _progress_changed(progress):

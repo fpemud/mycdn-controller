@@ -11,7 +11,6 @@ from gi.repository import GLib
 from mc_util import McUtil
 from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
-from mc_param import McConfig
 from mc_plugin import McPluginManager
 from mc_api_server import McApiServer
 from mc_updater import McMirrorSiteUpdater
@@ -28,7 +27,7 @@ class McDaemon:
         McUtil.mkDirAndClear(self.param.runDir)
         McUtil.mkDirAndClear(self.param.tmpDir)
         try:
-            sys.stdout = StdoutRedirector(os.path.join(self.param.tmpDir, "mycdn.out"))
+            sys.stdout = StdoutRedirector(os.path.join(self.param.tmpDir, "mirrors.out"))
             sys.stderr = sys.stdout
 
             logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
@@ -39,7 +38,7 @@ class McDaemon:
             self.param.mainloop = GLib.MainLoop()
 
             # write pid file
-            with open(os.path.join(self.param.runDir, "mycdn.pid"), "w") as f:
+            with open(os.path.join(self.param.runDir, "mirrors.pid"), "w") as f:
                 f.write(str(os.getpid()))
 
             # load config
@@ -72,7 +71,7 @@ class McDaemon:
             # register serivce
             if self.param.avahiSupport:
                 self.param.avahiObj = AvahiServiceRegister()
-                self.param.avahiObj.add_service(socket.gethostname(), "_mycdn._tcp", self.param.apiPort)
+                self.param.avahiObj.add_service(socket.gethostname(), "_mirrors._tcp", self.param.apiPort)
                 self.param.avahiObj.start()
 
             # start main loop
@@ -103,7 +102,3 @@ class McDaemon:
         logging.info("SIGTERM received.")
         self.param.mainloop.quit()
         return True
-
-    def _loadConfig(self):
-        # FIXME
-        self.param.cfg = McConfig()

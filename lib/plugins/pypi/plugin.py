@@ -14,15 +14,17 @@ import urllib.request
 class Database:
 
     def __init__(self):
-        # self.db = [
-        #     "": {
-        #     },
-        # ]
-        pass
+        selfDir = os.path.dirname(os.path.realpath(__file__))
+
+        self.dictOfficial = {}
+
+        self.dictExtended = copy.deepcopy(self.dictOfficial)
+        with open(os.path.join(selfDir, "db-extended.json")) as f:
+            self.dictExtended.update(json.load(f))
 
     def get(self, extended=False):
         if not extended:
-            return {}
+            return self.dictOfficial
         else:
             return self.dictExtended
 

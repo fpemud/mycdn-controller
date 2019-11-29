@@ -2,7 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import sys
-sys.path.append('/usr/lib64/mycdn')
+sys.path.append('/usr/lib64/mirrors')
 from mc_util import DynObject
 
 def main():
