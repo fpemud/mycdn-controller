@@ -41,10 +41,6 @@ class McDaemon:
             with open(os.path.join(self.param.runDir, "mirrors.pid"), "w") as f:
                 f.write(str(os.getpid()))
 
-            # load config
-            self._loadConfig()
-            logging.info("Configuration loaded.")
-
             # load plugins
             self.pluginManager = McPluginManager(self.param)
             self.pluginManager.loadPlugins()
