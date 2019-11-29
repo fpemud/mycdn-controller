@@ -15,8 +15,6 @@ install:
 	find "$(DESTDIR)/$(prefix)/lib64/mirrors" -type d | xargs chmod 755
 
 	install -d -m 0755 "$(DESTDIR)/etc/mirrors"
-	cp -r etc/* "$(DESTDIR)/etc/mirrors"
-	find "$(DESTDIR)/etc/mirrors" -type f | xargs chmod 600
 
 	install -d -m 0755 "$(DESTDIR)/$(prefix)/lib/systemd/system"
 	install -m 0644 data/mirrors.service "$(DESTDIR)/$(prefix)/lib/systemd/system"
