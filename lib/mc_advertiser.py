@@ -57,3 +57,40 @@ class McAdvertiser:
         if self.rsyncServer is not None:
             self.rsyncServer.stop()
             self.rsyncServer = None
+
+
+class HttpServer:
+
+    def __init__(self, ip, port, logDir):
+        assert 0 < port < 65536
+        self._ip = ip
+        self._port = port
+        self._dirDict = dict()
+        self._logDir = logDir
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def running(self):
+        assert False
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def addFileDir(self, dirname, realPath):
+        port = McUtil.getFreeSocketPort("tcp")
+        logfile = os.path.join(self._logDir, "httpd-%d.log" % (port))
+        cmd = "/usr/bin/bozohttpd -b -f -H -I %d -s -X %s 2>%s" % (port, realPath, logfile)
+        proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
+        self._dirDict[dirname] = (realPath, port, proc)
+
+    def removeFileDir(self, dirname):
+        realPath, port, proc = self._dirDict[dirname]
+        proc.terminate()
+        proc.wait()
+        del self._dirDict[dirname]
