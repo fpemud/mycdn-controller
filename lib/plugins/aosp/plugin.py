@@ -5,6 +5,7 @@ import os
 import io
 import gzip
 import time
+import shutil
 import certifi
 import subprocess
 import lxml.html
@@ -83,6 +84,15 @@ class Updater:
 
 
 class _Util:
+
+    @staticmethod
+    def forceDelete(filename):
+        if os.path.islink(filename):
+            os.remove(filename)
+        elif os.path.isfile(filename):
+            os.remove(filename)
+        elif os.path.isdir(filename):
+            shutil.rmtree(filename)
 
     @staticmethod
     def getWebPageElementTree(url):
