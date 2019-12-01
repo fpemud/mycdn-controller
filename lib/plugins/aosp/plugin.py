@@ -58,38 +58,47 @@ class Database:
 class Updater:
 
     def init(self, api):
-        # download
-        dstFile = None
-        if True:
-            url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
-            dstFile = os.path.join(api.get_data_dir(), "aosp-latest.tar")
-            logFile = os.path.join(api.get_log_dir(), "wget.log")
-            _Util.shellCall("/usr/bin/wget -c -O \"%s\" \"%s\" >\"%s\" 2>&1" % (dstFile, url, logFile))
-        api.progress_changed(80)
+        dstFile = os.path.join(api.get_data_dir(), "aosp-latest.tar")
+        usedFile = dstFile + ".used"
 
-        # clear directory
-        for fn in os.listdir(api.get_data_dir()):
-            fullfn = os.path.join(api.get_data_dir(), fn)
-            if fullfn != dstFile:
-                _Util.forceDelete(fullfn)
-        api.progress_changed(82)
+        if not os.path.exists(usedFile):
+            # download
+            if True:
+                url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
+                logFile = os.path.join(api.get_log_dir(), "wget.log")
+                _Util.shellCall("/usr/bin/wget -c -O \"%s\" \"%s\" >\"%s\" 2>&1" % (dstFile, url, logFile))
+            api.progress_changed(80)
 
-        # extract
-        _Util.shellCall("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
-        api.progress_changed(90)
+            # clear directory
+            for fn in os.listdir(api.get_data_dir()):
+                fullfn = os.path.join(api.get_data_dir(), fn)
+                if fullfn != dstFile:
+                    _Util.forceDelete(fullfn)
+            api.progress_changed(82)
+
+            # extract
+            # sometimes tar file contains minor errors
+            _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
+            os.rename(dstFile, usedFile)
+            api.progress_changed(90)
+        else:
+            api.progress_changed(90)
 
         # sync
-        with _TempChdir(api.get_data_dir()):
-            _Util.shellCall("/usr/bin/repo sync")
+        self._doSync(api)
         api.progress_changed(99)
 
         # all done, delete the tar file
-        _Util.forceDelete(dstFile)
+        _Util.forceDelete(usedFile)
         api.progress_changed(100)
 
     def update(self, api):
+        self._doSync(api)
+
+    def _doSync(self, api):
         with _TempChdir(api.get_data_dir()):
-            _Util.shellCall("/usr/bin/repo sync")
+            logFile = os.path.join(api.get_log_dir(), "repo.log")
+            _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
 
 
 class _Util:
@@ -116,6 +125,13 @@ class _Util:
         if ret.returncode != 0:
             ret.check_returncode()
         return ret.stdout.rstrip()
+
+    @staticmethod
+    def shellCallIgnoreResult(cmd):
+        ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             shell=True, universal_newlines=True)
+        if ret.returncode > 128:
+            time.sleep(1.0)
 
 
 class _TempChdir:
