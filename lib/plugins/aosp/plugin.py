@@ -59,6 +59,7 @@ class Updater:
 
     def init(self, api):
         # download
+        dstFile = None
         if True:
             url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
             dstFile = os.path.join(api.get_data_dir(), "aosp-latest.tar")
