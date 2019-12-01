@@ -77,7 +77,7 @@ class Updater:
                 _Util.forceDelete(fullfn)
 
         # extract
-        _Util.cmdCall("/bin/tar -x -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
+        _Util.shellCall("/bin/tar -x -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
         _Util.forceDelete(dstFile)
 
     def update(self, api):

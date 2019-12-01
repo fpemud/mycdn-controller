@@ -74,7 +74,7 @@ class Updater:
         api.progress_changed(82)
 
         # extract
-        _Util.cmdCall("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
+        _Util.shellCall("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
         api.progress_changed(90)
 
         # sync
