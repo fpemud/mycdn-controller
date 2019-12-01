@@ -287,7 +287,7 @@ class TemmplateMirrorSiteUpdaterInitApi:
     def get_log_dir(self):
         assert False
 
-    def progress_changed(progress, exc_info=None):
+    def progress_changed(progress):
         assert False
 
     def error_occured(exc_info):
