@@ -67,22 +67,22 @@ class Updater:
                 url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
                 logFile = os.path.join(api.get_log_dir(), "wget.log")
                 _Util.shellCall("/usr/bin/wget -c -O \"%s\" \"%s\" >\"%s\" 2>&1" % (dstFile, url, logFile))
-            api.progress_changed(80)
+            api.progress_changed(50)
 
             # clear directory
             for fn in os.listdir(api.get_data_dir()):
                 fullfn = os.path.join(api.get_data_dir(), fn)
                 if fullfn != dstFile:
                     _Util.forceDelete(fullfn)
-            api.progress_changed(82)
+            api.progress_changed(55)
 
             # extract
             # sometimes tar file contains minor errors
             _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
             os.rename(dstFile, usedFile)
-            api.progress_changed(90)
+            api.progress_changed(60)
         else:
-            api.progress_changed(90)
+            api.progress_changed(60)
 
         # sync
         self._doSync(api)
