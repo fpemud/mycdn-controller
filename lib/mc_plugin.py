@@ -152,6 +152,7 @@ class _UpdaterObjProxyRuntimeThread:
         self.threadObj = None
         self.realProgressChanged = None
         self.realErrorOccured = None
+        self.realErrorOccuredAndHoldFor = None
         try:
             f = open(filename)
             m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
@@ -163,6 +164,7 @@ class _UpdaterObjProxyRuntimeThread:
     def init_start(self, api):
         self.realProgressChanged = api.progress_changed
         self.realErrorOccured = api.error_occured
+        self.realErrorOccuredAndHoldFor = api.error_occured_and_hold_for
         self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
         self.threadObj.start()
 
@@ -172,6 +174,7 @@ class _UpdaterObjProxyRuntimeThread:
     def update_start(self, api):
         self.realProgressChanged = api.progress_changed
         self.realErrorOccured = api.error_occured
+        self.realErrorOccuredAndHoldFor = api.error_occured_and_hold_for
         self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
         self.threadObj.start()
 
@@ -182,6 +185,7 @@ class _UpdaterObjProxyRuntimeThread:
         self.realProgressChanged(progress)
         if progress == 100:
             self.threadObj = None
+            self.realErrorOccuredAndHoldFor = None
             self.realErrorOccured = None
             self.realProgressChanged = None
         return False
@@ -189,6 +193,15 @@ class _UpdaterObjProxyRuntimeThread:
     def _errorOccuredIdleHandler(self, exc_info):
         self.realErrorOccured(exc_info)
         self.threadObj = None
+        self.realErrorOccuredAndHoldFor = None
+        self.realErrorOccured = None
+        self.realProgressChanged = None
+        return False
+
+    def _errorOccuredAndHoldForIdleHandler(self, seconds, exc_info):
+        self.realErrorOccured(seconds, exc_info)
+        self.threadObj = None
+        self.realErrorOccuredAndHoldFor = None
         self.realErrorOccured = None
         self.realProgressChanged = None
         return False
@@ -203,8 +216,9 @@ class _UpdaterObjProxyRuntimeThreadImpl(threading.Thread):
         self.stopped = False
         self.api = api
         self.api.is_stopped = lambda: self.stopped
-        self.api.progress_changed = lambda progress: self._progressChanged(progress)
-        self.api.error_occured = lambda exc_info: self._errorOccured(exc_info)
+        self.api.progress_changed = self._progressChanged
+        self.api.error_occured = self._errorOccured
+        self.api.error_occured_and_hold_for = self._errorOccuredAndHoldFor
 
     def run(self):
         try:
@@ -223,6 +237,10 @@ class _UpdaterObjProxyRuntimeThreadImpl(threading.Thread):
     def _errorOccured(self, exc_info):
         self.api = None
         GLib.idle_add(self.parent._errorOccuredIdleHandler, exc_info)
+
+    def _errorOccuredAndHoldFor(self, seconds, exc_info):
+        self.api = None
+        GLib.idle_add(self.parent._errorOccuredAndHoldForIdleHandler, seconds, exc_info)
 
 
 class _UpdaterObjProxyRuntimeProcess:
@@ -291,6 +309,9 @@ class TemmplateMirrorSiteUpdaterInitApi:
         assert False
 
     def error_occured(exc_info):
+        assert False
+
+    def error_occured_and_hold_for(seconds, exc_info):
         assert False
 
 

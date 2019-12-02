@@ -34,6 +34,11 @@ def _error_occured(exc_info):
     if runtime == "glib-mainloop":
         mainloop.quit()
 
+def _error_occured_and_hold_for(seconds, exc_info):
+    print("error_and_hold_for %d %s" % (seconds, str(exc_info)))
+    if runtime == "glib-mainloop":
+        mainloop.quit()
+
 
 def createInitApi(param, dataDir, runtime):
     api = DynObject()
@@ -43,6 +48,7 @@ def createInitApi(param, dataDir, runtime):
     api.get_log_dir = lambda: param.logDir
     api.progress_changed = _progress_changed
     api.error_occured = _error_occured
+    api.error_occured_and_hold_for = _error_occured_and_hold_for
     return api
 
 
@@ -56,6 +62,7 @@ def createUpdateApi(param, dataDir, runtime):
     api.get_sched_datetime = lambda: schedDatetime
     api.progress_changed = _progress_changed
     api.error_occured = _error_occured
+    api.error_occured_and_hold_for = _error_occured_and_hold_for
     return api
 
 

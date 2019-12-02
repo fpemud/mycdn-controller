@@ -101,6 +101,12 @@ class _OneMirrorSiteUpdater:
         self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
         logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL), exc_info=exc_info)
 
+    def initErrorAndHoldForCallback(self, seconds, exc_info):
+        del self.progress
+        self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL
+        self.reInitHandler = GLib.timeout_add_seconds(seconds, self._reInitCallback)
+        logging.error("Mirror site \"%s\" initialization failed, hold for %d seconds before re-initialization." % (self.mirrorSite.id, seconds), exc_info=exc_info)
+
     def updateStart(self, schedDatetime):
         tstr = schedDatetime.strftime("%Y-%m-%d %H:%M")
         if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
@@ -136,6 +142,10 @@ class _OneMirrorSiteUpdater:
         self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL
         logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info=exc_info)
 
+    def updateErrorAndHoldForCallback(self, seconds, exc_info):
+        # FIXME
+        self.updateErrorCallback(exc_info)
+
     def _createInitApi(self):
         api = DynObject()
         api.get_country = lambda: "CN"
@@ -144,6 +154,7 @@ class _OneMirrorSiteUpdater:
         api.get_log_dir = lambda: self.param.logDir
         api.progress_changed = self.initProgressCallback
         api.error_occured = self.initErrorCallback
+        api.error_occured_and_hold_for = self.initErrorAndHoldForCallback
         return api
 
     def _createUpdateApi(self, schedDatetime):
@@ -155,6 +166,7 @@ class _OneMirrorSiteUpdater:
         api.get_sched_datetime = lambda: schedDatetime
         api.progress_changed = self.updateProgressCallback
         api.error_occured = self.updateErrorCallback
+        api.error_occured_and_hold_for = self.updateErrorAndHoldForCallback
         return api
 
     def _reInitCallback(self):
