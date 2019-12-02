@@ -3,6 +3,7 @@
 
 import os
 import logging
+from datetime import datetime
 from gi.repository import GLib
 from mc_util import McUtil
 from mc_util import DynObject
@@ -143,8 +144,10 @@ class _OneMirrorSiteUpdater:
         logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info=exc_info)
 
     def updateErrorAndHoldForCallback(self, seconds, exc_info):
-        # FIXME
-        self.updateErrorCallback(exc_info)
+        del self.progress
+        self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL
+        self.parent.scheduler.pauseJob(self.mirrorSite.id, datetime.now() + datetime.timedelta(seconds=seconds))
+        logging.error("Mirror site \"%s\" update failed, hold for %d seconds." % (self.mirrorSite.id, seconds), exc_info=exc_info)
 
     def _createInitApi(self):
         api = DynObject()

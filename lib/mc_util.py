@@ -336,15 +336,18 @@ class GLibCronScheduler:
 
     def __init__(self):
         self.jobDict = OrderedDict()       # dict<id,(iter,callback)>
+        self.jobPauseDict = dict()         # dict<id,datetime>
+
         self.nextDatetime = None
-        self.nextJobCallbackList = None
+        self.nextJobList = None
+
         self.timeoutHandler = None
 
     def dispose(self):
         if self.timeoutHandler is not None:
             GLib.source_remove(self.timeoutHandler)
             self.timeoutHandler = None
-        self.nextJobCallbackList = None
+        self.nextJobList = None
         self.nextDatetime = None
         self.jobDict = OrderedDict()
 
@@ -364,7 +367,7 @@ class GLibCronScheduler:
                 self._clearTimeout()
                 self._calcTimeout(now)
             elif self._getNextDatetime(now, iter) == self.nextDatetime:
-                self.nextJobCallbackList.append(jobCallback)
+                self.nextJobList.append(jobId)
         else:
             self._calcTimeout(now)
 
@@ -372,30 +375,34 @@ class GLibCronScheduler:
         assert jobId in self.jobDict
 
         # remove job
-        iter, jobCallback = self.jobDict[jobId]
         del self.jobDict[jobId]
 
         # recalculate timeout if neccessary
         now = datetime.now()
         if self.nextDatetime is not None:
-            if jobCallback in self.nextJobCallbackList:
-                self.nextJobCallbackList.remove(jobCallback)
-                if len(self.nextJobCallbackList) == 0:
+            if jobId in self.nextJobList:
+                self.nextJobList.remove(jobId)
+                if len(self.nextJobList) == 0:
                     self._clearTimeout()
                     self._calcTimeout(now)
         else:
             assert False
 
+    def pauseJob(self, jobId, datetime):
+        assert jobId in self.jobDict
+        self.jobPauseDict[jobId] = datetime
+
     def _calcTimeout(self, now):
         assert self.nextDatetime is None
 
-        for iter, jobCallback in self.jobDict.values():
+        for jobId, v in self.jobDict.items():
+            iter = v[0]
             if self.nextDatetime is None or self._getNextDatetime(now, iter) < self.nextDatetime:
                 self.nextDatetime = self._getNextDatetime(now, iter)
-                self.nextJobCallbackList = [jobCallback]
+                self.nextJobList = [jobId]
                 continue
             if self._getNextDatetime(now, iter) == self.nextDatetime:
-                self.nextJobCallbackList.append(jobCallback)
+                self.nextJobList.append(jobId)
                 continue
 
         if self.nextDatetime is not None:
@@ -408,12 +415,17 @@ class GLibCronScheduler:
 
         GLib.source_remove(self.timeoutHandler)
         self.timeoutHandler = None
-        self.nextJobCallbackList = None
+        self.nextJobList = None
         self.nextDatetime = None
 
     def _jobCallback(self):
-        for jobCallback in self.nextJobCallbackList:
-            jobCallback(self.nextDatetime)
+        for jobId in self.nextJobList:
+            if jobId not in self.jobPauseDict:
+                self.jobDict[jobId][1](self.nextDatetime)
+            else:
+                if self.jobPauseDict[jobId] <= self.nextDatetime:
+                    del self.jobPauseDict[jobId]
+                    self.jobDict[jobId][1](self.nextDatetime)
         self._clearTimeout()
         self._calcTimeout(datetime.now())           # self._calcTimeout(self.nextDatetime) is stricter but less robust
         return False
