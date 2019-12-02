@@ -3,7 +3,6 @@
 
 import os
 import io
-import re
 import gzip
 import time
 import certifi
@@ -39,8 +38,7 @@ class Updater:
                     continue
                 if not elem.text.startswith("DP_"):
                     continue
-                m = re.match("(DP_.*)_([0-9]+)\\.7z", elem.text)
-                linkDict[m.group(1)] = (m.group(0), m.group(2), elem.attrib["href"])
+                linkDict[elem.text] = elem.attrib["href"]
                 found = True
             if not found:
                 break
@@ -50,8 +48,7 @@ class Updater:
         # download driver pack file one by one
         i = 1
         total = len(linkDict)
-        for prefix, v in linkDict.items():
-            filename, timeStr, url = v
+        for filename, url in linkDict.items():
             fullfn = os.path.join(api.get_data_dir(), filename)
             if not os.path.exists(fullfn) or _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
                 # get real download url, gigabase sucks
