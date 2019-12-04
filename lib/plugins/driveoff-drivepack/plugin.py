@@ -5,6 +5,7 @@ import os
 import io
 import gzip
 import time
+import magic
 import certifi
 import subprocess
 import lxml.html
@@ -51,7 +52,7 @@ class Updater:
         for filename, url in linkDict.items():
             fullfn = os.path.join(api.get_data_dir(), filename)
             if not os.path.exists(fullfn) or _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
-                # get real download url, gigabase sucks
+                # get the real download url, gigabase sucks
                 downloadUrl = None
                 if True:
                     for elem in _Util.getWebPageElementTree(url).xpath(".//a"):
@@ -61,9 +62,25 @@ class Updater:
                     assert downloadUrl is not None
 
                 # download
+                tmpfn = fullfn + ".tmp"
                 logFile = os.path.join(api.get_log_dir(), "wget.log")
-                _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (fullfn + ".tmp", downloadUrl, logFile))
-                os.rename(fullfn + ".tmp", fullfn)
+                while True:
+                    _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (tmpfn, downloadUrl, logFile))
+                    # gigabase may show downloading page twice, re-get the real download url
+                    if magic.detect_from_filename(tmpfn).mimetype == "text/html":
+                        with open(tmpfn, "r") as f:
+                            found = False
+                            for elem in lxml.html.parse(f).xpath(".//a"):
+                                if elem.text == "Download file":
+                                    downloadUrl = elem.attrib["href"]
+                                    found = True
+                                    break
+                            if found:
+                                time.sleep(5.0)
+                                continue
+                    break
+                os.rename(tmpfn, fullfn)
+
             fnSet.add(filename)
             api.progress_changed(self.PROGRESS_STAGE_1 + self.PROGRESS_STAGE_2 * i // total)
             i += 1
