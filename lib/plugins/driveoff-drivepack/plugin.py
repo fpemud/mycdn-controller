@@ -67,7 +67,7 @@ class Updater:
                 while True:
                     _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (tmpfn, downloadUrl, logFile))
                     # gigabase may show downloading page twice, re-get the real download url
-                    if magic.detect_from_filename(tmpfn).mimetype == "text/html":
+                    if magic.detect_from_filename(tmpfn).mime_type == "text/html":
                         with open(tmpfn, "r") as f:
                             found = False
                             for elem in lxml.html.parse(f).xpath(".//a"):
