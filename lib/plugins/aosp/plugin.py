@@ -7,14 +7,6 @@ import shutil
 import subprocess
 
 
-class Database:
-
-    def get_data(self):
-        dictOfficial = {}
-        dictExtended = {}
-        return (dictOfficial, dictExtended)
-
-
 class Updater:
 
     def init(self, api):

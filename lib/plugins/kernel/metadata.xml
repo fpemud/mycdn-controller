@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin id="kernel">
+  <public-mirror-database id="kernel">
+    <filename>plugin.py</filename>
+    <classname>Database</classname>
+  </public-mirror-database>
+  <file-mirror id="kernel">
+    <name>Linux Kernel Release</name>
+    <data-directory>kernel</data-directory>
+    <updater>
+      <filename>plugin.py</filename>
+      <classname>Updater</classname>
+      <cron-expression>0 0 * * 0</cron-expression>
+      <runtime>thread</runtime>
+    </updater>
+    <advertiser>
+      <protocol>http</protocol>
+      <protocol>ftp</protocol>
+    </advertiser>
+  </file-mirror>
+</plugin>

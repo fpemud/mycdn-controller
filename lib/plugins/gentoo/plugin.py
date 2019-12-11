@@ -17,7 +17,7 @@ class Database:
         with open(os.path.join(selfDir, "db-official.json")) as f:
             dictOfficial = json.load(f)
 
-        dictExtended = copy.deepcopy(self.dictOfficial)
+        dictExtended = copy.deepcopy(dictOfficial)
         with open(os.path.join(selfDir, "db-extended.json")) as f:
             dictExtended.update(json.load(f))
 
@@ -33,7 +33,7 @@ class PortageDatabase:
         with open(os.path.join(selfDir, "db-official.json")) as f:
             dictOfficial = self._convertDict(json.load(f))
 
-        dictExtended = copy.deepcopy(self.dictOfficial)
+        dictExtended = copy.deepcopy(dictOfficial)
         with open(os.path.join(selfDir, "db-extended.json")) as f:
             dictExtended.update(self._convertDict(json.load(f)))
 

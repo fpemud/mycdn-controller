@@ -4,11 +4,6 @@
         "country": "CN",
         "protocol": "http"
     },
-    "ftp://mirrors.tuna.tsinghua.edu.cn/gentoo/": {
-        "name": "Tuna",
-        "country": "CN",
-        "protocol": "ftp"
-    },
     "rsync://mirrors.tuna.tsinghua.edu.cn/gentoo/": {
         "name": "Tuna",
         "country": "CN",
@@ -18,11 +13,6 @@
         "name": "163",
         "country": "CN",
         "protocol": "http"
-    },
-    "ftp://mirrors.163.com/gentoo/": {
-        "name": "163",
-        "country": "CN",
-        "protocol": "ftp"
     },
     "rsync://mirrors.163.com/gentoo/": {
         "name": "163",

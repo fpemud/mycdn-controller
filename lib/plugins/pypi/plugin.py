@@ -20,7 +20,7 @@ class Database:
 
         dictOfficial = dict()
 
-        dictExtended = copy.deepcopy(self.dictOfficial)
+        dictExtended = copy.deepcopy(dictOfficial)
         with open(os.path.join(selfDir, "db-extended.json")) as f:
             dictExtended.update(json.load(f))
 

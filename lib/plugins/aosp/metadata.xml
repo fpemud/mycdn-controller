@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin id="aosp">
-  <public-mirror-database id="aosp">
-    <filename>plugin.py</filename>
-    <classname>Database</classname>
-  </public-mirror-database>
   <git-mirror id="aosp">
     <name>AOSP</name>
     <data-directory>aosp</data-directory>
