@@ -78,7 +78,8 @@ class McPublicMirrorDatabase:
     def __init__(self, param, plugin, pluginDir, rootElem):
         self.id = rootElem.prop("id")
 
-        self.dbObj = None
+        self.dictOfficial = dict()
+        self.dictExtended = dict()
         if True:
             filename = os.path.join(pluginDir, rootElem.xpathEval(".//filename")[0].getContent())
             classname = rootElem.xpathEval(".//classname")[0].getContent()
@@ -88,7 +89,46 @@ class McPublicMirrorDatabase:
                 plugin_class = getattr(m, classname)
             except:
                 raise Exception("syntax error")
-            self.dbObj = plugin_class()
+            dbObj = plugin_class()
+            self.dictOfficial, self.dictExtended = dbObj.get_data()
+
+    def get(self, extended=False):
+        if not extended:
+            return self.dictOfficial
+        else:
+            return self.dictExtended
+
+    def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
+        assert location is None or (country is not None and location is not None)
+        assert protocolList is None or all(x in ["http", "ftp", "rsync"] for x in protocolList)
+
+        # select database
+        srcDict = self.dictOfficial if not extended else self.dictExtended
+
+        # country out of scope, we don't consider this condition
+        if country is not None:
+            if not any(x.get("country", None) == country for x in srcDict.values()):
+                country = None
+                location = None
+
+        # location out of scope, same as above
+        if location is not None:
+            if not any(x["country"] == country and x.get("location", None) == location for x in srcDict.values()):
+                location = None
+
+        # do query
+        ret = []
+        for url, prop in srcDict.items():
+            if len(ret) >= maximum:
+                break
+            if country is not None and prop.get("country", None) != country:
+                continue
+            if location is not None and prop.get("location", None) != location:
+                continue
+            if protocolList is not None and prop.get("protocol", None) not in protocolList:
+                continue
+            ret.append(url)
+        return ret
 
 
 class McMirrorSite:
@@ -267,10 +307,7 @@ class _UpdaterObjProxyRuntimeProcess:
 
 class TemplatePublicMirrorDatabase:
 
-    def get(self, extended=False):
-        assert False
-
-    def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
+    def get_data(self):
         assert False
 
 
@@ -305,13 +342,17 @@ class TemmplateMirrorSiteUpdaterInitApi:
     def get_log_dir(self):
         assert False
 
-    def progress_changed(progress):
+    def get_public_mirror_database(self):
+        # FIXME, should be changed to get_public_mirror
         assert False
 
-    def error_occured(exc_info):
+    def progress_changed(self, progress):
         assert False
 
-    def error_occured_and_hold_for(seconds, exc_info):
+    def error_occured(self, exc_info):
+        assert False
+
+    def error_occured_and_hold_for(self, seconds, exc_info):
         assert False
 
 

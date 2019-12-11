@@ -155,6 +155,7 @@ class _OneMirrorSiteUpdater:
         api.get_location = lambda: None
         api.get_data_dir = lambda: self.mirrorSite.dataDir
         api.get_log_dir = lambda: self.param.logDir
+        api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
         api.progress_changed = self.initProgressCallback
         api.error_occured = self.initErrorCallback
         api.error_occured_and_hold_for = self.initErrorAndHoldForCallback
@@ -166,6 +167,7 @@ class _OneMirrorSiteUpdater:
         api.get_location = lambda: None
         api.get_data_dir = lambda: self.mirrorSite.dataDir
         api.get_log_dir = lambda: self.param.logDir
+        api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
         api.get_sched_datetime = lambda: schedDatetime
         api.progress_changed = self.updateProgressCallback
         api.error_occured = self.updateErrorCallback
@@ -180,3 +182,10 @@ class _OneMirrorSiteUpdater:
 
 def _initFlagFile(param, mirrorSite):
     return os.path.join(param.cacheDir, mirrorSite.dataDir + ".uninitialized")
+
+
+def _publicMirrorDatabase(param, mirrorSite):
+    for pmd in param.publicMirrorDatabaseList:
+        if pmd.id == mirrorSite.id:
+            return pmd
+    return None

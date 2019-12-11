@@ -2,11 +2,11 @@
 <plugin id="gentoo">
   <public-mirror-database id="gentoo">
     <filename>plugin.py</filename>
-    <classname>Db</classname>
+    <classname>Database</classname>
   </public-mirror-database>
   <public-mirror-database id="gentoo-portage">
     <filename>plugin.py</filename>
-    <classname>PortageDb</classname>
+    <classname>PortageDatabase</classname>
   </public-mirror-database>
   <file-mirror id="gentoo">
     <name>Gentoo Source Mirror</name>

@@ -3,6 +3,8 @@
 
 import os
 import io
+import copy
+import json
 import gzip
 import time
 import certifi
@@ -13,52 +15,16 @@ import urllib.request
 
 class Database:
 
-    def __init__(self):
+    def get_data(self):
         selfDir = os.path.dirname(os.path.realpath(__file__))
 
-        self.dictOfficial = {}
+        dictOfficial = dict()
 
-        self.dictExtended = copy.deepcopy(self.dictOfficial)
+        dictExtended = copy.deepcopy(self.dictOfficial)
         with open(os.path.join(selfDir, "db-extended.json")) as f:
-            self.dictExtended.update(json.load(f))
+            dictExtended.update(json.load(f))
 
-    def get(self, extended=False):
-        if not extended:
-            return self.dictOfficial
-        else:
-            return self.dictExtended
-
-    def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
-        assert location is None or (country is not None and location is not None)
-        assert protocolList is None or all(x in ["http", "ftp", "rsync"] for x in protocolList)
-
-        # select database
-        srcDict = self.dictOfficial if not extended else self.dictExtended
-
-        # country out of scope, we don't consider this condition
-        if country is not None:
-            if not any(x.get("country", None) == country for x in srcDict.values()):
-                country = None
-                location = None
-
-        # location out of scope, same as above
-        if location is not None:
-            if not any(x["country"] == country and x.get("location", None) == location for x in srcDict.values()):
-                location = None
-
-        # do query
-        ret = []
-        for url, prop in srcDict.items():
-            if len(ret) >= maximum:
-                break
-            if country is not None and prop.get("country", None) != country:
-                continue
-            if location is not None and prop.get("location", None) != location:
-                continue
-            if protocolList is not None and prop.get("protocol", None) not in protocolList:
-                continue
-            ret.append(url)
-        return ret
+        return (dictOfficial, dictExtended)
 
 
 class Updater:

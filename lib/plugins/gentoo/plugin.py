@@ -8,106 +8,36 @@ import json
 from gi.repository import GLib
 
 
-class Db:
+class Database:
 
-    def __init__(self):
+    def get_data(self):
         selfDir = os.path.dirname(os.path.realpath(__file__))
 
-        self.dictOfficial = None
+        dictOfficial = None
         with open(os.path.join(selfDir, "db-official.json")) as f:
-            self.dictOfficial = json.load(f)
+            dictOfficial = json.load(f)
 
-        self.dictExtended = copy.deepcopy(self.dictOfficial)
+        dictExtended = copy.deepcopy(self.dictOfficial)
         with open(os.path.join(selfDir, "db-extended.json")) as f:
-            self.dictExtended.update(json.load(f))
+            dictExtended.update(json.load(f))
 
-    def get(self, extended=False):
-        if not extended:
-            return self.dictOfficial
-        else:
-            return self.dictExtended
-
-    def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
-        assert location is None or (country is not None and location is not None)
-        assert protocolList is None or all(x in ["http", "ftp", "rsync"] for x in protocolList)
-
-        # select database
-        srcDict = self.dictOfficial if not extended else self.dictExtended
-
-        # country out of scope, we don't consider this condition
-        if country is not None:
-            if not any(x.get("country", None) == country for x in srcDict.values()):
-                country = None
-                location = None
-
-        # location out of scope, same as above
-        if location is not None:
-            if not any(x["country"] == country and x.get("location", None) == location for x in srcDict.values()):
-                location = None
-
-        # do query
-        ret = []
-        for url, prop in srcDict.items():
-            if len(ret) >= maximum:
-                break
-            if country is not None and prop.get("country", None) != country:
-                continue
-            if location is not None and prop.get("location", None) != location:
-                continue
-            if protocolList is not None and prop.get("protocol", None) not in protocolList:
-                continue
-            ret.append(url)
-        return ret
+        return (dictOfficial, dictExtended)
 
 
-class PortageDb:
+class PortageDatabase:
 
-    def __init__(self):
+    def get_data(self):
         selfDir = os.path.dirname(os.path.realpath(__file__))
 
-        self.dictOfficial = None
+        dictOfficial = None
         with open(os.path.join(selfDir, "db-official.json")) as f:
-            self.dictOfficial = self._convertDict(json.load(f))
+            dictOfficial = self._convertDict(json.load(f))
 
-        self.dictExtended = copy.deepcopy(self.dictOfficial)
+        dictExtended = copy.deepcopy(self.dictOfficial)
         with open(os.path.join(selfDir, "db-extended.json")) as f:
-            self.dictExtended.update(self._convertDict(json.load(f)))
+            dictExtended.update(self._convertDict(json.load(f)))
 
-    def get(self, extended=False):
-        if not extended:
-            return self.dictOfficial
-        else:
-            return self.dictExtended
-
-    def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
-        assert location is None or (country is not None and location is not None)
-        assert protocolList is None or protocolList == ["rsync"]
-
-        # select database
-        srcDict = self.dictOfficial if not extended else self.dictExtended
-
-        # country out of scope, we don't consider this condition
-        if country is not None:
-            if not any(x.get("country", None) == country for x in srcDict.values()):
-                country = None
-                location = None
-
-        # location out of scope, same as above
-        if location is not None:
-            if not any(x["country"] == country and x.get("location", None) == location for x in srcDict.values()):
-                location = None
-
-        # do query
-        ret = []
-        for url, prop in srcDict.items():
-            if len(ret) >= maximum:
-                break
-            if country is not None and prop.get("country", None) != country:
-                continue
-            if location is not None and prop.get("location", None) != location:
-                continue
-            ret.append(url)
-        return ret
+        return (dictOfficial, dictExtended)
 
     def _convertDict(self, srcDict):
         ret = dict()
@@ -130,12 +60,6 @@ class PortageDb:
 
 class Updater:
 
-    def __init__(self, gentooOrGentooPortage=True):
-        if gentooOrGentooPortage:
-            self._db = Db()
-        else:
-            self._db = PortageDb()
-
     def init_start(self, api):
         self._api = api
         self._start()
@@ -151,7 +75,8 @@ class Updater:
         self._proc.terminate()
 
     def _start(self):
-        source = self._db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
+        db = self._api.get_public_mirror_database()
+        source = db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
         dataDir = self._api.get_data_dir()
         logFile = os.path.join(self._api.get_log_dir(), "rsync.log")
         cmd = "/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (source, dataDir, logFile)
