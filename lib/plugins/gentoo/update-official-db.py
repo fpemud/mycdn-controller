@@ -11,6 +11,27 @@ from collections import OrderedDict
 
 ###############################################################################
 
+def convertDict(srcDict):
+    ret = dict()
+    for url, prop in srcDict.items():
+        if prop["protocol"] != "rsync":
+            continue
+        url = convertUrl(url)
+        if url is None:
+            continue
+        ret[url] = prop
+    return ret
+
+
+def convertUrl(srcUrl):
+    url = srcUrl.rstrip("/")
+    if not url.endswith("/gentoo"):
+        return None
+    url += "-portage"
+    return url
+
+###############################################################################
+
 selfDir = os.path.dirname(os.path.realpath(__file__))
 
 url = "https://www.gentoo.org/downloads/mirrors"
@@ -53,3 +74,7 @@ for elemTitle in root.xpath(".//h3"):
 # write to database file
 with open(os.path.join(selfDir, "db-official.json"), "w") as f:
     f.write(json.dumps(mirrorDict, indent=4))
+
+# write to portage database file
+with open(os.path.join(selfDir, "db-portage-official.json"), "w") as f:
+    f.write(json.dumps(convertDict(mirrorDict), indent=4))

@@ -46,6 +46,7 @@ def createInitApi(param, dataDir, runtime):
     api.get_location = lambda: None
     api.get_data_dir = lambda: dataDir
     api.get_log_dir = lambda: param.logDir
+    api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
     api.progress_changed = _progress_changed
     api.error_occured = _error_occured
     api.error_occured_and_hold_for = _error_occured_and_hold_for
@@ -64,6 +65,42 @@ def createUpdateApi(param, dataDir, runtime):
     api.error_occured = _error_occured
     api.error_occured_and_hold_for = _error_occured_and_hold_for
     return api
+
+
+def loadPublicMirrorDatabase(param, mainloop, path, publicMirrorDatabaseId):
+    # get metadata.xml file
+    metadata_file = os.path.join(path, "metadata.xml")
+    if not os.path.exists(metadata_file):
+        raise Exception("plugin %s has no metadata.xml" % (name))
+    if not os.path.isfile(metadata_file):
+        raise Exception("metadata.xml for plugin %s is not a file" % (name))
+    if not os.access(metadata_file, os.R_OK):
+        raise Exception("metadata.xml for plugin %s is invalid" % (name))
+
+    root = libxml2.parseFile(metadata_file).getRootElement()
+
+    # create Database object
+    for child in root.xpathEval(".//file-mirror"):
+        dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
+
+        elem = root.xpathEval(".//updater")[0]
+
+        runtime = "glib-mainloop"
+        if len(elem.xpathEval(".//runtime")) > 0:
+            runtime = elem.xpathEval(".//runtime")[0].getContent()
+            assert runtime in ["thread", "process"]
+
+        filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
+        classname = elem.xpathEval(".//classname")[0].getContent()
+        try:
+            f = open(filename)
+            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+            plugin_class = getattr(m, classname)
+        except:
+            raise Exception("syntax error")
+
+        return dataDir, runtime, plugin_class()
+
 
 
 def loadUpdater(param, mainloop, path, mirrorSiteId):
@@ -134,6 +171,7 @@ mirrorSiteId = sys.argv[2]
 
 param = FakeParam()
 mainloop = GLib.MainLoop()
+db = loadPublicMirrorDatabase(param, mainloop, pluginDir, mirrorSiteId)
 dataDir, runtime, updater = loadUpdater(param, mainloop, pluginDir, mirrorSiteId)
 initFlagFile = dataDir + ".uninitialized"
 

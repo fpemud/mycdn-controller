@@ -5,7 +5,7 @@ import os
 import sys
 import copy
 import json
-from gi.repository import GLib
+import subprocess
 
 
 class Database:
@@ -24,59 +24,39 @@ class Database:
 
 class Updater:
 
-    def init_start(self, api):
-        self._api = api
-        self._start()
+    def init(self, api):
+        self._do_wor(api)
 
-    def init_stop(self):
-        self._proc.terminate()
+    def update(self, api):
+        self._do_wor(api)
 
-    def update_start(self, api):
-        self._api = api
-        self._start()
-
-    def update_stop(self):
-        self._proc.terminate()
-
-    def _start(self):
-        source = self._db.query(self._api.get_country(), self._api.get_location(), ["http"], True)[0]
+    def _do_wor(self):
+        url = self._db.query(self._api.get_country(), self._api.get_location(), ["http"], True)[0]
         dataDir = self._api.get_data_dir()
-        logFile = os.path.join(self._api.get_log_dir(), "rsync.log")
-        cmd = "/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (source, dataDir, logFile)
-        self._proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
-
-    def _finishCallback(self):
-        self._api.progress_changed(100)
-        del self._proc
-        del self._api
-
-    def _errorCallback(self, exc_info):
-        self._api.error_occured(exc_info)
-        del self._proc
-        del self._api
+        logFile = os.path.join(self._api.get_log_dir(), "wget.log")
+        cmd = "/usr/bin/wget -m --no-parent -e robots=off -nH --cut-dirs=1 --wait 1 --reject \"index.html\" -P \"%s\" %s >%s 2>&1" % (dataDir, url, logFile)
+        _Util.shellCall(cmd)
 
 
-class _ShellProc:
+class _Util:
 
-    def __init__(self, cmd, finishCallback, errorCallback):
-        targc, targv = GLib.shell_parse_argv("/bin/sh -c \"%s\"" % (cmd))
-        self.pid = GLib.spawn_async(targv, flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD)[0]
-        self.finishCallback = finishCallback
-        self.errorCallback = errorCallback
-        self.pidWatch = GLib.child_watch_add(self.pid, self._exitCallback)
+    @staticmethod
+    def shellCall(cmd):
+        # call command with shell to execute backstage job
+        # scenarios are the same as FmUtil.cmdCall
 
-    def terminate(self):
-        # FIXME
-        pass
+        ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             shell=True, universal_newlines=True)
+        if ret.returncode > 128:
+            # for scenario 1, caller's signal handler has the oppotunity to get executed during sleep
+            time.sleep(1.0)
+        if ret.returncode != 0:
+            ret.check_returncode()
+        return ret.stdout.rstrip()
 
-    def _exitCallback(self, status, data):
-        try:
-            GLib.spawn_check_exit_status(status)
-            self.finishCallback()
-        except:
-            self.errorCallback(sys.exc_info())
-        finally:
-            GLib.source_remove(self.pidWatch)
-            self.pidWatch = None
-            GLib.spawn_close_pid(self.pid)
-            self.pid = None
+    @staticmethod
+    def shellCallIgnoreResult(cmd):
+        ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             shell=True, universal_newlines=True)
+        if ret.returncode > 128:
+            time.sleep(1.0)

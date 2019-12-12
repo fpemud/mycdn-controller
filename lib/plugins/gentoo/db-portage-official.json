@@ -1,0 +1,87 @@
+{
+    "rsync://mirrors.tera-byte.com/gentoo-portage": {
+        "name": "Tera-byte Dot Com Inc",
+        "country": "CA",
+        "protocol": "rsync"
+    },
+    "rsync://rsync.gtlib.gatech.edu/gentoo-portage": {
+        "name": "Georgia Tech",
+        "country": "US",
+        "protocol": "rsync"
+    },
+    "rsync://mirrors.rit.edu/gentoo-portage": {
+        "name": "Rochester Institute of Technology",
+        "country": "US",
+        "protocol": "rsync"
+    },
+    "rsync://gentoo.c3sl.ufpr.br/gentoo-portage": {
+        "name": "C3SL, Federal University of Paran\u00e1",
+        "country": "BR",
+        "protocol": "rsync"
+    },
+    "rsync://ftp.fi.muni.cz/pub/linux/gentoo-portage": {
+        "name": "Masaryk University Brno",
+        "country": "CZ",
+        "protocol": "rsync"
+    },
+    "rsync://mirror.dkm.cz/gentoo-portage": {
+        "name": "UPC \u010cesk\u00e1 republika, a.s.",
+        "country": "CZ",
+        "protocol": "rsync"
+    },
+    "rsync://ftp.fau.de/gentoo-portage": {
+        "name": "Uni Erlangen-N\u00fcrnberg",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "rsync://ftp-stud.hs-esslingen.de/gentoo-portage": {
+        "name": "University of Applied Sciences, Esslingen",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "rsync://mirror.eu.oneandone.net/gentoo-portage": {
+        "name": "1&1 Internet SE",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "rsync://mirror.netcologne.de/gentoo-portage": {
+        "name": "Netcologne",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "rsync://ftp.halifax.rwth-aachen.de/gentoo-portage": {
+        "name": "RWTH Aachen University",
+        "country": "DE",
+        "protocol": "rsync"
+    },
+    "rsync://ftp.snt.utwente.nl/gentoo-portage": {
+        "name": "Universiteit Twente",
+        "country": "NL",
+        "protocol": "rsync"
+    },
+    "rsync://mirror.leaseweb.com/gentoo-portage": {
+        "name": "LeaseWeb",
+        "country": "NL",
+        "protocol": "rsync"
+    },
+    "rsync://ftp.vectranet.pl/gentoo-portage": {
+        "name": "Vectranet",
+        "country": "PL",
+        "protocol": "rsync"
+    },
+    "rsync://mirror.bytemark.co.uk/gentoo-portage": {
+        "name": "Bytemark Hosting",
+        "country": "UK",
+        "protocol": "rsync"
+    },
+    "rsync://ftp.iij.ad.jp/pub/linux/gentoo-portage": {
+        "name": "Internet Initiative Japan",
+        "country": "JP",
+        "protocol": "rsync"
+    },
+    "rsync://mirror.ps.kz/gentoo-portage": {
+        "name": "Neo Lab's",
+        "country": "KZ",
+        "protocol": "rsync"
+    }
+}

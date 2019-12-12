@@ -1,0 +1,12 @@
+{
+    "rsync://mirrors.tuna.tsinghua.edu.cn/gentoo-portage": {
+        "name": "Tuna",
+        "country": "CN",
+        "protocol": "rsync"
+    },
+    "rsync://mirrors.163.com/gentoo-portage": {
+        "name": "163",
+        "country": "CN",
+        "protocol": "rsync"
+    }
+}

@@ -8,56 +8,6 @@ import json
 from gi.repository import GLib
 
 
-class Database:
-
-    def get_data(self):
-        selfDir = os.path.dirname(os.path.realpath(__file__))
-
-        dictOfficial = None
-        with open(os.path.join(selfDir, "db-official.json")) as f:
-            dictOfficial = json.load(f)
-
-        dictExtended = copy.deepcopy(dictOfficial)
-        with open(os.path.join(selfDir, "db-extended.json")) as f:
-            dictExtended.update(json.load(f))
-
-        return (dictOfficial, dictExtended)
-
-
-class PortageDatabase:
-
-    def get_data(self):
-        selfDir = os.path.dirname(os.path.realpath(__file__))
-
-        dictOfficial = None
-        with open(os.path.join(selfDir, "db-official.json")) as f:
-            dictOfficial = self._convertDict(json.load(f))
-
-        dictExtended = copy.deepcopy(dictOfficial)
-        with open(os.path.join(selfDir, "db-extended.json")) as f:
-            dictExtended.update(self._convertDict(json.load(f)))
-
-        return (dictOfficial, dictExtended)
-
-    def _convertDict(self, srcDict):
-        ret = dict()
-        for url, prop in srcDict.items():
-            if prop["protocol"] != "rsync":
-                continue
-            url = self._convertUrl(url)
-            if url is None:
-                continue
-            ret[url] = prop
-        return ret
-
-    def _convertUrl(self, srcUrl):
-        url = srcUrl.rstrip("/")
-        if not url.endswith("/gentoo"):
-            return None
-        url += "-portage"
-        return url
-
-
 class Updater:
 
     def init_start(self, api):
@@ -91,12 +41,6 @@ class Updater:
         self._api.error_occured(exc_info)
         del self._proc
         del self._api
-
-
-class PortageUpdater(Updater):
-
-    def __init__(self):
-        super().__init__(False)
 
 
 class _ShellProc:

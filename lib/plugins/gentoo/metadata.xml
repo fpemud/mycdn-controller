@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin id="gentoo">
   <public-mirror-database id="gentoo">
-    <filename>plugin.py</filename>
-    <classname>Database</classname>
+    <json-file type="official">db-official.json</json-file>
+    <json-file type="extended">db-extended.json</json-file>
   </public-mirror-database>
   <public-mirror-database id="gentoo-portage">
-    <filename>plugin.py</filename>
-    <classname>PortageDatabase</classname>
+    <json-file type="official">db-portage-official.json</json-file>
+    <json-file type="extended">db-portage-extended.json</json-file>
   </public-mirror-database>
   <file-mirror id="gentoo">
     <name>Gentoo Source Mirror</name>
@@ -26,7 +26,7 @@
     <data-directory>gentoo-portage</data-directory>
     <updater>
       <filename>plugin.py</filename>
-      <classname>PortageUpdater</classname>
+      <classname>Updater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>

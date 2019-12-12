@@ -13,20 +13,6 @@ import lxml.html
 import urllib.request
 
 
-class Database:
-
-    def get_data(self):
-        selfDir = os.path.dirname(os.path.realpath(__file__))
-
-        dictOfficial = dict()
-
-        dictExtended = copy.deepcopy(dictOfficial)
-        with open(os.path.join(selfDir, "db-extended.json")) as f:
-            dictExtended.update(json.load(f))
-
-        return (dictOfficial, dictExtended)
-
-
 class Updater:
 
     def init(self, api):

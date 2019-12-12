@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <plugin id="pypi">
   <public-mirror-database id="pypi">
-    <filename>plugin.py</filename>
-    <classname>Database</classname>
+    <json-file type="extended">db-extended.json</json-file>
   </public-mirror-database>
   <file-mirror id="pypi">
     <name>PyPI</name>
