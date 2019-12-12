@@ -92,14 +92,9 @@ def loadPublicMirrorDatabase(param, mainloop, path, publicMirrorDatabaseId):
 
         filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
         classname = elem.xpathEval(".//classname")[0].getContent()
-        try:
-            f = open(filename)
-            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-            plugin_class = getattr(m, classname)
-        except:
-            raise Exception("syntax error")
+        dbObj = McUtil.loadObject(filename, classname)
 
-        return dataDir, runtime, plugin_class()
+        return dataDir, runtime, dbObj
 
 
 
@@ -128,14 +123,9 @@ def loadUpdater(param, mainloop, path, mirrorSiteId):
 
         filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
         classname = elem.xpathEval(".//classname")[0].getContent()
-        try:
-            f = open(filename)
-            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-            plugin_class = getattr(m, classname)
-        except:
-            raise Exception("syntax error")
+        updaterObj = McUtil.loadObject(filename, classname)
 
-        return dataDir, runtime, plugin_class()
+        return dataDir, runtime, updaterObj
 
     # create Updater object
     for child in root.xpathEval(".//git-mirror"):
@@ -150,14 +140,9 @@ def loadUpdater(param, mainloop, path, mirrorSiteId):
 
         filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
         classname = elem.xpathEval(".//classname")[0].getContent()
-        try:
-            f = open(filename)
-            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-            plugin_class = getattr(m, classname)
-        except:
-            raise Exception("syntax error")
+        updaterObj = McUtil.loadObject(filename, classname)
 
-        return dataDir, runtime, plugin_class()
+        return dataDir, runtime, updaterObj
 
     return None
 

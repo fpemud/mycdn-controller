@@ -3,6 +3,7 @@
 
 import os
 import sys
+import imp
 import dbus
 import math
 import fcntl
@@ -23,6 +24,16 @@ from dbus.mainloop.glib import DBusGMainLoop
 
 
 class McUtil:
+
+    @staticmethod
+    def loadObject(filename, classname, *args):
+        try:
+            f = open(filename)
+            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
+            objClass = getattr(m, classname)
+            return objClass(*args)
+        except:
+            raise Exception("syntax error")
 
     @staticmethod
     def is_method(obj, method_name):

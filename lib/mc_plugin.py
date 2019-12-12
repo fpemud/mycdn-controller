@@ -3,11 +3,11 @@
 
 import os
 import sys
-import imp
 import json
 import libxml2
 import threading
 from gi.repository import GLib
+from mc_util import McUtil
 
 
 class McPluginManager:
@@ -88,13 +88,7 @@ class McPublicMirrorDatabase:
             if tlist1 != [] and tlist2 != []:
                 filename = os.path.join(pluginDir, tlist1[0].getContent())
                 classname = tlist2[0].getContent()
-                try:
-                    f = open(filename)
-                    m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-                    plugin_class = getattr(m, classname)
-                except:
-                    raise Exception("syntax error")
-                dbObj = plugin_class()
+                dbObj = McUtil.loadObject(filename, classname)
                 self.dictOfficial, self.dictExtended = dbObj.get_data()
             elif tlist3 != []:
                 for e in tlist3:
@@ -159,10 +153,38 @@ class McMirrorSite:
         self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
         self.dataDir = os.path.join(param.cacheDir, self.dataDir)
 
+        # initializer
+        self.initializerObj = None
+        if True:
+            elem = rootElem.xpathEval(".//initializer")[0]
+
+            ret = elem.xpathEval(".//runtime")
+            if len(ret) > 0:
+                self.runtime = ret[0].getContent()
+                # FIXME: add check
+            else:
+                self.runtime = "glib-mainloop"
+
+            filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
+            classname = elem.xpathEval(".//classname")[0].getContent()
+            while True:
+                if self.runtime == "glib-mainloop":
+                    self.initializerObj = McUtil.loadObject(filename, classname)
+                    break
+
+                if self.runtime == "thread":
+                    self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)    # FIXME
+                    break
+
+                if self.runtime == "process":
+                    self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, filename, classname)    # FIXME
+                    break
+
+                assert False
+
         # updater
         self.updaterObj = None
         self.schedExpr = None
-        self.useWorkerProc = None
         if True:
             elem = rootElem.xpathEval(".//updater")[0]
 
@@ -180,13 +202,7 @@ class McMirrorSite:
             classname = elem.xpathEval(".//classname")[0].getContent()
             while True:
                 if self.runtime == "glib-mainloop":
-                    try:
-                        f = open(filename)
-                        m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-                        plugin_class = getattr(m, classname)
-                    except:
-                        raise Exception("syntax error")
-                    self.updaterObj = plugin_class()
+                    self.updaterObj = McUtil.loadObject(filename, classname)
                     break
 
                 if self.runtime == "thread":
@@ -212,13 +228,7 @@ class _UpdaterObjProxyRuntimeThread:
         self.realProgressChanged = None
         self.realErrorOccured = None
         self.realErrorOccuredAndHoldFor = None
-        try:
-            f = open(filename)
-            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-            plugin_class = getattr(m, classname)
-        except:
-            raise Exception("syntax error")
-        self.realUpdaterObj = plugin_class()
+        self.realUpdaterObj = McUtil.loadObject(filename, classname)
 
     def init_start(self, api):
         self.realProgressChanged = api.progress_changed

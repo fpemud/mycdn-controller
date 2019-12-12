@@ -33,14 +33,3 @@ def _createUpdateApi(self):
 
 if __name__ == "__main__":
     assert False
-
-
-
-
-        try:
-            f = open(filename)
-            m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
-            plugin_class = getattr(m, classname)
-        except:
-            raise Exception("syntax error")
-        self.realUpdaterObj = plugin_class()
