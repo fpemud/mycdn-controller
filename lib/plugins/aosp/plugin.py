@@ -7,9 +7,9 @@ import shutil
 import subprocess
 
 
-class Updater:
+class Initializer:
 
-    def init(self, api):
+    def run(self, api):
         dstFile = os.path.join(api.get_data_dir(), "aosp-latest.tar")
         usedFile = dstFile + ".used"
 
@@ -37,17 +37,19 @@ class Updater:
             api.progress_changed(60)
 
         # sync
-        self._doSync(api)
+        with _TempChdir(api.get_data_dir()):
+            logFile = os.path.join(api.get_log_dir(), "repo.log")
+            _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
         api.progress_changed(99)
 
         # all done, delete the tar file
         _Util.forceDelete(usedFile)
         api.progress_changed(100)
 
-    def update(self, api):
-        self._doSync(api)
 
-    def _doSync(self, api):
+class Updater:
+
+    def run(self, api):
         with _TempChdir(api.get_data_dir()):
             logFile = os.path.join(api.get_log_dir(), "repo.log")
             _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))

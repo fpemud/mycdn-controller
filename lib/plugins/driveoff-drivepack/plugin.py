@@ -12,19 +12,20 @@ import lxml.html
 import urllib.request
 
 
-class Updater:
+MAX_PAGE = 10
+PROGRESS_STAGE_1 = 20
+PROGRESS_STAGE_2 = 79
 
-    MAX_PAGE = 10
-    PROGRESS_STAGE_1 = 20
-    PROGRESS_STAGE_2 = 79
 
-    def init(self, api):
+class InitAndUpdater:
+
+    def run(self, api):
         linkDict = dict()
         fnSet = set()
 
         # fetch web pages
         # retrived from "http://driveroff.net/category/dp", it's in russian, do use google webpage translator
-        for i in range(1, self.MAX_PAGE):
+        for i in range(1, MAX_PAGE):
             found = False
             url = "http://www.gigabase.com/folder/cbcv8AZeKsHjAkenvVrjPQBB?page=%d" % (i)
             root = _Util.getWebPageElementTree(url)
@@ -37,8 +38,8 @@ class Updater:
                 found = True
             if not found:
                 break
-            api.progress_changed(self.PROGRESS_STAGE_1 * i // self.MAX_PAGE)
-        api.progress_changed(self.PROGRESS_STAGE_1)
+            api.progress_changed(PROGRESS_STAGE_1 * i // MAX_PAGE)
+        api.progress_changed(PROGRESS_STAGE_1)
 
         # download driver pack file one by one
         i = 1
@@ -76,7 +77,7 @@ class Updater:
                 os.rename(tmpfn, fullfn)
 
             fnSet.add(filename)
-            api.progress_changed(self.PROGRESS_STAGE_1 + self.PROGRESS_STAGE_2 * i // total)
+            api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // total)
             i += 1
 
         # clear old files in cache
@@ -93,9 +94,6 @@ class Updater:
 
         # report full progress
         api.progress_changed(100)
-
-    def update(self, api):
-        self.init(api)
 
 
 class _Util:

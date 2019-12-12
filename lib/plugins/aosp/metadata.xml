@@ -3,6 +3,11 @@
   <git-mirror id="aosp">
     <name>AOSP</name>
     <data-directory>aosp</data-directory>
+    <initializer>
+      <filename>plugin.py</filename>
+      <classname>Initializer</classname>
+      <runtime>thread</runtime>
+    </initializer>
     <updater>
       <filename>plugin.py</filename>
       <classname>Updater</classname>

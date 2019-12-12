@@ -6,15 +6,9 @@ import time
 import subprocess
 
 
-class Updater:
+class InitAndUpdater:
 
-    def init(self, api):
-        self._do_wor(api)
-
-    def update(self, api):
-        self._do_wor(api)
-
-    def _do_wor(self):
+    def run(self, api):
         url = self._db.query(self._api.get_country(), self._api.get_location(), ["http"], True)[0]
         dataDir = self._api.get_data_dir()
         logFile = os.path.join(self._api.get_log_dir(), "wget.log")

@@ -3,9 +3,14 @@
   <file-mirror id="driveoff-drivepack">
     <name>Driveoff Driver Pack</name>
     <data-directory>driveoff-drivepack</data-directory>
+    <initializer>
+      <filename>plugin.py</filename>
+      <classname>InitAndUpdater</classname>
+      <runtime>thread</runtime>
+    </initializer>
     <updater>
       <filename>plugin.py</filename>
-      <classname>Updater</classname>
+      <classname>InitAndUpdater</classname>
       <cron-expression>0 0 * * 0</cron-expression>
       <runtime>thread</runtime>
     </updater>

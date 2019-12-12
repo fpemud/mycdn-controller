@@ -6,29 +6,20 @@ import sys
 from gi.repository import GLib
 
 
-class Updater:
+class InitAndUpdater:
 
-    def init_start(self, api):
+    def start(self, api):
         self._api = api
-        self._start()
 
-    def init_stop(self):
-        self._proc.terminate()
-
-    def update_start(self, api):
-        self._api = api
-        self._start()
-
-    def update_stop(self):
-        self._proc.terminate()
-
-    def _start(self):
         db = self._api.get_public_mirror_database()
         source = db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
         dataDir = self._api.get_data_dir()
         logFile = os.path.join(self._api.get_log_dir(), "rsync.log")
         cmd = "/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (source, dataDir, logFile)
         self._proc = _ShellProc(cmd, self._finishCallback, self._errorCallback)
+
+    def stop(self):
+        self._proc.terminate()
 
     def _finishCallback(self):
         self._api.progress_changed(100)

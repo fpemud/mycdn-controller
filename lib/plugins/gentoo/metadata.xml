@@ -11,9 +11,13 @@
   <file-mirror id="gentoo">
     <name>Gentoo Source Mirror</name>
     <data-directory>gentoo</data-directory>
+    <initializer>
+      <filename>plugin.py</filename>
+      <classname>InitAndUpdater</classname>
+    </initializer>
     <updater>
       <filename>plugin.py</filename>
-      <classname>Updater</classname>
+      <classname>InitAndUpdater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>
@@ -24,9 +28,13 @@
   <file-mirror id="gentoo-portage">
     <name>Gentoo Portage</name>
     <data-directory>gentoo-portage</data-directory>
+    <initializer>
+      <filename>plugin.py</filename>
+      <classname>InitAndUpdater</classname>
+    </initializer>
     <updater>
       <filename>plugin.py</filename>
-      <classname>Updater</classname>
+      <classname>InitAndUpdater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>
