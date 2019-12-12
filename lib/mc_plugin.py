@@ -84,6 +84,7 @@ class McPublicMirrorDatabase:
         if True:
             tlist1 = rootElem.xpathEval(".//filename")
             tlist2 = rootElem.xpathEval(".//classname")
+            tlist3 = rootElem.xpathEval(".//json-file")
             if tlist1 != [] and tlist2 != []:
                 filename = os.path.join(pluginDir, tlist1[0].getContent())
                 classname = tlist2[0].getContent()
@@ -95,19 +96,20 @@ class McPublicMirrorDatabase:
                     raise Exception("syntax error")
                 dbObj = plugin_class()
                 self.dictOfficial, self.dictExtended = dbObj.get_data()
-            else:
-                tlist = rootElem.xpathEval(".//json-file")
-                if tlist == []:
-                    raise Exception("no json-file specified")
-                for e in tlist:
+            elif tlist3 != []:
+                for e in tlist3:
                     if e.prop("id") == "official":
                         with open(os.path.join(pluginDir, e.getContent())) as f:
-                            dictOfficial.update(json.load(f))
+                            jobj = json.load(f)
+                            self.dictOfficial.update(jobj)
+                            self.dictExtended.update(jobj)
                     elif e.prop("id") == "extended":
                         with open(os.path.join(pluginDir, e.getContent())) as f:
-                            dictExtended.update(json.load(f))
+                            self.dictExtended.update(json.load(f))
                     else:
                         raise Exception("invalid json-file")
+            else:
+                raise Exception("invalid metadata")
 
     def get(self, extended=False):
         if not extended:

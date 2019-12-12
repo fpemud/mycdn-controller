@@ -3,8 +3,6 @@
 
 import os
 import sys
-import copy
-import json
 from gi.repository import GLib
 
 

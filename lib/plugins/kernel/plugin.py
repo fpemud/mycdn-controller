@@ -2,24 +2,8 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
-import sys
-import copy
-import json
+import time
 import subprocess
-
-
-class Database:
-
-    def get_data(self):
-        selfDir = os.path.dirname(os.path.realpath(__file__))
-
-        dictOfficial = dict()
-
-        dictExtended = copy.deepcopy(dictOfficial)
-        with open(os.path.join(selfDir, "db-extended.json")) as f:
-            dictExtended.update(json.load(f))
-
-        return (dictOfficial, dictExtended)
 
 
 class Updater:

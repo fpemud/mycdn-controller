@@ -3,8 +3,6 @@
 
 import os
 import io
-import copy
-import json
 import gzip
 import time
 import certifi
