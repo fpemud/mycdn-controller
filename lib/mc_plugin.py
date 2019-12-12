@@ -173,11 +173,11 @@ class McMirrorSite:
                     break
 
                 if self.runtime == "thread":
-                    self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)    # FIXME
+                    self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)
                     break
 
                 if self.runtime == "process":
-                    self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, filename, classname)    # FIXME
+                    self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, filename, classname)
                     break
 
                 assert False
@@ -230,24 +230,14 @@ class _UpdaterObjProxyRuntimeThread:
         self.realErrorOccuredAndHoldFor = None
         self.realUpdaterObj = McUtil.loadObject(filename, classname)
 
-    def init_start(self, api):
+    def start(self, api):
         self.realProgressChanged = api.progress_changed
         self.realErrorOccured = api.error_occured
         self.realErrorOccuredAndHoldFor = api.error_occured_and_hold_for
         self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
         self.threadObj.start()
 
-    def init_stop(self):
-        self.threadObj.stopped = True
-
-    def update_start(self, api):
-        self.realProgressChanged = api.progress_changed
-        self.realErrorOccured = api.error_occured
-        self.realErrorOccuredAndHoldFor = api.error_occured_and_hold_for
-        self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
-        self.threadObj.start()
-
-    def update_stop(self):
+    def stop(self):
         self.threadObj.stopped = True
 
     def _progressChangedIdleHandler(self, progress):
@@ -319,16 +309,10 @@ class _UpdaterObjProxyRuntimeProcess:
         self.filename = filename
         self.classname = classname
 
-    def init_start(self, api):
+    def start(self, api):
         assert False
 
-    def init_stop(self):
-        assert False
-
-    def update_start(self, api):
-        assert False
-
-    def update_stop(self):
+    def stop(self):
         assert False
 
 
@@ -340,7 +324,7 @@ class TemplatePublicMirrorDatabase:
         assert False
 
 
-# file-mirror #################################################################
+# file-mirror && git-mirror ###################################################
 
 class TemplateMirrorSiteInitializer:
 
