@@ -23,6 +23,76 @@ class FakeParam:
         self.tmpDir = "/tmp/mirrors"
 
 
+class FakePublicMirrorDatabase:
+
+    def __init__(self, param, plugin, pluginDir, rootElem):
+        self.id = rootElem.prop("id")
+
+        self.dictOfficial = dict()
+        self.dictExtended = dict()
+        if True:
+            tlist1 = rootElem.xpathEval(".//filename")
+            tlist2 = rootElem.xpathEval(".//classname")
+            tlist3 = rootElem.xpathEval(".//json-file")
+            if tlist1 != [] and tlist2 != []:
+                filename = os.path.join(pluginDir, tlist1[0].getContent())
+                classname = tlist2[0].getContent()
+                dbObj = McUtil.loadObject(filename, classname)
+                self.dictOfficial, self.dictExtended = dbObj.get_data()
+            elif tlist3 != []:
+                for e in tlist3:
+                    if e.prop("id") == "official":
+                        with open(os.path.join(pluginDir, e.getContent())) as f:
+                            jobj = json.load(f)
+                            self.dictOfficial.update(jobj)
+                            self.dictExtended.update(jobj)
+                    elif e.prop("id") == "extended":
+                        with open(os.path.join(pluginDir, e.getContent())) as f:
+                            self.dictExtended.update(json.load(f))
+                    else:
+                        raise Exception("invalid json-file")
+            else:
+                raise Exception("invalid metadata")
+
+    def get(self, extended=False):
+        if not extended:
+            return self.dictOfficial
+        else:
+            return self.dictExtended
+
+    def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
+        assert location is None or (country is not None and location is not None)
+        assert protocolList is None or all(x in ["http", "ftp", "rsync"] for x in protocolList)
+
+        # select database
+        srcDict = self.dictOfficial if not extended else self.dictExtended
+
+        # country out of scope, we don't consider this condition
+        if country is not None:
+            if not any(x.get("country", None) == country for x in srcDict.values()):
+                country = None
+                location = None
+
+        # location out of scope, same as above
+        if location is not None:
+            if not any(x["country"] == country and x.get("location", None) == location for x in srcDict.values()):
+                location = None
+
+        # do query
+        ret = []
+        for url, prop in srcDict.items():
+            if len(ret) >= maximum:
+                break
+            if country is not None and prop.get("country", None) != country:
+                continue
+            if location is not None and prop.get("location", None) != location:
+                continue
+            if protocolList is not None and prop.get("protocol", None) not in protocolList:
+                continue
+            ret.append(url)
+        return ret
+
+
 def _progress_changed(progress):
     print("progress %s" % (progress))
     if progress == 100 and runtime == "glib-mainloop":
@@ -34,32 +104,34 @@ def _error_occured(exc_info):
     if runtime == "glib-mainloop":
         mainloop.quit()
 
+
 def _error_occured_and_hold_for(seconds, exc_info):
     print("error_and_hold_for %d %s" % (seconds, str(exc_info)))
     if runtime == "glib-mainloop":
         mainloop.quit()
 
 
-def createInitApi(param, dataDir, runtime):
+def createInitApi(param, db, dataDir, runtime):
     api = DynObject()
     api.get_country = lambda: "CN"
     api.get_location = lambda: None
     api.get_data_dir = lambda: dataDir
     api.get_log_dir = lambda: param.logDir
-    api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
+    api.get_public_mirror_database = lambda: db
     api.progress_changed = _progress_changed
     api.error_occured = _error_occured
     api.error_occured_and_hold_for = _error_occured_and_hold_for
     return api
 
 
-def createUpdateApi(param, dataDir, runtime):
+def createUpdateApi(param, db, dataDir, runtime):
     schedDatetime = datetime.now()
     api = DynObject()
     api.get_country = lambda: "CN"
     api.get_location = lambda: None
     api.get_data_dir = lambda: dataDir
     api.get_log_dir = lambda: param.logDir
+    api.get_public_mirror_database = lambda: db
     api.get_sched_datetime = lambda: schedDatetime
     api.progress_changed = _progress_changed
     api.error_occured = _error_occured
@@ -68,7 +140,7 @@ def createUpdateApi(param, dataDir, runtime):
 
 
 def loadPublicMirrorDatabase(param, mainloop, path, publicMirrorDatabaseId):
-    # get metadata.xml file
+                     # get metadata.xml file
     metadata_file = os.path.join(path, "metadata.xml")
     if not os.path.exists(metadata_file):
         raise Exception("plugin %s has no metadata.xml" % (name))
@@ -80,7 +152,9 @@ def loadPublicMirrorDatabase(param, mainloop, path, publicMirrorDatabaseId):
     root = libxml2.parseFile(metadata_file).getRootElement()
 
     # create Database object
-    for child in root.xpathEval(".//file-mirror"):
+    for child in root.xpathEval(".//public-mirror-database"):
+        obj = McPublicMirrorDatabase(atysaz     param, self, path, child)
+
         dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
 
         elem = root.xpathEval(".//updater")[0]
@@ -166,7 +240,7 @@ if not os.path.exists(dataDir):
 
 if os.path.exists(initFlagFile):
     print("init start begin")
-    api = createInitApi(param, dataDir, runtime)
+    api = createInitApi(param, db, dataDir, runtime)
     if runtime == "glib-mainloop":
         updater.init_start(api)
     elif runtime == "thread":
@@ -179,7 +253,7 @@ if os.path.exists(initFlagFile):
     print("init start end")
 else:
     print("update start begin")
-    api = createUpdateApi(param, dataDir, runtime)
+    api = createUpdateApi(param, db, dataDir, runtime)
     if runtime == "glib-mainloop":
         updater.update_start(api)
     elif runtime == "thread":
