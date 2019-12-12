@@ -19,12 +19,6 @@ class Updater:
     PROGRESS_STAGE_2 = 79
 
     def init(self, api):
-        self._doWork(api)
-
-    def update(self, api):
-        self._doWork(api)
-
-    def _doWork(self, api):
         linkDict = dict()
         fnSet = set()
 
@@ -99,6 +93,9 @@ class Updater:
 
         # report full progress
         api.progress_changed(100)
+
+    def update(self, api):
+        self.init(api)
 
 
 class _Util:

@@ -332,22 +332,16 @@ class TemplatePublicMirrorDatabase:
 
 # file-mirror #################################################################
 
-class TemplateMirrorSiteUpdater:
+class TemplateMirrorSiteInitializer:
 
-    def init_start(self, api):
+    def start(self, api):
         assert False
 
-    def init_stop(self):
-        assert False
-
-    def update_start(self, api):
-        assert False
-
-    def update_stop(self):
+    def stop(self):
         assert False
 
 
-class TemmplateMirrorSiteUpdaterInitApi:
+class TemmplateMirrorSiteInitializerApi:
 
     def get_country(self):
         assert False
@@ -375,7 +369,39 @@ class TemmplateMirrorSiteUpdaterInitApi:
         assert False
 
 
-class TemmplateMirrorSiteUpdaterUpdateApi(TemmplateMirrorSiteUpdaterInitApi):
+class TemplateMirrorSiteInitializerRuntimeThread:
+
+    def run(self, api):
+        assert False
+
+
+class TemmplateMirrorSiteInitializerRuntimeThreadApi(TemmplateMirrorSiteInitializerApi):
+
+    def is_stopped(self):
+        assert False
+
+
+class TemplateMirrorSiteInitializerRuntimeProcess:
+
+    def run(self, api):
+        assert False
+
+
+class TemmplateMirrorSiteInitializerRuntimeProcessApi(TemmplateMirrorSiteInitializerApi):
+    # stop by SIGTERM signal
+    pass
+
+
+class TemplateMirrorSiteUpdater:
+
+    def start(self, api):
+        assert False
+
+    def stop(self):
+        assert False
+
+
+class TemmplateMirrorSiteUpdaterApi(TemmplateMirrorSiteInitializerApi):
 
     def get_sched_datetime(self):
         assert False
@@ -383,20 +409,11 @@ class TemmplateMirrorSiteUpdaterUpdateApi(TemmplateMirrorSiteUpdaterInitApi):
 
 class TemplateMirrorSiteUpdaterRuntimeThread:
 
-    def init(self, api):
-        assert False
-
-    def update(self, api):
+    def run(self, api):
         assert False
 
 
-class TemmplateMirrorSiteUpdaterRuntimeThreadInitApi(TemmplateMirrorSiteUpdaterInitApi):
-
-    def is_stopped(self):
-        assert False
-
-
-class TemmplateMirrorSiteUpdaterRuntimeThreadUpdateApi(TemmplateMirrorSiteUpdaterInitApi):
+class TemmplateMirrorSiteUpdaterRuntimeThreadApi(TemmplateMirrorSiteUpdaterApi):
 
     def is_stopped(self):
         assert False
@@ -404,18 +421,10 @@ class TemmplateMirrorSiteUpdaterRuntimeThreadUpdateApi(TemmplateMirrorSiteUpdate
 
 class TemplateMirrorSiteUpdaterRuntimeProcess:
 
-    def init(self, api):
-        assert False
-
-    def update(self, api):
+    def run(self, api):
         assert False
 
 
-class TemmplateMirrorSiteUpdaterRuntimeProcessInitApi(TemmplateMirrorSiteUpdaterInitApi):
-    # stop by SIGTERM signal
-    pass
-
-
-class TemmplateMirrorSiteUpdaterRuntimeProcessUpdateApi(TemmplateMirrorSiteUpdaterInitApi):
+class TemmplateMirrorSiteUpdaterRuntimeProcessApi(TemmplateMirrorSiteUpdaterApi):
     # stop by SIGTERM signal
     pass
