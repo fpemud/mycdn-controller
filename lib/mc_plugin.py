@@ -6,6 +6,8 @@ import sys
 import json
 import libxml2
 import threading
+import subprocess
+from datetime import datetime
 from gi.repository import GLib
 from mc_util import McUtil
 from mc_param import McConst
@@ -190,7 +192,7 @@ class McMirrorSite:
                     break
 
                 if self.runtime == "process":
-                    self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, filename, classname)
+                    self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, self.id, True, filename, classname)
                     break
 
                 assert False
@@ -223,7 +225,7 @@ class McMirrorSite:
                     break
 
                 if self.runtime == "process":
-                    self.updaterObj = _UpdaterObjProxyRuntimeProcess(param, filename, classname)
+                    self.updaterObj = _UpdaterObjProxyRuntimeProcess(param, self.id, False, filename, classname)
                     break
 
                 assert False
@@ -317,16 +319,82 @@ class _UpdaterObjProxyRuntimeThreadImpl(threading.Thread):
 
 class _UpdaterObjProxyRuntimeProcess:
 
-    def __init__(self, param, filename, classname):
+    def __init__(self, param, mirrorSiteId, bInitOrUpdate, filename, classname):
+        self._flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL
+
         self.param = param
+        self.mirrorSiteId = mirrorSiteId
+        self.bInitOrUpdate = bInitOrUpdate
         self.filename = filename
         self.classname = classname
 
+        self.api = None
+        self.proc = None
+        self.ioWatch = None
+        self.pidWatch = None
+
     def start(self, api):
-        assert False
+        self.api = api
+        self.proc = subprocess.Popen(McConst.updaterExe)
+
+        self.proc.stdin.write(McConst.tmpDir + "\n")
+
+        self.proc.stdin.write(self.mirrorSiteId + "\n")
+        self.proc.stdin.write(self.api.get_data_dir())
+
+        pmd = self.api.get_public_mirror_database()
+        if pmd is not None:
+            self.proc.stdin.write("1\n")
+            self.proc.stdin.write(json.dumps(pmd.get(False)) + "\n")
+            self.proc.stdin.write(json.dumps(pmd.get(True)) + "\n")
+        else:
+            self.proc.stdin.write("0\n")
+
+        self.proc.stdin.write(self.filename + "\n")
+        self.proc.stdin.write(self.classname + "\n")
+
+        if self.bInitOrUpdate:
+            self.proc.stdin.write("1\n")
+        else:
+            self.proc.stdin.write("0\n")
+            self.proc.stdin.write(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M") + "\n")
+
+        self.watch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self._onRecv)
+
+
+
+
 
     def stop(self):
-        assert False
+        self.proc.terminate()
+
+    def _onRecv(self, source, cb_condition):
+        pass
+
+    def _progressChangedIdleHandler(self, progress):
+        self.realProgressChanged(progress)
+        if progress == 100:
+            self.threadObj = None
+            self.realErrorOccuredAndHoldFor = None
+            self.realErrorOccured = None
+            self.realProgressChanged = None
+        return False
+
+    def _errorOccuredIdleHandler(self, exc_info):
+        self.realErrorOccured(exc_info)
+        self.threadObj = None
+        self.realErrorOccuredAndHoldFor = None
+        self.realErrorOccured = None
+        self.realProgressChanged = None
+        return False
+
+    def _errorOccuredAndHoldForIdleHandler(self, seconds, exc_info):
+        self.realErrorOccured(seconds, exc_info)
+        self.threadObj = None
+        self.realErrorOccuredAndHoldFor = None
+        self.realErrorOccured = None
+        self.realProgressChanged = None
+        return False
 
 
 # public-mirror-database ######################################################

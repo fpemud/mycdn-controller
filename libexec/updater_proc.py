@@ -39,7 +39,7 @@ class Main:
             if bInitOrUpdate:
                 self.api = self._createInitOrUpdateApi()
             else:
-                schedDatetime = datetime.strptime(sys.stdin.readline())
+                schedDatetime = datetime.strptime(sys.stdin.readline(), "%Y-%m-%d %H:%M")
                 self.api = self._createInitOrUpdateApi(schedDatetime)
 
     def run(self):
@@ -56,9 +56,11 @@ class Main:
         sys.stdout.write("\n")
 
     def errorCallback(self, exc_info):
+        # FIXME
         pass
 
     def errorAndHoldForCallback(self, seconds, exc_info):
+        # FIXME
         pass
 
     def _createInitOrUpdateApi(self, schedDatetime=None):
