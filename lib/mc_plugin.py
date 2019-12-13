@@ -55,7 +55,7 @@ class McPluginManager:
 
         # create McPublicMirrorDatabase objects
         for child in root.xpathEval(".//public-mirror-database"):
-            obj = McPublicMirrorDatabase(path, child)
+            obj = McPublicMirrorDatabase.createFromPlugin(path, child)
             assert obj.id not in [x.id for x in self.param.publicMirrorDatabaseList]   # FIXME
             self.param.publicMirrorDatabaseList.append(obj)
 
@@ -77,11 +77,13 @@ class McPluginManager:
 
 class McPublicMirrorDatabase:
 
-    def __init__(self, pluginDir, rootElem):
-        self.id = rootElem.prop("id")
+    @staticmethod
+    def createFromPlugin(pluginDir, rootElem):
+        ret = McPublicMirrorDatabase()
+        ret.id = rootElem.prop("id")
 
-        self.dictOfficial = dict()
-        self.dictExtended = dict()
+        ret.dictOfficial = dict()
+        ret.dictExtended = dict()
         if True:
             tlist1 = rootElem.xpathEval(".//filename")
             tlist2 = rootElem.xpathEval(".//classname")
@@ -90,21 +92,31 @@ class McPublicMirrorDatabase:
                 filename = os.path.join(pluginDir, tlist1[0].getContent())
                 classname = tlist2[0].getContent()
                 dbObj = McUtil.loadObject(filename, classname)
-                self.dictOfficial, self.dictExtended = dbObj.get_data()
+                ret.dictOfficial, ret.dictExtended = dbObj.get_data()
             elif tlist3 != []:
                 for e in tlist3:
                     if e.prop("id") == "official":
                         with open(os.path.join(pluginDir, e.getContent())) as f:
                             jobj = json.load(f)
-                            self.dictOfficial.update(jobj)
-                            self.dictExtended.update(jobj)
+                            ret.dictOfficial.update(jobj)
+                            ret.dictExtended.update(jobj)
                     elif e.prop("id") == "extended":
                         with open(os.path.join(pluginDir, e.getContent())) as f:
-                            self.dictExtended.update(json.load(f))
+                            ret.dictExtended.update(json.load(f))
                     else:
                         raise Exception("invalid json-file")
             else:
                 raise Exception("invalid metadata")
+
+        return ret
+
+    @staticmethod
+    def createFromJson(id, jsonOfficial, jsonExtended):
+        ret = McPublicMirrorDatabase()
+        ret.id = id
+        ret.dictOfficial = json.loads(jsonOfficial)
+        ret.dictExtended = json.loads(jsonExtended)
+        return ret
 
     def get(self, extended=False):
         if not extended:
