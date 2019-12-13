@@ -47,7 +47,7 @@ class McAdvertiser:
         if len(self.rsyncDirDict) > 0:
             if self.param.rsyncPort == "random":
                 self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
-            self.rsyncServer = RsyncServer(self.param.listenIp, self.param.rsyncPort, list(self.rsyncDirDict.values()), self.param.tmpDir, McConst.logDir)
+            self.rsyncServer = RsyncServer(self.param.listenIp, self.param.rsyncPort, list(self.rsyncDirDict.values()), McConst.tmpDir, McConst.logDir)
             self.rsyncServer.start()
 
     def dispose(self):

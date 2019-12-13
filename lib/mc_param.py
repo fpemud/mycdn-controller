@@ -14,13 +14,12 @@ class McConst:
     cacheDir = "/var/cache/mirrors"
     runDir = "/run/mirrors"
     logDir = "/var/log/mirrors"
+    tmpDir = "/tmp/mirrors"             # FIXME
 
 
 class McParam:
 
     def __init__(self):
-        self.tmpDir = "/tmp/mirrors"
-
         self.cfg = None
 
         self.pluginList = []

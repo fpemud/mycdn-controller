@@ -26,9 +26,9 @@ class McDaemon:
     def run(self):
         McUtil.ensureDir(McConst.logDir)
         McUtil.mkDirAndClear(McConst.runDir)
-        McUtil.mkDirAndClear(self.param.tmpDir)
+        McUtil.mkDirAndClear(McConst.tmpDir)
         try:
-            sys.stdout = StdoutRedirector(os.path.join(self.param.tmpDir, "mirrors.out"))
+            sys.stdout = StdoutRedirector(os.path.join(McConst.tmpDir, "mirrors.out"))
             sys.stderr = sys.stdout
 
             logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
@@ -87,7 +87,7 @@ class McDaemon:
             if self.param.advertiser is not None:
                 self.param.advertiser.dispose()
             logging.shutdown()
-            shutil.rmtree(self.param.tmpDir)
+            shutil.rmtree(McConst.tmpDir)
             shutil.rmtree(McConst.runDir)
 
     def _sigHandlerINT(self, signum):

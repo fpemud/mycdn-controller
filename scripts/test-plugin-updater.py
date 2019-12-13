@@ -13,12 +13,6 @@ from mc_util import DynObject
 from mc_param import McConst
 
 
-class FakeParam:
-
-    def __init__(self):
-        self.tmpDir = "/tmp/mirrors"
-
-
 class FakePublicMirrorDatabase:
 
     def __init__(self, param, plugin, pluginDir, rootElem):
