@@ -55,7 +55,7 @@ class McPluginManager:
 
         # create McPublicMirrorDatabase objects
         for child in root.xpathEval(".//public-mirror-database"):
-            obj = McPublicMirrorDatabase(self.param, self, path, child)
+            obj = McPublicMirrorDatabase(path, child)
             assert obj.id not in [x.id for x in self.param.publicMirrorDatabaseList]   # FIXME
             self.param.publicMirrorDatabaseList.append(obj)
 
@@ -77,7 +77,7 @@ class McPluginManager:
 
 class McPublicMirrorDatabase:
 
-    def __init__(self, param, plugin, pluginDir, rootElem):
+    def __init__(self, pluginDir, rootElem):
         self.id = rootElem.prop("id")
 
         self.dictOfficial = dict()
