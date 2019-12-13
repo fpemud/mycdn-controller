@@ -10,16 +10,12 @@ from gi.repository import GLib
 sys.path.append("/usr/lib64/mirrors")
 from mc_util import McUtil
 from mc_util import DynObject
+from mc_param import McConst
 
 
 class FakeParam:
 
     def __init__(self):
-        self.etcDir = "/etc/mirrors"
-        self.libDir = "/usr/lib64/mirrors"
-        self.cacheDir = "/var/cache/mirrors"
-        self.runDir = "/run/mirrors"
-        self.logDir = "/var/log/mirrors"
         self.tmpDir = "/tmp/mirrors"
 
 
@@ -116,7 +112,7 @@ def createInitApi(param, db, dataDir, runtime):
     api.get_country = lambda: "CN"
     api.get_location = lambda: None
     api.get_data_dir = lambda: dataDir
-    api.get_log_dir = lambda: param.logDir
+    api.get_log_dir = lambda: McConst.logDir
     api.get_public_mirror_database = lambda: db
     api.progress_changed = _progress_changed
     api.error_occured = _error_occured
@@ -130,7 +126,7 @@ def createUpdateApi(param, db, dataDir, runtime):
     api.get_country = lambda: "CN"
     api.get_location = lambda: None
     api.get_data_dir = lambda: dataDir
-    api.get_log_dir = lambda: param.logDir
+    api.get_log_dir = lambda: McConst.logDir
     api.get_public_mirror_database = lambda: db
     api.get_sched_datetime = lambda: schedDatetime
     api.progress_changed = _progress_changed
@@ -155,7 +151,7 @@ def loadPublicMirrorDatabase(param, mainloop, path, publicMirrorDatabaseId):
     for child in root.xpathEval(".//public-mirror-database"):
         obj = McPublicMirrorDatabase(atysaz     param, self, path, child)
 
-        dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
+        dataDir = os.path.join(McConst.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
 
         elem = root.xpathEval(".//updater")[0]
 
@@ -186,7 +182,7 @@ def loadUpdater(param, mainloop, path, mirrorSiteId):
 
     # create Updater object
     for child in root.xpathEval(".//file-mirror"):
-        dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
+        dataDir = os.path.join(McConst.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
 
         elem = root.xpathEval(".//updater")[0]
 
@@ -203,7 +199,7 @@ def loadUpdater(param, mainloop, path, mirrorSiteId):
 
     # create Updater object
     for child in root.xpathEval(".//git-mirror"):
-        dataDir = os.path.join(param.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
+        dataDir = os.path.join(McConst.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
 
         elem = root.xpathEval(".//updater")[0]
 

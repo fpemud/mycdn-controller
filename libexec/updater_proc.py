@@ -17,7 +17,7 @@ def _createInitApi(self):
     api.get_country = lambda: "CN"
     api.get_location = lambda: None
     api.get_data_dir = lambda: self.mirrorSite.dataDir
-    api.get_log_dir = lambda: self.param.logDir
+    api.get_log_dir = lambda: McConst.logDir
     api.progress_changed = self.initProgressCallback
     return api
 
@@ -26,7 +26,7 @@ def _createUpdateApi(self):
     api.get_country = lambda: "CN"
     api.get_location = lambda: None
     api.get_data_dir = lambda: self.mirrorSite.dataDir
-    api.get_log_dir = lambda: self.param.logDir
+    api.get_log_dir = lambda: McConst.logDir
     api.progress_changed = self.initProgressCallback
     return api
 

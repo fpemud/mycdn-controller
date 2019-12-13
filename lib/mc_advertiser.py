@@ -7,6 +7,7 @@ from mc_util import McUtil
 from mc_util import HttpFileServer
 from mc_util import FtpServer
 from mc_util import RsyncServer
+from mc_param import McConst
 
 
 class McAdvertiser:
@@ -32,21 +33,21 @@ class McAdvertiser:
         if len(self.httpDirDict) > 0:
             if self.param.httpPort == "random":
                 self.param.httpPort = McUtil.getFreeSocketPort("tcp")
-            self.httpServer = HttpFileServer(self.param.listenIp, self.param.httpPort, list(self.httpDirDict.values()), self.param.logDir)
+            self.httpServer = HttpFileServer(self.param.listenIp, self.param.httpPort, list(self.httpDirDict.values()), McConst.logDir)
             self.httpServer.start()
 
         self.ftpServer = None
         if len(self.ftpDirDict) > 0:
             if self.param.ftpPort == "random":
                 self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
-            self.ftpServer = FtpServer(self.param.listenIp, self.param.ftpPort, list(self.ftpDirDict.values()), self.param.logDir)
+            self.ftpServer = FtpServer(self.param.listenIp, self.param.ftpPort, list(self.ftpDirDict.values()), McConst.logDir)
             self.ftpServer.start()
 
         self.rsyncServer = None
         if len(self.rsyncDirDict) > 0:
             if self.param.rsyncPort == "random":
                 self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
-            self.rsyncServer = RsyncServer(self.param.listenIp, self.param.rsyncPort, list(self.rsyncDirDict.values()), self.param.tmpDir, self.param.logDir)
+            self.rsyncServer = RsyncServer(self.param.listenIp, self.param.rsyncPort, list(self.rsyncDirDict.values()), self.param.tmpDir, McConst.logDir)
             self.rsyncServer.start()
 
     def dispose(self):

@@ -9,6 +9,7 @@ from mc_util import McUtil
 from mc_util import DynObject
 from mc_util import GLibIdleInvoker
 from mc_util import GLibCronScheduler
+from mc_param import McConst
 
 
 class McMirrorSiteUpdater:
@@ -31,10 +32,10 @@ class McMirrorSiteUpdater:
 
         for ms in self.param.mirrorSiteList:
             # initialize data directory
-            fullDir = os.path.join(self.param.cacheDir, ms.dataDir)
+            fullDir = os.path.join(McConst.cacheDir, ms.dataDir)
             if not os.path.exists(fullDir):
                 os.makedirs(fullDir)
-                McUtil.touchFile(_initFlagFile(param, ms))
+                McUtil.touchFile(_initFlagFile(ms))
 
             # record updater object
             self.updaterDict[ms.id] = _OneMirrorSiteUpdater(self, ms)
@@ -60,7 +61,7 @@ class _OneMirrorSiteUpdater:
         self.parent = parent
         self.mirrorSite = mirrorSite
 
-        if os.path.exists(_initFlagFile(self.param, self.mirrorSite)):
+        if os.path.exists(_initFlagFile(self.mirrorSite)):
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
             self.parent.invoker.add(self.initStart)
         else:
@@ -87,7 +88,7 @@ class _OneMirrorSiteUpdater:
             return
 
         if progress == 100:
-            McUtil.forceDelete(_initFlagFile(self.param, self.mirrorSite))
+            McUtil.forceDelete(_initFlagFile(self.mirrorSite))
             del self.progress
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             self.parent.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
@@ -154,7 +155,7 @@ class _OneMirrorSiteUpdater:
         api.get_country = lambda: "CN"
         api.get_location = lambda: None
         api.get_data_dir = lambda: self.mirrorSite.dataDir
-        api.get_log_dir = lambda: self.param.logDir
+        api.get_log_dir = lambda: McConst.logDir
         api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
         api.progress_changed = self.initProgressCallback
         api.error_occured = self.initErrorCallback
@@ -166,7 +167,7 @@ class _OneMirrorSiteUpdater:
         api.get_country = lambda: "CN"
         api.get_location = lambda: None
         api.get_data_dir = lambda: self.mirrorSite.dataDir
-        api.get_log_dir = lambda: self.param.logDir
+        api.get_log_dir = lambda: McConst.logDir
         api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
         api.get_sched_datetime = lambda: schedDatetime
         api.progress_changed = self.updateProgressCallback
@@ -180,8 +181,8 @@ class _OneMirrorSiteUpdater:
         return False
 
 
-def _initFlagFile(param, mirrorSite):
-    return os.path.join(param.cacheDir, mirrorSite.dataDir + ".uninitialized")
+def _initFlagFile(mirrorSite):
+    return os.path.join(McConst.cacheDir, mirrorSite.dataDir + ".uninitialized")
 
 
 def _publicMirrorDatabase(param, mirrorSite):

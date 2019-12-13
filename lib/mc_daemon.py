@@ -11,6 +11,7 @@ from gi.repository import GLib
 from mc_util import McUtil
 from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
+from mc_param import McConst
 from mc_plugin import McPluginManager
 from mc_api_server import McApiServer
 from mc_updater import McMirrorSiteUpdater
@@ -23,8 +24,8 @@ class McDaemon:
         self.param = param
 
     def run(self):
-        McUtil.ensureDir(self.param.logDir)
-        McUtil.mkDirAndClear(self.param.runDir)
+        McUtil.ensureDir(McConst.logDir)
+        McUtil.mkDirAndClear(McConst.runDir)
         McUtil.mkDirAndClear(self.param.tmpDir)
         try:
             sys.stdout = StdoutRedirector(os.path.join(self.param.tmpDir, "mirrors.out"))
@@ -38,7 +39,7 @@ class McDaemon:
             self.param.mainloop = GLib.MainLoop()
 
             # write pid file
-            with open(os.path.join(self.param.runDir, "mirrors.pid"), "w") as f:
+            with open(os.path.join(McConst.runDir, "mirrors.pid"), "w") as f:
                 f.write(str(os.getpid()))
 
             # load plugins
@@ -87,7 +88,7 @@ class McDaemon:
                 self.param.advertiser.dispose()
             logging.shutdown()
             shutil.rmtree(self.param.tmpDir)
-            shutil.rmtree(self.param.runDir)
+            shutil.rmtree(McConst.runDir)
 
     def _sigHandlerINT(self, signum):
         logging.info("SIGINT received.")

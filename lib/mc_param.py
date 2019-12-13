@@ -4,17 +4,21 @@
 import os
 
 
+class McConst:
+
+    etcDir = "/etc/mirrors"
+    libDir = "/usr/lib64/mirrors"
+    pluginsDir = os.path.join(libDir, "plugins")
+    libexecDir = "/usr/libexec/mirrors"
+    updaterExe = os.path.join(libexecDir, "updater_proc.py")
+    cacheDir = "/var/cache/mirrors"
+    runDir = "/run/mirrors"
+    logDir = "/var/log/mirrors"
+
+
 class McParam:
 
     def __init__(self):
-        self.etcDir = "/etc/mirrors"
-        self.libDir = "/usr/lib64/mirrors"
-        self.pluginsDir = os.path.join(self.libDir, "plugins")
-        self.libexecDir = "/usr/libexec/mirrors"
-        self.updaterExe = os.path.join(self.libexecDir, "updater_proc.py")
-        self.cacheDir = "/var/cache/mirrors"
-        self.runDir = "/run/mirrors"
-        self.logDir = "/var/log/mirrors"
         self.tmpDir = "/tmp/mirrors"
 
         self.cfg = None

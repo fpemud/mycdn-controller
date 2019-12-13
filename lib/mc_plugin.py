@@ -8,6 +8,7 @@ import libxml2
 import threading
 from gi.repository import GLib
 from mc_util import McUtil
+from mc_param import McConst
 
 
 class McPluginManager:
@@ -16,11 +17,11 @@ class McPluginManager:
         self.param = param
 
     def loadPlugins(self):
-        for fn in os.listdir(self.param.etcDir):
+        for fn in os.listdir(McConst.etcDir):
             if not fn.endswith(".conf"):
                 continue
             pluginName = fn.replace(".conf", "")
-            pluginPath = os.path.join(self.param.pluginsDir, pluginName)
+            pluginPath = os.path.join(McConst.pluginsDir, pluginName)
             if not os.path.isdir(pluginPath):
                 raise Exception("Invalid configuration file %s" % (fn))
             self._load(pluginName, pluginPath)
@@ -151,7 +152,7 @@ class McMirrorSite:
 
         # data directory
         self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
-        self.dataDir = os.path.join(param.cacheDir, self.dataDir)
+        self.dataDir = os.path.join(McConst.cacheDir, self.dataDir)
 
         # initializer
         self.initializerObj = None
