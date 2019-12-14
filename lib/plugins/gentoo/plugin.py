@@ -6,6 +6,7 @@ import re
 import io
 import gzip
 import time
+import random
 import certifi
 import lxml.html
 import urllib.request
@@ -30,18 +31,19 @@ class Initializer:
 
         # stage2: download file list
         logFile = os.path.join(api.get_log_dir(), "wget.log")
-        for i in range(0, len(fileList)):
-            fn = fileList[i]
+        i = 1
+        total = len(fileList)
+        for fn in _Util.randomSorted(fileList):
             fullfn = os.path.join(api.get_data_dir(), fn)
             if not os.path.exists(fullfn):
                 tmpfn = fullfn + ".tmp"
                 url = os.path.join(fileSource, fn)
                 rc, out = _Util.shellCallWithRetCode("/usr/bin/wget -O \"%s\" %s >%s 2>&1" % (tmpfn, url, logFile))
                 if rc != 0 and rc != 8:
-                    # ignore "file not found" error (8) since rsyncSource and fileSource may be different servers
+                    # ignore "file not found" error (8) since rsyncSource/fileSource may be different servers
                     raise Exception("download %s failed" % (url))
                 os.rename(tmpfn, fullfn)
-            api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // len(fileList))
+            api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // total)
         api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2)
 
         # stage3: rsync
@@ -78,10 +80,10 @@ class Updater:
 
     def run(self, api):
         db = self._api.get_public_mirror_database()
-        source = db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
+        rsyncSource = db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
         dataDir = self._api.get_data_dir()
         logFile = os.path.join(self._api.get_log_dir(), "rsync.log")
-        _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (source, dataDir, logFile))
+        _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (rsyncSource, dataDir, logFile))
 
 
 class PortageInitAndUpdater(Updater):
@@ -89,6 +91,10 @@ class PortageInitAndUpdater(Updater):
 
 
 class _Util:
+
+    @staticmethod
+    def randomSorted(tlist):
+        return sorted(tlist, key=lambda x: random.random())
 
     @staticmethod
     def ensureDir(dirname):
