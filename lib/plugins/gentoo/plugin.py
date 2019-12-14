@@ -12,6 +12,11 @@ import urllib.request
 import subprocess
 
 
+PROGRESS_STAGE_1 = 10
+PROGRESS_STAGE_2 = 70
+PROGRESS_STAGE_3 = 20
+
+
 class Initializer:
 
     def run(self, api):
@@ -19,10 +24,14 @@ class Initializer:
         rsyncSource = db.query(api.get_country(), api.get_location(), ["rsync"], extended=True)[0]
         fileSource = db.query(api.get_country(), api.get_location(), ["http", "ftp"], True)[0]
 
-        # download file list
+        # stage1: get file list
         fileList = self._makeDirAndGetFileList(rsyncSource)
+        api.progress_changed(PROGRESS_STAGE_1)
+
+        # stage2: download file list
         logFile = os.path.join(api.get_log_dir(), "wget.log")
-        for fn in fileList:
+        for i in range(0, len(fileList)):
+            fn = fileList[i]
             fullfn = os.path.join(api.get_data_dir(), fn)
             if not os.path.exists(fullfn):
                 url = os.path.join(fileSource, fn)
@@ -30,10 +39,15 @@ class Initializer:
                 if rc != 0 and rc != 8:
                     # ignore "file not found" error (8) since rsyncSource and fileSource may be different servers
                     raise Exception("download %s failed" % (url))
+            api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // len(fileList))
+        api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2)
 
-        # rsync
+        # stage3: rsync
         logFile = os.path.join(api.get_log_dir(), "rsync.log")
         _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (rsyncSource, api.get_data_dir(), logFile))
+
+        # report full progress
+        api.progress_changed(100)
 
     def _makeDirAndGetFileList(self, rsyncSource):
         out = _Util.shellCall("/usr/bin/rsync --list-only %s" % (rsyncSource))
