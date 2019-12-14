@@ -314,7 +314,7 @@ class _UpdaterObjProxyRuntimeProcess:
 
     def start(self, api):
         self.api = api
-        self.proc = subprocess.Popen(McConst.updaterExe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.proc = subprocess.Popen(McConst.updaterExe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         self.pidWatch = GLib.child_watch_add(self.proc.pid, self._onExit)
         self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self._onStdout)
         self.stderrWatch = GLib.io_add_watch(self.proc.stderr, GLib.IO_IN | self._flagError, self._onStderr)
