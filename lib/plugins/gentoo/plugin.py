@@ -24,7 +24,7 @@ class Initializer:
         rsyncSource = db.query(api.get_country(), api.get_location(), ["rsync"], extended=True)[0]
         fileSource = db.query(api.get_country(), api.get_location(), ["http", "ftp"], True)[0]
 
-        # stage1: get file list
+        # stage1: create directories, get file list, ignore symlinks
         fileList = self._makeDirAndGetFileList(rsyncSource)
         api.progress_changed(PROGRESS_STAGE_1)
 
