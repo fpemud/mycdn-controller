@@ -14,13 +14,13 @@
     <initializer>
       <filename>plugin.py</filename>
       <classname>InitAndUpdater</classname>
-      <runtime>thread</runtime>
+      <runtime>process</runtime>
     </initializer>
     <updater>
       <filename>plugin.py</filename>
       <classname>InitAndUpdater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
-      <runtime>thread</runtime>
+      <runtime>process</runtime>
     </updater>
     <advertiser>
       <protocol>http</protocol>
@@ -33,11 +33,13 @@
     <initializer>
       <filename>plugin.py</filename>
       <classname>InitAndUpdater</classname>
+      <runtime>process</runtime>
     </initializer>
     <updater>
       <filename>plugin.py</filename>
       <classname>InitAndUpdater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
+      <runtime>process</runtime>
     </updater>
     <advertiser>
       <protocol>rsync</protocol>
