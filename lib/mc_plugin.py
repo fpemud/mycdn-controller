@@ -4,6 +4,7 @@
 import os
 import sys
 import json
+import pickle
 import libxml2
 import threading
 import subprocess
@@ -330,71 +331,87 @@ class _UpdaterObjProxyRuntimeProcess:
 
         self.api = None
         self.proc = None
-        self.ioWatch = None
+        self.stdoutWatch = None
+        self.stderrWatch = None
         self.pidWatch = None
 
     def start(self, api):
-        self.api = api
-        self.proc = subprocess.Popen(McConst.updaterExe)
-
-        self.proc.stdin.write(McConst.tmpDir + "\n")
-
-        self.proc.stdin.write(self.mirrorSiteId + "\n")
-        self.proc.stdin.write(self.api.get_data_dir())
-
         pmd = self.api.get_public_mirror_database()
-        if pmd is not None:
-            self.proc.stdin.write("1\n")
-            self.proc.stdin.write(json.dumps(pmd.get(False)) + "\n")
-            self.proc.stdin.write(json.dumps(pmd.get(True)) + "\n")
-        else:
-            self.proc.stdin.write("0\n")
 
-        self.proc.stdin.write(self.filename + "\n")
-        self.proc.stdin.write(self.classname + "\n")
+        self.api = api
+        self.proc = subprocess.Popen(McConst.updaterExe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.pidWatch = GLib.child_watch_add(self.proc.pid, self._onExit)
+        self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self._onStdout)
+        self.stderrWatch = GLib.io_add_watch(self.proc.stderr, GLib.IO_IN | self._flagError, self._onStderr)
 
-        if self.bInitOrUpdate:
-            self.proc.stdin.write("1\n")
-        else:
-            self.proc.stdin.write("0\n")
-            self.proc.stdin.write(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M") + "\n")
+        try:
+            self.proc.stdin.write(McConst.tmpDir + "\n")
 
-        self.watch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self._onRecv)
+            self.proc.stdin.write(self.mirrorSiteId + "\n")
+            self.proc.stdin.write(self.api.get_data_dir())
 
+            if pmd is not None:
+                self.proc.stdin.write("1\n")
+                self.proc.stdin.write(json.dumps(pmd.get(False)) + "\n")
+                self.proc.stdin.write(json.dumps(pmd.get(True)) + "\n")
+            else:
+                self.proc.stdin.write("0\n")
 
+            self.proc.stdin.write(self.filename + "\n")
+            self.proc.stdin.write(self.classname + "\n")
 
-
+            if self.bInitOrUpdate:
+                self.proc.stdin.write("1\n")
+            else:
+                self.proc.stdin.write("0\n")
+                self.proc.stdin.write(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M") + "\n")
+        except:
+            self.proc.terminate()
+            raise
 
     def stop(self):
         self.proc.terminate()
 
-    def _onRecv(self, source, cb_condition):
-        pass
+    def _onStdout(self, source, cb_condition):
+        assert source == self.proc.stdout
 
-    def _progressChangedIdleHandler(self, progress):
-        self.realProgressChanged(progress)
-        if progress == 100:
-            self.threadObj = None
-            self.realErrorOccuredAndHoldFor = None
-            self.realErrorOccured = None
-            self.realProgressChanged = None
-        return False
+        line = self.proc.stdout.buffer.readline()
+        obj = pickle.loads(line)
+        if obj[0] == "progress":
+            self.api.progress_changed(obj[1])
+        elif obj[0] == "error":
+            self.api.error_occured(obj[1])
+        elif obj[0] == "error-and-hold-for":
+            self.api.error_occured_and_hold_for(obj[1], obj[2])
+        else:
+            assert False
 
-    def _errorOccuredIdleHandler(self, exc_info):
-        self.realErrorOccured(exc_info)
-        self.threadObj = None
-        self.realErrorOccuredAndHoldFor = None
-        self.realErrorOccured = None
-        self.realProgressChanged = None
-        return False
+    def _onStderr(self, source, cb_condition):
+        # /usr/libexec/updater_subproc.py should not print to stderr at all
+        assert False
 
-    def _errorOccuredAndHoldForIdleHandler(self, seconds, exc_info):
-        self.realErrorOccured(seconds, exc_info)
-        self.threadObj = None
-        self.realErrorOccuredAndHoldFor = None
-        self.realErrorOccured = None
-        self.realProgressChanged = None
-        return False
+    def _onExit(self, status, data):
+        if self.pidWatch is not None:
+            GLib.source_remove(self.pidWatch)
+            self.pidWatch = None
+
+        if self.stderrWatch is not None:
+            GLib.source_remove(self.stderrWatch)
+            self.stderrWatch = None
+
+        if self.stdoutWatch is not None:
+            GLib.source_remove(self.stdoutWatch)
+            self.stdoutWatch = None
+
+        self.proc = None
+
+        if self.api is not None:
+            if status == 0:
+                self.api.progress_changed(100)
+            else:
+                exc_info = (None, None, None)
+                self.api.error_occured(exc_info)
+            self.api = None
 
 
 # public-mirror-database ######################################################

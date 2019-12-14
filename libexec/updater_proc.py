@@ -2,7 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import sys
-import json
+import pickle
 from datetime import datetime
 sys.path.append('/usr/lib64/mirrors')
 from mc_util import McUtil
@@ -52,16 +52,19 @@ class Main:
                 self.api.error_occured(sys.exc_info())
 
     def progressCallback(self, progress):
-        sys.stdout.write(json.dumps(progress))
-        sys.stdout.write("\n")
+        obj = ("progress", progress)
+        sys.stdout.buffer.write(pickle.dumps(obj))
+        sys.stdout.buffer.write(b'\n')
 
     def errorCallback(self, exc_info):
-        # FIXME
-        pass
+        obj = ("errror", exc_info)
+        sys.stdout.buffer.write(pickle.dumps(obj))
+        sys.stdout.buffer.write(b'\n')
 
     def errorAndHoldForCallback(self, seconds, exc_info):
-        # FIXME
-        pass
+        obj = ("errror-and-hold-for", seconds, exc_info)
+        sys.stdout.buffer.write(pickle.dumps(obj))
+        sys.stdout.buffer.write(b'\n')
 
     def _createInitOrUpdateApi(self, schedDatetime=None):
         api = DynObject()
