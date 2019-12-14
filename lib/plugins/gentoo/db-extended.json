@@ -1,22 +1,17 @@
 {
-    "http://mirrors.tuna.tsinghua.edu.cn/gentoo/": {
+    "http://mirrors.tuna.tsinghua.edu.cn/gentoo": {
         "name": "Tuna",
         "country": "CN",
         "protocol": "http"
     },
-    "rsync://mirrors.tuna.tsinghua.edu.cn/gentoo/": {
+    "rsync://mirrors.tuna.tsinghua.edu.cn/gentoo": {
         "name": "Tuna",
         "country": "CN",
         "protocol": "rsync"
     },
-    "http://mirrors.163.com/gentoo/": {
+    "http://mirrors.163.com/gentoo": {
         "name": "163",
         "country": "CN",
         "protocol": "http"
     },
-    "rsync://mirrors.163.com/gentoo/": {
-        "name": "163",
-        "country": "CN",
-        "protocol": "rsync"
-    }
 }

@@ -127,7 +127,7 @@ class McPublicMirrorDatabase:
         else:
             return self.dictExtended
 
-    def query(self, country=None, location=None, protocolList=None, extended=False, maximum=1):
+    def query(self, country=None, location=None, protocolList=None, extended=False):
         assert location is None or (country is not None and location is not None)
         assert protocolList is None or all(x in ["http", "ftp", "rsync"] for x in protocolList)
 
@@ -148,8 +148,6 @@ class McPublicMirrorDatabase:
         # do query
         ret = []
         for url, prop in srcDict.items():
-            if len(ret) >= maximum:
-                break
             if country is not None and prop.get("country", None) != country:
                 continue
             if location is not None and prop.get("location", None) != location:

@@ -13,12 +13,12 @@
     <data-directory>gentoo</data-directory>
     <initializer>
       <filename>plugin.py</filename>
-      <classname>InitAndUpdater</classname>
+      <classname>Initializer</classname>
       <runtime>process</runtime>
     </initializer>
     <updater>
       <filename>plugin.py</filename>
-      <classname>InitAndUpdater</classname>
+      <classname>Updater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
       <runtime>process</runtime>
     </updater>
@@ -32,12 +32,12 @@
     <data-directory>gentoo-portage</data-directory>
     <initializer>
       <filename>plugin.py</filename>
-      <classname>InitAndUpdater</classname>
+      <classname>PortageInitAndUpdater</classname>
       <runtime>process</runtime>
     </initializer>
     <updater>
       <filename>plugin.py</filename>
-      <classname>InitAndUpdater</classname>
+      <classname>PortageInitAndUpdater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
       <runtime>process</runtime>
     </updater>

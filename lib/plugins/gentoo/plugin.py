@@ -2,6 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import re
 import io
 import gzip
 import time
@@ -11,40 +12,64 @@ import urllib.request
 import subprocess
 
 
-class InitAndUpdater:
+class Initializer:
 
     def run(self, api):
-        self._api = api
-        db = self._api.get_public_mirror_database()
+        db = api.get_public_mirror_database()
+        rsyncSource = db.query(api.get_country(), api.get_location(), ["rsync"], extended=True)[0]
+        fileSource = db.query(api.get_country(), api.get_location(), ["http", "ftp"], True)[0]
 
-        # download distfiles by wget
-        distfilesUrl = os.path.join(db.query(self._api.get_country(), self._api.get_location(), ["http"], True)[0], "distfiles")
-        distfilesDir = os.path.join(self._api.get_data_dir(), "distfiles")
+        # download file list
+        fileList = self._makeDirAndGetFileList(rsyncSource)
         logFile = os.path.join(api.get_log_dir(), "wget.log")
-        wgetArgs = []
-        if True:
-            wgetArgs.append("-e robots=off")
-            wgetArgs.append("-m")
-            wgetArgs.append("-np")                          # --no-parent
-            wgetArgs.append("-nH")                          # --no-host-directories
-            wgetArgs.append("--reject \"index.html\"")
-        for elem in _Util.getWebPageElementTree(distfilesUrl).xpath(".//a"):
-            if elem.attrib["href"].startswith("/"):
-                continue    # absolute path
-            if elem.attrib["href"].startswith("."):
-                continue    # parent path or myself
-            if elem.attrib["href"].endswith("/"):
-                print("x " + elem.attrib["href"])
-                myUrl = os.path.join(distfilesUrl, elem.attrib["href"])
-                myDir = os.path.join(distfilesDir, elem.attrib["href"])
-                _Util.ensureDir(myDir)
-                _Util.shellCall("/usr/bin/wget %s --cut-dirs=2 -P \"%s\" %s >%s 2>&1" % (" ".join(wgetArgs), myDir, myUrl, logFile))
+        for fn in fileList:
+            fullfn = os.path.join(api.get_data_dir(), fn)
+            if not os.path.exists(fullfn):
+                url = os.path.join(fileSource, fn)
+                rc, out = _Util.shellCallWithRetCode("/usr/bin/wget -O \"%s\" %s >%s 2>&1" % (fullfn, url, logFile))
+                if rc != 0 and rc != 8:
+                    # ignore "file not found" error (8) since rsyncSource and fileSource may be different servers
+                    raise Exception("download %s failed" % (url))
 
         # rsync
+        logFile = os.path.join(api.get_log_dir(), "rsync.log")
+        _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (rsyncSource, api.get_data_dir(), logFile))
+
+    def _makeDirAndGetFileList(self, rsyncSource):
+        out = _Util.shellCall("/usr/bin/rsync --list-only %s" % (rsyncSource))
+
+        ret = []
+        for line in out.split("\n"):
+            m = re.match("(\\S+) +(\\S+) +(\\S+ \\S+) (.+)", line)
+            if m is None:
+                continue
+            modstr = m.group(1)
+            filename = m.group(4)
+            if filename.startswith("."):
+                continue
+            if " -> " in filename:
+                continue
+
+            if modstr.startswith("d"):
+                _Util.ensureDir(os.path.join(self._api.get_data_dir(), filename))
+            else:
+                ret.append(filename)
+
+        return ret
+
+
+class Updater:
+
+    def run(self, api):
+        db = self._api.get_public_mirror_database()
         source = db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
         dataDir = self._api.get_data_dir()
         logFile = os.path.join(self._api.get_log_dir(), "rsync.log")
         _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (source, dataDir, logFile))
+
+
+class PortageInitAndUpdater(Updater):
+    pass
 
 
 class _Util:
@@ -86,6 +111,14 @@ class _Util:
         if ret.returncode != 0:
             ret.check_returncode()
         return ret.stdout.rstrip()
+
+    @staticmethod
+    def shellCallWithRetCode(cmd):
+        ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             shell=True, universal_newlines=True)
+        if ret.returncode > 128:
+            time.sleep(1.0)
+        return (ret.returncode, ret.stdout.rstrip())
 
 
 # class _ShellProc:
