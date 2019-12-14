@@ -2,8 +2,13 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
-import sys
-from gi.repository import GLib
+import io
+import gzip
+import lxml
+import time
+import urllib
+import certifi
+import subprocess
 
 
 class InitAndUpdater:
