@@ -313,8 +313,6 @@ class _UpdaterObjProxyRuntimeProcess:
         self.pidWatch = None
 
     def start(self, api):
-        pmd = self.api.get_public_mirror_database()
-
         self.api = api
         self.proc = subprocess.Popen(McConst.updaterExe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.pidWatch = GLib.child_watch_add(self.proc.pid, self._onExit)
@@ -327,6 +325,7 @@ class _UpdaterObjProxyRuntimeProcess:
             self.proc.stdin.write(self.mirrorSiteId + "\n")
             self.proc.stdin.write(self.api.get_data_dir())
 
+            pmd = self.api.get_public_mirror_database()
             if pmd is not None:
                 self.proc.stdin.write("1\n")
                 self.proc.stdin.write(json.dumps(pmd.get(False)) + "\n")
