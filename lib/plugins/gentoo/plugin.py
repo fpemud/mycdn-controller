@@ -25,7 +25,7 @@ class Initializer:
         fileSource = db.query(api.get_country(), api.get_location(), ["http", "ftp"], True)[0]
 
         # stage1: create directories, get file list, ignore symlinks
-        fileList = self._makeDirAndGetFileList(rsyncSource)
+        fileList = self._makeDirAndGetFileList(rsyncSource, api.get_data_dir())
         api.progress_changed(PROGRESS_STAGE_1)
 
         # stage2: download file list
@@ -49,7 +49,7 @@ class Initializer:
         # report full progress
         api.progress_changed(100)
 
-    def _makeDirAndGetFileList(self, rsyncSource):
+    def _makeDirAndGetFileList(self, rsyncSource, dataDir):
         out = _Util.shellCall("/usr/bin/rsync --list-only %s" % (rsyncSource))
 
         ret = []
@@ -65,7 +65,7 @@ class Initializer:
                 continue
 
             if modstr.startswith("d"):
-                _Util.ensureDir(os.path.join(self._api.get_data_dir(), filename))
+                _Util.ensureDir(os.path.join(dataDir, filename))
             else:
                 ret.append(filename)
 
