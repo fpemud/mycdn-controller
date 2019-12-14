@@ -6,6 +6,7 @@ import io
 import gzip
 import time
 import magic
+import random
 import certifi
 import subprocess
 import lxml.html
@@ -44,7 +45,7 @@ class InitAndUpdater:
         # download driver pack file one by one
         i = 1
         total = len(linkDict)
-        for filename, url in linkDict.items():
+        for filename, url in _Util.randomSorted(linkDict.items()):
             fullfn = os.path.join(api.get_data_dir(), filename)
             if not os.path.exists(fullfn) or _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
                 # get the real download url, gigabase sucks
@@ -97,6 +98,10 @@ class InitAndUpdater:
 
 
 class _Util:
+
+    @staticmethod
+    def randomSorted(tlist):
+        return sorted(tlist, key=lambda x: random.random())
 
     @staticmethod
     def getWebPageElementTree(url):

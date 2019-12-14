@@ -4,10 +4,10 @@
 import os
 import io
 import gzip
-import lxml
 import time
-import urllib
 import certifi
+import lxml.html
+import urllib.request
 import subprocess
 
 
@@ -27,16 +27,16 @@ class InitAndUpdater:
             wgetArgs.append("-m")
             wgetArgs.append("-np")                          # --no-parent
             wgetArgs.append("-nH")                          # --no-host-directories
-            wgetArgs.append("-nc")                          # --no-clobber
             wgetArgs.append("--reject \"index.html\"")
         for elem in _Util.getWebPageElementTree(distfilesUrl).xpath(".//a"):
-            if elem.href.startswith("/"):
+            if elem.attrib["href"].startswith("/"):
                 continue    # absolute path
-            if elem.href.startswith("."):
+            if elem.attrib["href"].startswith("."):
                 continue    # parent path or myself
-            if elem.href.endswith("/"):
-                myUrl = os.path.join(distfilesUrl, elem.href)
-                myDir = os.path.join(distfilesDir, elem.href)
+            if elem.attrib["href"].endswith("/"):
+                print("x " + elem.attrib["href"])
+                myUrl = os.path.join(distfilesUrl, elem.attrib["href"])
+                myDir = os.path.join(distfilesDir, elem.attrib["href"])
                 _Util.ensureDir(myDir)
                 _Util.shellCall("/usr/bin/wget %s --cut-dirs=2 -P \"%s\" %s >%s 2>&1" % (" ".join(wgetArgs), myDir, myUrl, logFile))
 

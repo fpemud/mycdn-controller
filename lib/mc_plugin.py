@@ -98,12 +98,12 @@ class McPublicMirrorDatabase:
                 ret.dictOfficial, ret.dictExtended = dbObj.get_data()
             elif tlist3 != []:
                 for e in tlist3:
-                    if e.prop("id") == "official":
+                    if e.prop("type") == "official":
                         with open(os.path.join(pluginDir, e.getContent())) as f:
                             jobj = json.load(f)
                             ret.dictOfficial.update(jobj)
                             ret.dictExtended.update(jobj)
-                    elif e.prop("id") == "extended":
+                    elif e.prop("type") == "extended":
                         with open(os.path.join(pluginDir, e.getContent())) as f:
                             ret.dictExtended.update(json.load(f))
                     else:
