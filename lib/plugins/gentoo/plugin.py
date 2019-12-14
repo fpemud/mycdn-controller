@@ -34,11 +34,13 @@ class Initializer:
             fn = fileList[i]
             fullfn = os.path.join(api.get_data_dir(), fn)
             if not os.path.exists(fullfn):
+                tmpfn = fullfn + ".tmp"
                 url = os.path.join(fileSource, fn)
-                rc, out = _Util.shellCallWithRetCode("/usr/bin/wget -O \"%s\" %s >%s 2>&1" % (fullfn, url, logFile))
+                rc, out = _Util.shellCallWithRetCode("/usr/bin/wget -O \"%s\" %s >%s 2>&1" % (tmpfn, url, logFile))
                 if rc != 0 and rc != 8:
                     # ignore "file not found" error (8) since rsyncSource and fileSource may be different servers
                     raise Exception("download %s failed" % (url))
+                os.rename(tmpfn, fullfn)
             api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // len(fileList))
         api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2)
 
@@ -50,11 +52,11 @@ class Initializer:
         api.progress_changed(100)
 
     def _makeDirAndGetFileList(self, rsyncSource, dataDir):
-        out = _Util.shellCall("/usr/bin/rsync --list-only %s" % (rsyncSource))
+        out = _Util.shellCall("/usr/bin/rsync -a --list-only %s 2>&1" % (rsyncSource))
 
         ret = []
         for line in out.split("\n"):
-            m = re.match("(\\S+) +(\\S+) +(\\S+ \\S+) (.+)", line)
+            m = re.match("(\\S{10}) +([0-9,]+) +(\\S+ \\S+) (.+)", line)
             if m is None:
                 continue
             modstr = m.group(1)
