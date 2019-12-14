@@ -57,7 +57,7 @@ def loadPublicMirrorDatabase(path, publicMirrorDatabaseId):
     for child in root.xpathEval(".//public-mirror-database"):
         if child.prop("id") == publicMirrorDatabaseId:
             return McPublicMirrorDatabase.createFromPlugin(path, child)
-    assert False
+    return None
 
 
 def loadInitializerAndUpdater(path, mirrorSiteId):
