@@ -173,29 +173,19 @@ class McMirrorSite:
         self.initializerObj = None
         if True:
             elem = rootElem.xpathEval(".//initializer")[0]
-
-            ret = elem.xpathEval(".//runtime")
-            if len(ret) > 0:
-                self.runtime = ret[0].getContent()
-                # FIXME: add check
-            else:
-                self.runtime = "glib-mainloop"
-
+            runtime = elem.xpathEval(".//runtime")[0].getContent()
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
             while True:
                 if self.runtime == "glib-mainloop":
                     self.initializerObj = McUtil.loadObject(filename, classname)
                     break
-
                 if self.runtime == "thread":
                     self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)
                     break
-
                 if self.runtime == "process":
                     self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, self.id, True, filename, classname)
                     break
-
                 assert False
 
         # updater
@@ -204,31 +194,20 @@ class McMirrorSite:
         if True:
             elem = rootElem.xpathEval(".//updater")[0]
 
-            self.schedExpr = elem.xpathEval(".//cron-expression")[0].getContent()
-            # FIXME: add check
-
-            ret = elem.xpathEval(".//runtime")
-            if len(ret) > 0:
-                self.runtime = ret[0].getContent()
-                # FIXME: add check
-            else:
-                self.runtime = "glib-mainloop"
-
+            self.schedExpr = elem.xpathEval(".//cron-expression")[0].getContent()           ,mxxd.x,# FIXME: add check
+            runtime = elem.xpathEval(".//runtime")[0].getContent()
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
             while True:
                 if self.runtime == "glib-mainloop":
                     self.updaterObj = McUtil.loadObject(filename, classname)
                     break
-
                 if self.runtime == "thread":
                     self.updaterObj = _UpdaterObjProxyRuntimeThread(filename, classname)
                     break
-
                 if self.runtime == "process":
                     self.updaterObj = _UpdaterObjProxyRuntimeProcess(param, self.id, False, filename, classname)
                     break
-
                 assert False
 
         # advertiser
