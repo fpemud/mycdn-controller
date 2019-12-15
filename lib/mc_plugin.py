@@ -315,15 +315,20 @@ class _UpdaterObjProxyRuntimeProcess:
 
     def start(self, api):
         self.api = api
-        self.proc = subprocess.Popen(McConst.updaterExe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        self.proc = subprocess.Popen([McConst.updaterExe, self.mirrorSiteId, "init" if self.bInitOrUpdate else "update"],
+                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     universal_newlines=True)
         self.pidWatch = GLib.child_watch_add(self.proc.pid, self.onExit)
-        self.stdoutWatch = GLib.io_add_watch(self.proc.stdout.fileno(), GLib.IO_IN | self._flagError, self.onStdout)
-        self.stderrWatch = GLib.io_add_watch(self.proc.stderr.fileno(), GLib.IO_IN | self._flagError, self.onStderr)
+
+        # FIXME: why io_add_watch only works when NONBLOCK is set?
+        # import fcntl
+        # fcntl.fcntl(self.proc.stdout, fcntl.F_SETFL, os.O_NONBLOCK)
+        # fcntl.fcntl(self.proc.stderr, fcntl.F_SETFL, os.O_NONBLOCK)
+        self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self.onStdout)
+        self.stderrWatch = GLib.io_add_watch(self.proc.stderr, GLib.IO_IN | self._flagError, self.onStderr)
 
         try:
             self._writeToProc(McConst.tmpDir)
-
-            self._writeToProc(self.mirrorSiteId)
             self._writeToProc(self.api.get_data_dir())
 
             pmd = self.api.get_public_mirror_database()
@@ -337,10 +342,7 @@ class _UpdaterObjProxyRuntimeProcess:
             self._writeToProc(self.filename)
             self._writeToProc(self.classname)
 
-            if self.bInitOrUpdate:
-                self._writeToProc("1")
-            else:
-                self._writeToProc("0")
+            if not self.bInitOrUpdate:
                 self._writeToProc(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))
         except:
             if self.proc.poll() is None:
@@ -352,6 +354,8 @@ class _UpdaterObjProxyRuntimeProcess:
             self.proc.terminate()
 
     def onStdout(self, source, cb_condition):
+        print("debug XXXXXXXXXXXXXXXX")
+        
         line = self.proc.stdout.buffer.readline()
         obj = pickle.loads(line)
         if obj[0] == "progress":
@@ -364,6 +368,8 @@ class _UpdaterObjProxyRuntimeProcess:
             assert False
 
     def onStderr(self, source, cb_condition):
+        print("debug UYYYYYYYYYYYYYY")
+
         logging.error(self.proc.stderr.read())
 
     def onExit(self, status, data):

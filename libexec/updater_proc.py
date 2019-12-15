@@ -14,9 +14,17 @@ from mc_plugin import McPublicMirrorDatabase
 class Main:
 
     def __init__(self):
-        self.tmpDir = self._readFrom()
+        # get variables from arguments
+        self.mirrorSiteId = sys.argv[1]
+        if sys.argv[2] == "init":
+            self.bInitOrUpdate = True
+        elif sys.argv[2] == "update":
+            self.bInitOrUpdate = False
+        else:
+            assert False
 
-        self.mirrorSiteId = self._readFrom()
+        # get variables from stdin
+        self.tmpDir = self._readFrom()
         self.mirrorSiteDataDir = self._readFrom()
 
         self.db = None
@@ -34,13 +42,11 @@ class Main:
             self.realUpdaterObj = McUtil.loadObject(filename, classname)
 
         self.api = None
-        if True:
-            bInitOrUpdate = (self._readFrom() == "1")
-            if bInitOrUpdate:
-                self.api = self._createInitOrUpdateApi()
-            else:
-                schedDatetime = datetime.strptime(self._readFrom(), "%Y-%m-%d %H:%M")
-                self.api = self._createInitOrUpdateApi(schedDatetime)
+        if self.bInitOrUpdate:
+            self.api = self._createInitOrUpdateApi()
+        else:
+            schedDatetime = datetime.strptime(self._readFrom(), "%Y-%m-%d %H:%M")
+            self.api = self._createInitOrUpdateApi(schedDatetime)
 
     def run(self):
         try:
