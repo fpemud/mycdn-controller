@@ -359,13 +359,13 @@ class _UpdaterObjProxyRuntimeProcess:
             if not self.bInitOrUpdate:
                 self._writeToProc(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))
         except:
-            self._killProc()
+            self._killAndWait()
             self._partiallyClear()
             self.api = None
             raise
 
     def stop(self):
-        self._killProc()
+        self._killAndWait()
 
     def onStdout(self, source, cb_condition):
         print("debug XXXXXXXXXXXXXXXX")
@@ -406,9 +406,12 @@ class _UpdaterObjProxyRuntimeProcess:
         self.stdin.write("\n")
         self.stdin.flush()
 
-    def _killProc(self):
+    def _killAndWait(self):
         if self.pid is not None:
-            os.kill(self.pid, signal.SIGTERM)
+            try:
+                os.kill(self.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
             os.waitpid(self.pid, os.WEXITED)
 
     def _partiallyClear(self):
