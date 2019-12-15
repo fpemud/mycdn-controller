@@ -6,13 +6,11 @@
     <initializer>
       <filename>plugin.py</filename>
       <classname>InitAndUpdater</classname>
-      <runtime>process</runtime>
     </initializer>
     <updater>
       <filename>plugin.py</filename>
       <classname>InitAndUpdater</classname>
       <cron-expression>0 0 * * 0</cron-expression>
-      <runtime>process</runtime>
     </updater>
     <advertiser>
       <protocol>http</protocol>

@@ -14,13 +14,11 @@
     <initializer>
       <filename>plugin.py</filename>
       <classname>Initializer</classname>
-      <runtime>process</runtime>
     </initializer>
     <updater>
       <filename>plugin.py</filename>
       <classname>Updater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
-      <runtime>process</runtime>
     </updater>
     <advertiser>
       <protocol>http</protocol>
@@ -33,13 +31,11 @@
     <initializer>
       <filename>plugin.py</filename>
       <classname>PortageInitAndUpdater</classname>
-      <runtime>process</runtime>
     </initializer>
     <updater>
       <filename>plugin.py</filename>
       <classname>PortageInitAndUpdater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
-      <runtime>process</runtime>
     </updater>
     <advertiser>
       <protocol>rsync</protocol>

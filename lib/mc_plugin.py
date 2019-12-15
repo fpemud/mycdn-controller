@@ -4,11 +4,11 @@
 import os
 import sys
 import json
+import signal
 import pickle
 import libxml2
 import logging
 import threading
-import subprocess
 from datetime import datetime
 from gi.repository import GLib
 from mc_util import McUtil
@@ -172,19 +172,21 @@ class McMirrorSite:
         self.initializerObj = None
         if True:
             elem = rootElem.xpathEval(".//initializer")[0]
-            runtime = elem.xpathEval(".//runtime")[0].getContent()
+
+            # we have grown up, so stop support other runtime any more
+            # runtime = elem.xpathEval(".//runtime")[0].getContent()
+            runtime = "process"
+
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
-            while True:
-                if runtime == "glib-mainloop":
-                    self.initializerObj = McUtil.loadObject(filename, classname)
-                    break
-                if runtime == "thread":
-                    self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)
-                    break
-                if runtime == "process":
-                    self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, self.id, True, filename, classname)
-                    break
+
+            if runtime == "glib-mainloop":
+                self.initializerObj = McUtil.loadObject(filename, classname)
+            elif runtime == "thread":
+                self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)
+            elif runtime == "process":
+                self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, self.id, True, filename, classname)
+            else:
                 assert False
 
         # updater
@@ -194,20 +196,20 @@ class McMirrorSite:
             elem = rootElem.xpathEval(".//updater")[0]
 
             self.schedExpr = elem.xpathEval(".//cron-expression")[0].getContent()           # FIXME: add check
-            runtime = elem.xpathEval(".//runtime")[0].getContent()
+
+            # we have grown up, so stop support other runtime any more
+            # runtime = elem.xpathEval(".//runtime")[0].getContent()
+            runtime = "process"
+
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
-            while True:
-                if runtime == "glib-mainloop":
-                    self.updaterObj = McUtil.loadObject(filename, classname)
-                    break
-                if runtime == "thread":
-                    self.updaterObj = _UpdaterObjProxyRuntimeThread(filename, classname)
-                    break
-                if runtime == "process":
-                    self.updaterObj = _UpdaterObjProxyRuntimeProcess(param, self.id, False, filename, classname)
-                    break
-                assert False
+
+            if runtime == "glib-mainloop":
+                self.initializerObj = McUtil.loadObject(filename, classname)
+            elif runtime == "thread":
+                self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)
+            elif runtime == "process":
+                self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, self.id, True, filename, classname)
 
         # advertiser
         self.advertiseProtocolList = []
@@ -308,26 +310,38 @@ class _UpdaterObjProxyRuntimeProcess:
         self.classname = classname
 
         self.api = None
-        self.proc = None
+        self.pid = None
+        self.stdin = None
+        self.stdout = None
+        self.stderr = None
         self.pidWatch = None
         self.stdoutWatch = None
         self.stderrWatch = None
 
     def start(self, api):
-        self.api = api
-        self.proc = subprocess.Popen([McConst.updaterExe, self.mirrorSiteId, "init" if self.bInitOrUpdate else "update"],
-                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                     universal_newlines=True)
-        self.pidWatch = GLib.child_watch_add(self.proc.pid, self.onExit)
-
-        # FIXME: why io_add_watch only works when NONBLOCK is set?
-        # import fcntl
-        # fcntl.fcntl(self.proc.stdout, fcntl.F_SETFL, os.O_NONBLOCK)
-        # fcntl.fcntl(self.proc.stderr, fcntl.F_SETFL, os.O_NONBLOCK)
-        self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self.onStdout)
-        self.stderrWatch = GLib.io_add_watch(self.proc.stderr, GLib.IO_IN | self._flagError, self.onStderr)
-
         try:
+            self.api = api
+
+            # create process
+            ret = GLib.spawn_async_with_pipes(None,                                         # working_directory
+                                              [
+                                                  McConst.updaterExe,
+                                                  self.mirrorSiteId,
+                                                  "init" if self.bInitOrUpdate else "update",
+                                              ],
+                                              None,                                         # envp
+                                              GLib.SpawnFlags.DO_NOT_REAP_CHILD)
+            assert ret[0]
+
+            self.pid = ret[1]
+            self.stdin = os.fdopen(ret[2], "w")
+            self.stdout = os.fdopen(ret[3], "rb")
+            self.stderr = os.fdopen(ret[4], "r")
+
+            self.pidWatch = GLib.child_watch_add(self.pid, self.onExit)
+            self.stdoutWatch = GLib.io_add_watch(self.stdout, GLib.IO_IN | self._flagError, self.onStdout)
+            self.stderrWatch = GLib.io_add_watch(self.stderr, GLib.IO_IN | self._flagError, self.onStderr)
+
             self._writeToProc(McConst.tmpDir)
             self._writeToProc(self.api.get_data_dir())
 
@@ -345,34 +359,62 @@ class _UpdaterObjProxyRuntimeProcess:
             if not self.bInitOrUpdate:
                 self._writeToProc(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))
         except:
-            if self.proc.poll() is None:
-                self.proc.terminate()
+            self._killProc()
+            self._partiallyClear()
+            self.api = None
             raise
 
     def stop(self):
-        if self.proc is not None and self.proc.poll() is None:
-            self.proc.terminate()
+        self._killProc()
 
     def onStdout(self, source, cb_condition):
         print("debug XXXXXXXXXXXXXXXX")
         
-        line = self.proc.stdout.buffer.readline()
+        line = self.stdout.readline()
         obj = pickle.loads(line)
         if obj[0] == "progress":
-            self.api.progress_changed(obj[1])
+            progress = obj[1]
+            self.api.progress_changed(progress)
+            if progress == 100:
+                self.api = None
         elif obj[0] == "error":
             self.api.error_occured(obj[1])
+            self.api = None
         elif obj[0] == "error-and-hold-for":
             self.api.error_occured_and_hold_for(obj[1], obj[2])
+            self.api = None
         else:
             assert False
 
     def onStderr(self, source, cb_condition):
         print("debug UYYYYYYYYYYYYYY")
 
-        logging.error(self.proc.stderr.read())
+        logging.error(self.stderr.read())
 
     def onExit(self, status, data):
+        self._partiallyClear()
+        if self.api is not None:
+            if status == 0:
+                self.api.progress_changed(100)
+            else:
+                exc_info = (None, None, None)               # FIXME
+                self.api.error_occured(exc_info)
+            self.api = None
+
+    def _writeToProc(self, s):
+        self.stdin.write(s)
+        self.stdin.write("\n")
+        self.stdin.flush()
+
+    def _killProc(self):
+        if self.pid is not None:
+            os.kill(self.pid, signal.SIGTERM)
+            os.waitpid(self.pid, os.WEXITED)
+
+    def _partiallyClear(self):
+        # 1. this method should be called after self.pid exit
+        # 2. self.api is not cleared
+
         if self.pidWatch is not None:
             GLib.source_remove(self.pidWatch)
             self.pidWatch = None
@@ -385,20 +427,21 @@ class _UpdaterObjProxyRuntimeProcess:
             GLib.source_remove(self.stdoutWatch)
             self.stdoutWatch = None
 
-        self.proc = None
+        if self.stdin is not None:
+            self.stdin.close()
+            self.stdin = None
 
-        if self.api is not None:
-            if status == 0:
-                self.api.progress_changed(100)
-            else:
-                exc_info = (None, None, None)
-                self.api.error_occured(exc_info)
-            self.api = None
+        if self.stdout is not None:
+            self.stdout.close()
+            self.stdout = None
 
-    def _writeToProc(self, s):
-        self.proc.stdin.write(s)
-        self.proc.stdin.write("\n")
-        self.proc.stdin.flush()
+        if self.stderr is not None:
+            self.stderr.close()
+            self.stderr = None
+
+        if self.pid is not None:
+            GLib.spawn_close_pid(self.pid)
+            self.pid = None
 
 
 # public-mirror-database ######################################################
