@@ -72,7 +72,7 @@ class _OneMirrorSiteUpdater:
         self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
         try:
             self.progress = 0
-            self.mirrorSite.initializerObj.start(self._createInitApi())
+            self.mirrorSite.initializerObj.start(self._createInitOrUpdateApi())
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except:
             self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
@@ -117,7 +117,7 @@ class _OneMirrorSiteUpdater:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
             try:
                 self.progress = 0
-                self.mirrorSite.updaterObj.start(self._createUpdateApi(schedDatetime))
+                self.mirrorSite.updaterObj.start(self._createInitOrUpdateApi(schedDatetime))
                 logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, tstr))
             except:
                 self._resetStatus(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL)
@@ -150,29 +150,20 @@ class _OneMirrorSiteUpdater:
         self.parent.scheduler.pauseJob(self.mirrorSite.id, datetime.now() + datetime.timedelta(seconds=seconds))
         logging.error("Mirror site \"%s\" update failed, hold for %d seconds." % (self.mirrorSite.id, seconds), exc_info=exc_info)
 
-    def _createInitApi(self):
+    def _createInitOrUpdateApi(self, schedDatetime=None):
         api = DynObject()
         api.get_country = lambda: "CN"
         api.get_location = lambda: None
         api.get_data_dir = lambda: self.mirrorSite.dataDir
         api.get_log_dir = lambda: McConst.logDir
         api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
+        if schedDatetime is not None:
+            api.get_sched_datetime = lambda: schedDatetime
+        api.print_info = lambda message: logging.info(self.mirrorSite.id + ": " + message)
+        api.print_error = lambda message: logging.error(self.mirrorSite.id + ": " + message)
         api.progress_changed = self.initProgressCallback
         api.error_occured = self.initErrorCallback
         api.error_occured_and_hold_for = self.initErrorAndHoldForCallback
-        return api
-
-    def _createUpdateApi(self, schedDatetime):
-        api = DynObject()
-        api.get_country = lambda: "CN"
-        api.get_location = lambda: None
-        api.get_data_dir = lambda: self.mirrorSite.dataDir
-        api.get_log_dir = lambda: McConst.logDir
-        api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
-        api.get_sched_datetime = lambda: schedDatetime
-        api.progress_changed = self.updateProgressCallback
-        api.error_occured = self.updateErrorCallback
-        api.error_occured_and_hold_for = self.updateErrorAndHoldForCallback
         return api
 
     def _reInitCallback(self):

@@ -175,7 +175,7 @@ class McMirrorSite:
 
             # we have grown up, so stop support other runtime any more
             # runtime = elem.xpathEval(".//runtime")[0].getContent()
-            runtime = "process"
+            runtime = "thread"
 
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
@@ -185,7 +185,7 @@ class McMirrorSite:
             elif runtime == "thread":
                 self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)
             elif runtime == "process":
-                self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, self.id, True, filename, classname)
+                self.initializerObj = _UpdaterObjProxyRuntimeProcess(self.id, True, filename, classname)
             else:
                 assert False
 
@@ -199,17 +199,17 @@ class McMirrorSite:
 
             # we have grown up, so stop support other runtime any more
             # runtime = elem.xpathEval(".//runtime")[0].getContent()
-            runtime = "process"
+            runtime = "thread"
 
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
 
             if runtime == "glib-mainloop":
-                self.initializerObj = McUtil.loadObject(filename, classname)
+                self.updaterObj = McUtil.loadObject(filename, classname)
             elif runtime == "thread":
-                self.initializerObj = _UpdaterObjProxyRuntimeThread(filename, classname)
+                self.updaterObj = _UpdaterObjProxyRuntimeThread(filename, classname)
             elif runtime == "process":
-                self.initializerObj = _UpdaterObjProxyRuntimeProcess(param, self.id, True, filename, classname)
+                self.updaterObj = _UpdaterObjProxyRuntimeProcess(self.id, False, filename, classname)
 
         # advertiser
         self.advertiseProtocolList = []
@@ -221,12 +221,16 @@ class _UpdaterObjProxyRuntimeThread:
 
     def __init__(self, filename, classname):
         self.threadObj = None
+        self.realPrintInfo = None
+        self.realPrintError = None
         self.realProgressChanged = None
         self.realErrorOccured = None
         self.realErrorOccuredAndHoldFor = None
         self.realUpdaterObj = McUtil.loadObject(filename, classname)
 
     def start(self, api):
+        self.realPrintInfo = api.print_info
+        self.realPrintError = api.print_error
         self.realProgressChanged = api.progress_changed
         self.realErrorOccured = api.error_occured
         self.realErrorOccuredAndHoldFor = api.error_occured_and_hold_for
@@ -235,6 +239,14 @@ class _UpdaterObjProxyRuntimeThread:
 
     def stop(self):
         self.threadObj.stopped = True
+
+    def _printInfoIdleHandler(self, message):
+        self.realPrintInfo(message)
+        return False
+
+    def _printErrorIdleHandler(self, message):
+        self.realPrintError(message)
+        return False
 
     def _progressChangedIdleHandler(self, progress):
         self.realProgressChanged(progress)
@@ -271,6 +283,8 @@ class _UpdaterObjProxyRuntimeThreadImpl(threading.Thread):
         self.stopped = False
         self.api = api
         self.api.is_stopped = lambda: self.stopped
+        self.api.print_info = self._printInfo
+        self.api.print_error = self._printError
         self.api.progress_changed = self._progressChanged
         self.api.error_occured = self._errorOccured
         self.api.error_occured_and_hold_for = self._errorOccuredAndHoldFor
@@ -283,6 +297,12 @@ class _UpdaterObjProxyRuntimeThreadImpl(threading.Thread):
         except:
             if self.api is not None:
                 self.api.error_occured(sys.exc_info())
+
+    def _printInfo(self, message):
+        GLib.idle_add(self.parent._printInfoIdleHandler, message)
+
+    def _printError(self, message):
+        GLib.idle_add(self.parent._printErrorIdleHandler, message)
 
     def _progressChanged(self, progress):
         if progress == 100:
@@ -300,10 +320,9 @@ class _UpdaterObjProxyRuntimeThreadImpl(threading.Thread):
 
 class _UpdaterObjProxyRuntimeProcess:
 
-    def __init__(self, param, mirrorSiteId, bInitOrUpdate, filename, classname):
+    def __init__(self, mirrorSiteId, bInitOrUpdate, filename, classname):
         self._flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL
 
-        self.param = param
         self.mirrorSiteId = mirrorSiteId
         self.bInitOrUpdate = bInitOrUpdate
         self.filename = filename
@@ -322,7 +341,6 @@ class _UpdaterObjProxyRuntimeProcess:
         try:
             self.api = api
 
-            # create process
             ret = GLib.spawn_async_with_pipes(None,                                         # working_directory
                                               [
                                                   McConst.updaterExe,
@@ -332,7 +350,6 @@ class _UpdaterObjProxyRuntimeProcess:
                                               None,                                         # envp
                                               GLib.SpawnFlags.DO_NOT_REAP_CHILD)
             assert ret[0]
-
             self.pid = ret[1]
             self.stdin = os.fdopen(ret[2], "w")
             self.stdout = os.fdopen(ret[3], "rb")
@@ -342,34 +359,41 @@ class _UpdaterObjProxyRuntimeProcess:
             self.stdoutWatch = GLib.io_add_watch(self.stdout, GLib.IO_IN | self._flagError, self.onStdout)
             self.stderrWatch = GLib.io_add_watch(self.stderr, GLib.IO_IN | self._flagError, self.onStderr)
 
-            self._writeToProc(McConst.tmpDir)
-            self._writeToProc(self.api.get_data_dir())
+            self._writeTo(McConst.tmpDir)
+            self._writeTo(self.api.get_data_dir())
 
             pmd = self.api.get_public_mirror_database()
             if pmd is not None:
-                self._writeToProc("1")
-                self._writeToProc(json.dumps(pmd.get(False)))
-                self._writeToProc(json.dumps(pmd.get(True)))
+                self._writeTo("1")
+                self._writeTo(json.dumps(pmd.get(False)))
+                self._writeTo(json.dumps(pmd.get(True)))
             else:
-                self._writeToProc("0")
+                self._writeTo("0")
 
-            self._writeToProc(self.filename)
-            self._writeToProc(self.classname)
+            self._writeTo(self.filename)
+            self._writeTo(self.classname)
 
             if not self.bInitOrUpdate:
-                self._writeToProc(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))
+                self._writeTo(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))
         except:
-            self._killAndWait()
+            if self.pid is not None:
+                try:
+                    os.kill(self.pid, signal.SIGTERM)
+                    os.waitpid(self.pid, 0)
+                except ProcessLookupError:
+                    pass                        # process already exited
             self._partiallyClear()
             self.api = None
             raise
 
     def stop(self):
-        self._killAndWait()
+        if self.pid is not None:
+            try:
+                os.kill(self.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass                            # process already exited
 
     def onStdout(self, source, cb_condition):
-        print("debug XXXXXXXXXXXXXXXX")
-        
         line = self.stdout.readline()
         obj = pickle.loads(line)
         if obj[0] == "progress":
@@ -387,8 +411,6 @@ class _UpdaterObjProxyRuntimeProcess:
             assert False
 
     def onStderr(self, source, cb_condition):
-        print("debug UYYYYYYYYYYYYYY")
-
         logging.error(self.stderr.read())
 
     def onExit(self, status, data):
@@ -401,18 +423,10 @@ class _UpdaterObjProxyRuntimeProcess:
                 self.api.error_occured(exc_info)
             self.api = None
 
-    def _writeToProc(self, s):
+    def _writeTo(self, s):
         self.stdin.write(s)
         self.stdin.write("\n")
         self.stdin.flush()
-
-    def _killAndWait(self):
-        if self.pid is not None:
-            try:
-                os.kill(self.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            os.waitpid(self.pid, os.WEXITED)
 
     def _partiallyClear(self):
         # 1. this method should be called after self.pid exit
@@ -430,17 +444,10 @@ class _UpdaterObjProxyRuntimeProcess:
             GLib.source_remove(self.stdoutWatch)
             self.stdoutWatch = None
 
-        if self.stdin is not None:
-            self.stdin.close()
-            self.stdin = None
-
-        if self.stdout is not None:
-            self.stdout.close()
-            self.stdout = None
-
-        if self.stderr is not None:
-            self.stderr.close()
-            self.stderr = None
+        # no close needed
+        self.stdin = None
+        self.stdout = None
+        self.stderr = None
 
         if self.pid is not None:
             GLib.spawn_close_pid(self.pid)
@@ -482,6 +489,12 @@ class TemmplateMirrorSiteInitializerApi:
 
     def get_public_mirror_database(self):
         # FIXME, should be changed to get_public_mirror
+        assert False
+
+    def print_info(self, message):
+        assert False
+
+    def print_error(self, message):
         assert False
 
     def progress_changed(self, progress):

@@ -21,7 +21,9 @@ class Initializer:
         fileSource = db.query(api.get_country(), api.get_location(), ["http", "ftp"], True)[0]
 
         # stage1: create directories, get file list, ignore symlinks (file donwloaders can not cope with symlinks)
+        api.print_info("Start fetching file list.")
         fileList = self._makeDirAndGetFileList(rsyncSource, api.get_data_dir())
+        api.print_info("File list fetched, total %d files." % (len(fileList)))
         api.progress_changed(PROGRESS_STAGE_1)
 
         # stage2: download file list
@@ -31,6 +33,7 @@ class Initializer:
         for fn in _Util.randomSorted(fileList):
             fullfn = os.path.join(api.get_data_dir(), fn)
             if not os.path.exists(fullfn):
+                api.print_info("Download file \"%s\"." % (fn))
                 tmpfn = fullfn + ".tmp"
                 url = os.path.join(fileSource, fn)
                 rc, out = _Util.shellCallWithRetCode("/usr/bin/wget -O \"%s\" %s >%s 2>&1" % (tmpfn, url, logFile))
@@ -38,12 +41,16 @@ class Initializer:
                     # ignore "file not found" error (8) since rsyncSource/fileSource may be different servers
                     raise Exception("download %s failed" % (url))
                 os.rename(tmpfn, fullfn)
+            else:
+                api.print_info("File \"%s\" exists." % (fn))
             api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // total)
         api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2)
 
         # stage3: rsync
+        api.print_info("Start rsync.")
         logFile = os.path.join(api.get_log_dir(), "rsync.log")
         _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (rsyncSource, api.get_data_dir(), logFile))
+        api.print_info("Rsync over.")
 
         # report full progress
         api.progress_changed(100)

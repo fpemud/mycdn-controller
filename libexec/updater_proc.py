@@ -57,6 +57,12 @@ class Main:
             if self.api is not None:
                 self.api.error_occured(sys.exc_info())
 
+    def printInfoCallback(self, message):
+        pass
+
+    def printErrorCallback(self, message):
+        pass
+
     def progressCallback(self, progress):
         # FIXME
         obj = ("progress", progress)
@@ -93,6 +99,8 @@ class Main:
             # means update api
             api.get_sched_datetime = lambda: schedDatetime
 
+        api.print_info = self.printInfoCallback
+        api.print_error = self.printErrorCallback
         api.progress_changed = self.progressCallback
         api.error_occured = self.errorCallback
         api.error_occured_and_hold_for = self.errorAndHoldForCallback
