@@ -3,13 +3,8 @@
 
 import os
 import re
-import io
-import gzip
 import time
 import random
-import certifi
-import lxml.html
-import urllib.request
 import subprocess
 
 
@@ -25,7 +20,7 @@ class Initializer:
         rsyncSource = db.query(api.get_country(), api.get_location(), ["rsync"], extended=True)[0]
         fileSource = db.query(api.get_country(), api.get_location(), ["http", "ftp"], True)[0]
 
-        # stage1: create directories, get file list, ignore symlinks
+        # stage1: create directories, get file list, ignore symlinks (file donwloaders can not cope with symlinks)
         fileList = self._makeDirAndGetFileList(rsyncSource, api.get_data_dir())
         api.progress_changed(PROGRESS_STAGE_1)
 
@@ -100,25 +95,6 @@ class _Util:
     def ensureDir(dirname):
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-
-    @staticmethod
-    def getWebPageElementTree(url):
-        for i in range(0, 3):
-            try:
-                resp = urllib.request.urlopen(url, timeout=60, cafile=certifi.where())
-                if resp.info().get('Content-Encoding') is None:
-                    fakef = resp
-                elif resp.info().get('Content-Encoding') == 'gzip':
-                    fakef = io.BytesIO(resp.read())
-                    fakef = gzip.GzipFile(fileobj=fakef)
-                else:
-                    assert False
-                return lxml.html.parse(fakef)
-            except urllib.error.URLError as e:
-                if isinstance(e.reason, TimeoutError):
-                    pass                                # retry 3 times
-                else:
-                    raise
 
     @staticmethod
     def shellCall(cmd):

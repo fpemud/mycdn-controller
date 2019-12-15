@@ -309,16 +309,16 @@ class _UpdaterObjProxyRuntimeProcess:
 
         self.api = None
         self.proc = None
+        self.pidWatch = None
         self.stdoutWatch = None
         self.stderrWatch = None
-        self.pidWatch = None
 
     def start(self, api):
         self.api = api
         self.proc = subprocess.Popen(McConst.updaterExe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         self.pidWatch = GLib.child_watch_add(self.proc.pid, self.onExit)
-        self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self.onStdout)
-        self.stderrWatch = GLib.io_add_watch(self.proc.stderr, GLib.IO_IN | self._flagError, self.onStderr)
+        self.stdoutWatch = GLib.io_add_watch(self.proc.stdout.fileno(), GLib.IO_IN | self._flagError, self.onStdout)
+        self.stderrWatch = GLib.io_add_watch(self.proc.stderr.fileno(), GLib.IO_IN | self._flagError, self.onStderr)
 
         try:
             self._writeToProc(McConst.tmpDir)
@@ -343,15 +343,15 @@ class _UpdaterObjProxyRuntimeProcess:
                 self._writeToProc("0")
                 self._writeToProc(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))
         except:
-            self.proc.terminate()
+            if self.proc.poll() is None:
+                self.proc.terminate()
             raise
 
     def stop(self):
-        self.proc.terminate()
+        if self.proc is not None and self.proc.poll() is None:
+            self.proc.terminate()
 
     def onStdout(self, source, cb_condition):
-        assert source == self.proc.stdout
-
         line = self.proc.stdout.buffer.readline()
         obj = pickle.loads(line)
         if obj[0] == "progress":
@@ -364,8 +364,6 @@ class _UpdaterObjProxyRuntimeProcess:
             assert False
 
     def onStderr(self, source, cb_condition):
-        assert source == self.proc.stderr
-
         logging.error(self.proc.stderr.read())
 
     def onExit(self, status, data):

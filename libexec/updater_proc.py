@@ -52,19 +52,25 @@ class Main:
                 self.api.error_occured(sys.exc_info())
 
     def progressCallback(self, progress):
+        # FIXME
         obj = ("progress", progress)
         sys.stdout.buffer.write(pickle.dumps(obj))
         sys.stdout.buffer.write(b'\n')
+        sys.stdout.buffer.flush()
 
     def errorCallback(self, exc_info):
+        # FIXME
         obj = ("errror", exc_info)
         sys.stdout.buffer.write(pickle.dumps(obj))
         sys.stdout.buffer.write(b'\n')
+        sys.stdout.buffer.flush()
 
     def errorAndHoldForCallback(self, seconds, exc_info):
+        # FIXME
         obj = ("errror-and-hold-for", seconds, exc_info)
         sys.stdout.buffer.write(pickle.dumps(obj))
         sys.stdout.buffer.write(b'\n')
+        sys.stdout.buffer.flush()
 
     def _readFrom(self):
         return sys.stdin.readline().rstrip("\n")
