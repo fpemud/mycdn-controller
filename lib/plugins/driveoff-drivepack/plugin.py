@@ -26,6 +26,7 @@ class InitAndUpdater:
 
         # fetch web pages
         # retrived from "http://driveroff.net/category/dp", it's in russian, do use google webpage translator
+        api.print_info("Start fetching file list.")
         for i in range(1, MAX_PAGE):
             found = False
             url = "http://www.gigabase.com/folder/cbcv8AZeKsHjAkenvVrjPQBB?page=%d" % (i)
@@ -40,6 +41,7 @@ class InitAndUpdater:
             if not found:
                 break
             api.progress_changed(PROGRESS_STAGE_1 * i // MAX_PAGE)
+        api.print_info("File list fetched, total %d files." % (len(linkDict)))
         api.progress_changed(PROGRESS_STAGE_1)
 
         # download driver pack file one by one
@@ -48,6 +50,8 @@ class InitAndUpdater:
         for filename, url in _Util.randomSorted(linkDict.items()):
             fullfn = os.path.join(api.get_data_dir(), filename)
             if not os.path.exists(fullfn) or _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
+                api.print_info("Download file \"%s\"." % (filename))
+
                 # get the real download url, gigabase sucks
                 downloadUrl = None
                 if True:
@@ -76,6 +80,8 @@ class InitAndUpdater:
                                 continue
                     break
                 os.rename(tmpfn, fullfn)
+            else:
+                api.print_info("File \"%s\" exists." % (filename))
 
             fnSet.add(filename)
             api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // total)
@@ -83,6 +89,7 @@ class InitAndUpdater:
 
         # clear old files in cache
         for fn in (set(os.listdir(api.get_data_dir())) - fnSet):
+            api.print_info("Remove old file \"%s\"." % (fn))
             fullfn = os.path.join(api.get_data_dir(), fn)
             os.unlink(fullfn)
 
