@@ -15,6 +15,7 @@ class Initializer:
 
         if not os.path.exists(usedFile):
             # download
+            api.print_info("Download \"aosp-latest.tar\".")
             if True:
                 url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
                 logFile = os.path.join(api.get_log_dir(), "wget.log")
@@ -22,6 +23,7 @@ class Initializer:
             api.progress_changed(50)
 
             # clear directory
+            api.print_info("Clear cache directory.")
             for fn in os.listdir(api.get_data_dir()):
                 fullfn = os.path.join(api.get_data_dir(), fn)
                 if fullfn != dstFile:
@@ -30,16 +32,20 @@ class Initializer:
 
             # extract
             # sometimes tar file contains minor errors
+            api.print_info("Extract aosp-latest.tar.")
             _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
             os.rename(dstFile, usedFile)
             api.progress_changed(60)
         else:
+            api.print_info("Found \"aosp-latest.tar.used\".")
             api.progress_changed(60)
 
         # sync
+        api.print_info("Synchonization starts.")
         with _TempChdir(api.get_data_dir()):
             logFile = os.path.join(api.get_log_dir(), "repo.log")
             _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
+        api.print_info("Synchonization over.")
         api.progress_changed(99)
 
         # all done, delete the tar file
