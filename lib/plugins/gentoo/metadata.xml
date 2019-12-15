@@ -10,6 +10,7 @@
   </public-mirror-database>
   <file-mirror id="gentoo">
     <name>Gentoo Source Mirror</name>
+    <estimated-size>550GiB</estimated-size>
     <data-directory>gentoo</data-directory>
     <initializer>
       <filename>plugin.py</filename>
@@ -27,6 +28,7 @@
   </file-mirror>
   <file-mirror id="gentoo-portage">
     <name>Gentoo Portage</name>
+    <estimated-size>700MiB</estimated-size>
     <data-directory>gentoo-portage</data-directory>
     <initializer>
       <filename>plugin.py</filename>

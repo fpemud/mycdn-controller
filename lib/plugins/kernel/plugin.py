@@ -9,7 +9,8 @@ import subprocess
 class InitAndUpdater:
 
     def run(self, api):
-        url = self._db.query(api.get_country(), api.get_location(), ["http"], True)[0]
+        db = api.get_public_mirror_database()
+        url = db.query(api.get_country(), api.get_location(), ["http"], True)[0]
         dataDir = api.get_data_dir()
         logFile = os.path.join(api.get_log_dir(), "wget.log")
         cmd = "/usr/bin/wget -m --no-parent -e robots=off -nH --cut-dirs=1 --wait 1 --reject \"index.html\" -P \"%s\" %s >%s 2>&1" % (dataDir, url, logFile)
