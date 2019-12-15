@@ -79,10 +79,10 @@ class Initializer:
 class Updater:
 
     def run(self, api):
-        db = self._api.get_public_mirror_database()
-        rsyncSource = db.query(self._api.get_country(), self._api.get_location(), ["rsync"], True)[0]
-        dataDir = self._api.get_data_dir()
-        logFile = os.path.join(self._api.get_log_dir(), "rsync.log")
+        db = api.get_public_mirror_database()
+        rsyncSource = db.query(api.get_country(), api.get_location(), ["rsync"], True)[0]
+        dataDir = api.get_data_dir()
+        logFile = os.path.join(api.get_log_dir(), "rsync.log")
         _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (rsyncSource, dataDir, logFile))
 
 

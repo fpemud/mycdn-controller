@@ -14,32 +14,32 @@ from mc_plugin import McPublicMirrorDatabase
 class Main:
 
     def __init__(self):
-        self.tmpDir = sys.stdin.readline()
+        self.tmpDir = self._readFrom()
 
-        self.mirrorSiteId = sys.stdin.readline()
-        self.mirrorSiteDataDir = sys.stdin.readline()
+        self.mirrorSiteId = self._readFrom()
+        self.mirrorSiteDataDir = self._readFrom()
 
         self.db = None
         if True:
-            bHasPublicMirrorDatabase = (sys.stdin.readline() == "1")
+            bHasPublicMirrorDatabase = (self._readFrom() == "1")
             if bHasPublicMirrorDatabase:
-                jsonOfficial = sys.stdin.readline()
-                jsonExtended = sys.stdin.readline()
+                jsonOfficial = self._readFrom()
+                jsonExtended = self._readFrom()
                 self.db = McPublicMirrorDatabase.createFromJson(self.mirrorSiteId, jsonOfficial, jsonExtended)
 
         self.realUpdaterObj = None
         if True:
-            filename = sys.stdin.readline()
-            classname = sys.stdin.readline()
+            filename = self._readFrom()
+            classname = self._readFrom()
             self.realUpdaterObj = McUtil.loadObject(filename, classname)
 
         self.api = None
         if True:
-            bInitOrUpdate = (sys.stdin.readline() == "1")
+            bInitOrUpdate = (self._readFrom() == "1")
             if bInitOrUpdate:
                 self.api = self._createInitOrUpdateApi()
             else:
-                schedDatetime = datetime.strptime(sys.stdin.readline(), "%Y-%m-%d %H:%M")
+                schedDatetime = datetime.strptime(self._readFrom(), "%Y-%m-%d %H:%M")
                 self.api = self._createInitOrUpdateApi(schedDatetime)
 
     def run(self):
@@ -66,6 +66,9 @@ class Main:
         sys.stdout.buffer.write(pickle.dumps(obj))
         sys.stdout.buffer.write(b'\n')
 
+    def _readFrom(self):
+        return sys.stdin.readline().rstrip("\n")
+
     def _createInitOrUpdateApi(self, schedDatetime=None):
         api = DynObject()
         api.get_country = lambda: "CN"
@@ -88,4 +91,8 @@ class Main:
 ###############################################################################
 
 if __name__ == "__main__":
-    Main().run()
+    print("Subprocess starts.", file=sys.stderr)
+    obj = Main()
+    print("Subprocess starts to run.", file=sys.stderr)
+    obj.run()
+    print("Subprocess ends.", file=sys.stderr)

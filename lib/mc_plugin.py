@@ -6,6 +6,7 @@ import sys
 import json
 import pickle
 import libxml2
+import logging
 import threading
 import subprocess
 from datetime import datetime
@@ -227,7 +228,7 @@ class _UpdaterObjProxyRuntimeThread:
         self.realProgressChanged = api.progress_changed
         self.realErrorOccured = api.error_occured
         self.realErrorOccuredAndHoldFor = api.error_occured_and_hold_for
-        self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.init)
+        self.threadObj = _UpdaterObjProxyRuntimeThreadImpl(self, api, self.realUpdaterObj.run)
         self.threadObj.start()
 
     def stop(self):
@@ -315,32 +316,32 @@ class _UpdaterObjProxyRuntimeProcess:
     def start(self, api):
         self.api = api
         self.proc = subprocess.Popen(McConst.updaterExe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        self.pidWatch = GLib.child_watch_add(self.proc.pid, self._onExit)
-        self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self._onStdout)
-        self.stderrWatch = GLib.io_add_watch(self.proc.stderr, GLib.IO_IN | self._flagError, self._onStderr)
+        self.pidWatch = GLib.child_watch_add(self.proc.pid, self.onExit)
+        self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | self._flagError, self.onStdout)
+        self.stderrWatch = GLib.io_add_watch(self.proc.stderr, GLib.IO_IN | self._flagError, self.onStderr)
 
         try:
-            self.proc.stdin.write(McConst.tmpDir + "\n")
+            self._writeToProc(McConst.tmpDir)
 
-            self.proc.stdin.write(self.mirrorSiteId + "\n")
-            self.proc.stdin.write(self.api.get_data_dir())
+            self._writeToProc(self.mirrorSiteId)
+            self._writeToProc(self.api.get_data_dir())
 
             pmd = self.api.get_public_mirror_database()
             if pmd is not None:
-                self.proc.stdin.write("1\n")
-                self.proc.stdin.write(json.dumps(pmd.get(False)) + "\n")
-                self.proc.stdin.write(json.dumps(pmd.get(True)) + "\n")
+                self._writeToProc("1")
+                self._writeToProc(json.dumps(pmd.get(False)))
+                self._writeToProc(json.dumps(pmd.get(True)))
             else:
-                self.proc.stdin.write("0\n")
+                self._writeToProc("0")
 
-            self.proc.stdin.write(self.filename + "\n")
-            self.proc.stdin.write(self.classname + "\n")
+            self._writeToProc(self.filename)
+            self._writeToProc(self.classname)
 
             if self.bInitOrUpdate:
-                self.proc.stdin.write("1\n")
+                self._writeToProc("1")
             else:
-                self.proc.stdin.write("0\n")
-                self.proc.stdin.write(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M") + "\n")
+                self._writeToProc("0")
+                self._writeToProc(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))
         except:
             self.proc.terminate()
             raise
@@ -348,7 +349,7 @@ class _UpdaterObjProxyRuntimeProcess:
     def stop(self):
         self.proc.terminate()
 
-    def _onStdout(self, source, cb_condition):
+    def onStdout(self, source, cb_condition):
         assert source == self.proc.stdout
 
         line = self.proc.stdout.buffer.readline()
@@ -362,11 +363,12 @@ class _UpdaterObjProxyRuntimeProcess:
         else:
             assert False
 
-    def _onStderr(self, source, cb_condition):
-        # /usr/libexec/updater_subproc.py should not print to stderr at all
-        assert False
+    def onStderr(self, source, cb_condition):
+        assert source == self.proc.stderr
 
-    def _onExit(self, status, data):
+        logging.error(self.proc.stderr.read())
+
+    def onExit(self, status, data):
         if self.pidWatch is not None:
             GLib.source_remove(self.pidWatch)
             self.pidWatch = None
@@ -388,6 +390,11 @@ class _UpdaterObjProxyRuntimeProcess:
                 exc_info = (None, None, None)
                 self.api.error_occured(exc_info)
             self.api = None
+
+    def _writeToProc(self, s):
+        self.proc.stdin.write(s)
+        self.proc.stdin.write("\n")
+        self.proc.stdin.flush()
 
 
 # public-mirror-database ######################################################

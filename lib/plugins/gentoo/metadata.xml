@@ -27,22 +27,22 @@
       <protocol>ftp</protocol>
     </advertiser>
   </file-mirror>
-  <file-mirror id="gentoo-portage">
+  <!-- <file-mirror id="gentoo-portage">
     <name>Gentoo Portage</name>
     <data-directory>gentoo-portage</data-directory>
     <initializer>
       <filename>plugin.py</filename>
       <classname>PortageInitAndUpdater</classname>
-      <runtime>process</runtime>
+      <runtime>thread</runtime>
     </initializer>
     <updater>
       <filename>plugin.py</filename>
       <classname>PortageInitAndUpdater</classname>
       <cron-expression>0 */4 * * *</cron-expression>
-      <runtime>process</runtime>
+      <runtime>thread</runtime>
     </updater>
     <advertiser>
       <protocol>rsync</protocol>
     </advertiser>
-  </file-mirror>
+  </file-mirror> -->
 </plugin>
