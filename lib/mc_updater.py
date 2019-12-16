@@ -152,18 +152,28 @@ class _OneMirrorSiteUpdater:
 
     def _createInitOrUpdateApi(self, schedDatetime=None):
         api = DynObject()
+
         api.get_country = lambda: "CN"
         api.get_location = lambda: None
         api.get_data_dir = lambda: self.mirrorSite.dataDir
         api.get_log_dir = lambda: McConst.logDir
         api.get_public_mirror_database = lambda: _publicMirrorDatabase(self.param, self.mirrorSite)
+
         if schedDatetime is not None:
             api.get_sched_datetime = lambda: schedDatetime
+
         api.print_info = lambda message: logging.info(self.mirrorSite.id + ": " + message)
         api.print_error = lambda message: logging.error(self.mirrorSite.id + ": " + message)
-        api.progress_changed = self.initProgressCallback
-        api.error_occured = self.initErrorCallback
-        api.error_occured_and_hold_for = self.initErrorAndHoldForCallback
+
+        if schedDatetime is None:
+            api.progress_changed = self.initProgressCallback
+            api.error_occured = self.initErrorCallback
+            api.error_occured_and_hold_for = self.initErrorAndHoldForCallback
+        else:
+            api.progress_changed = self.updateProgressCallback
+            api.error_occured = self.updateErrorCallback
+            api.error_occured_and_hold_for = self.updateErrorAndHoldForCallback
+
         return api
 
     def _reInitCallback(self):
