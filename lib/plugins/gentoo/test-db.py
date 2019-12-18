@@ -41,7 +41,7 @@ def shellCall(cmd):
     # scenarios are the same as FmUtil.cmdCall
 
     ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            shell=True, universal_newlines=True)
+                         shell=True, universal_newlines=True)
     if ret.returncode > 128:
         # for scenario 1, caller's signal handler has the oppotunity to get executed during sleep
         time.sleep(1.0)

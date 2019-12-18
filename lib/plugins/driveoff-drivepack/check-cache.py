@@ -2,6 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import re
 import sys
 import time
 import subprocess
@@ -22,7 +23,7 @@ if __name__ == "__main__":
 
     cacheDir = sys.argv[1]
     for fn in sorted(os.listdir(cacheDir)):
-        if fn.endswith(".tmp"):
+        if re.match("DP_.*\\.7z", fn) is None:
             continue
         fullfn = os.path.join(cacheDir, fn)
         rc, out = shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))
