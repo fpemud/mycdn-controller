@@ -29,7 +29,7 @@ def testGentooPortage(filename):
     for url in jobj.keys():
         sys.stdout.write("    Testing \"%s\" ... " % (url))
         try:
-            shellCall("/usr/bin/rsync -a --list-only %s" % (url))
+            shellCall("/usr/bin/rsync -a --no-motd --list-only %s" % (url))
             print("Ok.")
         except:
             print("Failed.")
