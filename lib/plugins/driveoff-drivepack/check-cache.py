@@ -21,7 +21,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     cacheDir = sys.argv[1]
-    for fn in os.listdir(cacheDir):
+    for fn in sorted(os.listdir(cacheDir)):
         if fn.endswith(".tmp"):
             continue
         fullfn = os.path.join(cacheDir, fn)
