@@ -33,43 +33,47 @@ class McAdvertiser:
         if len(self.httpDirDict) > 0:
             if self.param.httpPort == "random":
                 self.param.httpPort = McUtil.getFreeSocketPort("tcp")
-            self.httpServer = HttpFileServer(self.param.listenIp, self.param.httpPort, list(self.httpDirDict.values()), McConst.logDir)
-            self.httpServer.start()
+            self.httpServer = AioHttpFileServer(self.param.listenIp, self.param.httpPort, list(self.httpDirDict.values()), McConst.logDir)
+            self.param.mainloop.call_soon(self.httpServer.start())
 
         self.ftpServer = None
         if len(self.ftpDirDict) > 0:
             if self.param.ftpPort == "random":
                 self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
-            self.ftpServer = FtpServer(self.param.listenIp, self.param.ftpPort, list(self.ftpDirDict.values()), McConst.logDir)
-            self.ftpServer.start()
+            self.ftpServer = AioFtpServer(self.param.listenIp, self.param.ftpPort, list(self.ftpDirDict.values()), McConst.logDir)
+            self.param.mainloop.call_soon(self.ftpServer.start())
 
         self.rsyncServer = None
         if len(self.rsyncDirDict) > 0:
             if self.param.rsyncPort == "random":
                 self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
             self.rsyncServer = RsyncServer(self.param.listenIp, self.param.rsyncPort, list(self.rsyncDirDict.values()), McConst.tmpDir, McConst.logDir)
-            self.rsyncServer.start()
+            self.param.mainloop.call_soon(self.rsyncServer.start())
 
     def dispose(self):
         if self.httpServer is not None:
-            self.httpServer.stop()
+            self.param.mainloop.run_until_complete(self.httpServer.stop())
             self.httpServer = None
         if self.ftpServer is not None:
-            self.ftpServer.stop()
+            self.param.mainloop.run_until_complete(self.ftpServer.stop())
             self.ftpServer = None
         if self.rsyncServer is not None:
-            self.rsyncServer.stop()
+            self.param.mainloop.run_until_complete(self.rsyncServer.stop())
             self.rsyncServer = None
 
 
-class HttpServer:
+class AioHttpServer:
 
-    def __init__(self, ip, port, logDir):
+    def __init__(self, mainloop, ip, port, logDir):
         assert 0 < port < 65536
+
+        self._mainloop = mainloop
         self._ip = ip
         self._port = port
         self._dirDict = dict()
         self._logDir = logDir
+
+        self._runner = None
 
     @property
     def port(self):
@@ -77,23 +81,22 @@ class HttpServer:
 
     @property
     def running(self):
-        assert False
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
+        return self._runner is None
 
     def addFileDir(self, dirname, realPath):
-        port = McUtil.getFreeSocketPort("tcp")
-        logfile = os.path.join(self._logDir, "httpd-%d.log" % (port))
-        cmd = "/usr/bin/bozohttpd -b -f -H -I %d -s -X %s 2>%s" % (port, realPath, logfile)
-        proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
-        self._dirDict[dirname] = (realPath, port, proc)
+        self._dirDict[dirname] = realPath
 
     def removeFileDir(self, dirname):
-        realPath, port, proc = self._dirDict[dirname]
-        proc.terminate()
-        proc.wait()
         del self._dirDict[dirname]
+
+    async def start(self):
+        app = web.Application(loop=self._mainloop)
+        for dirname, realPath in self._dirDict.items():
+            app.router.add_static("/" + dirname + "/", realPath, name=dirname, show_index=True, follow_symlinks=True)
+        self._runner = web.AppRunner(app)
+        await self._runner.setup()
+        site = web.TCPSite(self._runner, self._ip, self._port)
+        await site.start()
+
+    async def stop(self):
+        await self._runner.cleanup()
