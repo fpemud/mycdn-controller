@@ -62,17 +62,17 @@ class McAdvertiser:
             self.rsyncServer = None
 
 
-class AioHttpServer:
+class _HttpServer:
 
     def __init__(self, mainloop, ip, port, logDir):
         assert 0 < port < 65536
 
-        self._mainloop = mainloop
         self._ip = ip
         self._port = port
         self._dirDict = dict()
         self._logDir = logDir
 
+        self._app = web.Application(loop=mainloop)
         self._runner = None
 
     @property
@@ -83,20 +83,50 @@ class AioHttpServer:
     def running(self):
         return self._runner is None
 
-    def addFileDir(self, dirname, realPath):
-        self._dirDict[dirname] = realPath
-
-    def removeFileDir(self, dirname):
-        del self._dirDict[dirname]
+    def addFileDir(self, name, realPath):
+        self._dirDict[name] = realPath
+        self._app.router.add_static("/" + name + "/", realPath, name=name, show_index=True, follow_symlinks=True)
 
     async def start(self):
-        app = web.Application(loop=self._mainloop)
-        for dirname, realPath in self._dirDict.items():
-            app.router.add_static("/" + dirname + "/", realPath, name=dirname, show_index=True, follow_symlinks=True)
-        self._runner = web.AppRunner(app)
+        self._runner = web.AppRunner(self._app)
         await self._runner.setup()
         site = web.TCPSite(self._runner, self._ip, self._port)
         await site.start()
 
     async def stop(self):
         await self._runner.cleanup()
+
+
+class _FtpServer:
+
+    def __init__(self, mainloop, ip, port, logDir):
+        assert 0 < port < 65536
+
+        self._mainloop = mainloop
+        self._ip = ip
+        self._port = port
+        self._dirDict = dict()
+        self._logDir = logDir
+
+        self._server = aioftp.Server(path_io_factory=self)
+        self._bStart = False
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def running(self):
+        return self._bStart
+
+    def addFileDir(self, name, realPath):
+        self._dirDict[name] = realPath
+
+    async def start(self):
+        await self._server.start(self._ip, self._port)
+        self._bStart = True
+
+    async def stop(self):
+        await self._server.cleanup()
+        self._bStart = False
+
