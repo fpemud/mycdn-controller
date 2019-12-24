@@ -20,7 +20,6 @@ class McMirrorSiteUpdater:
     MIRROR_SITE_UPDATE_STATUS_IDLE = 3
     MIRROR_SITE_UPDATE_STATUS_SYNCING = 4
     MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL = 5
-    MIRROR_SITE_UPDATE_STATUS_ERROR = 6
 
     MIRROR_SITE_RE_INIT_INTERVAL = 60
 
@@ -53,8 +52,6 @@ class McMirrorSiteUpdater:
     def isMirrorSiteInitialized(self, mirrorSiteId):
         ret = self.updaterDict[mirrorSiteId].status
         if self.MIRROR_SITE_UPDATE_STATUS_INIT <= ret <= self.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL:
-            return False
-        if ret == self.MIRROR_SITE_UPDATE_STATUS_ERROR:
             return False
         return True
 
