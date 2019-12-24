@@ -66,14 +66,14 @@ class McPluginManager:
         # create McMirrorSite objects
         for child in root.xpathEval(".//file-mirror"):
             obj = McMirrorSite(self.param, path, child)
-            assert obj.id not in [x.id for x in self.param.mirrorSiteList]             # FIXME
-            self.param.mirrorSiteList.append(obj)
+            assert obj.id not in self.param.mirrorSiteDict
+            self.param.mirrorSiteDict[obj.id] = obj
 
         # create McMirrorSite objects, use file-mirror and git-mirror as the same yet
         for child in root.xpathEval(".//git-mirror"):
             obj = McMirrorSite(self.param, path, child)
-            assert obj.id not in [x.id for x in self.param.mirrorSiteList]             # FIXME
-            self.param.mirrorSiteList.append(obj)
+            assert obj.id not in self.param.mirrorSiteDict
+            self.param.mirrorSiteDict[obj.id] = obj
 
         # record plugin id
         self.param.pluginList.append(root.prop("id"))

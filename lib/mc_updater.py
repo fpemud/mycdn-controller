@@ -30,7 +30,7 @@ class McMirrorSiteUpdater:
         self.scheduler = GLibCronScheduler()
         self.updaterDict = dict()           # dict<mirror-id,updater-object>
 
-        for ms in self.param.mirrorSiteList:
+        for ms in self.param.mirrorSiteDict.values():
             # initialize data directory
             fullDir = os.path.join(McConst.cacheDir, ms.dataDir)
             if not os.path.exists(fullDir):
@@ -49,6 +49,14 @@ class McMirrorSiteUpdater:
         # FIXME, should use g_main_context_iteration to wait them to stop
         self.scheduler.dispose()
         self.invoker.dispose()
+
+    def isMirrorSiteInitialized(self, mirrorSiteId):
+        ret = self.updaterDict[mirrorSiteId].status
+        if self.MIRROR_SITE_UPDATE_STATUS_INIT <= ret <= self.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL:
+            return False
+        if ret == self.MIRROR_SITE_UPDATE_STATUS_ERROR:
+            return False
+        return True
 
     def getMirrorSiteUpdateStatus(self, mirrorSiteId):
         return self.updaterDict[mirrorSiteId].status

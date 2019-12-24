@@ -24,7 +24,7 @@ class McParam:
 
         self.pluginList = []
         self.publicMirrorDatabaseList = []
-        self.mirrorSiteList = []
+        self.mirrorSiteDict = dict()
 
         self.listenIp = "0.0.0.0"
 
