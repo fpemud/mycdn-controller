@@ -175,7 +175,7 @@ class McMirrorSite:
 
             # we have grown up, so stop support other runtime any more
             # runtime = elem.xpathEval(".//runtime")[0].getContent()
-            runtime = "thread"
+            runtime = "process"
 
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
@@ -199,7 +199,7 @@ class McMirrorSite:
 
             # we have grown up, so stop support other runtime any more
             # runtime = elem.xpathEval(".//runtime")[0].getContent()
-            runtime = "thread"
+            runtime = "process"
 
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
@@ -401,17 +401,21 @@ class _UpdaterObjProxyRuntimeProcess:
             self.api.progress_changed(progress)
             if progress == 100:
                 self.api = None
+            return True
         elif obj[0] == "error":
             self.api.error_occured(obj[1])
             self.api = None
+            return True
         elif obj[0] == "error-and-hold-for":
             self.api.error_occured_and_hold_for(obj[1], obj[2])
             self.api = None
+            return True
         else:
             assert False
 
     def onStderr(self, source, cb_condition):
         logging.error(self.stderr.read())
+        return True
 
     def onExit(self, status, data):
         self._partiallyClear()
@@ -422,6 +426,7 @@ class _UpdaterObjProxyRuntimeProcess:
                 exc_info = (None, None, None)               # FIXME
                 self.api.error_occured(exc_info)
             self.api = None
+        return True
 
     def _writeTo(self, s):
         self.stdin.write(s)
