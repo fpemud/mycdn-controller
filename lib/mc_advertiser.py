@@ -36,7 +36,7 @@ class McAdvertiser:
                 # if self.param.updater.isMirrorSiteInitialized(msId):
                 if True:
                     self.httpServer.addFileDir(msId, self.param.mirrorSiteDict[msId].dataDir)
-            self.param.mainloop.call_soon(self.httpServer.start)
+            self.param.mainloop.create_task(self.httpServer.start())
 
         self.ftpServer = None
         if len(self.ftpMirrorSiteList) > 0:
@@ -47,24 +47,24 @@ class McAdvertiser:
                 # if self.param.updater.isMirrorSiteInitialized(msId):
                 if True:
                     self.ftpServer.addFileDir(msId, self.param.mirrorSiteDict[msId].dataDir)
-            self.param.mainloop.call_soon(self.ftpServer.start)
+            self.param.mainloop.create_task(self.ftpServer.start())
 
         self.rsyncServer = None
         if len(self.rsyncMirrorSiteList) > 0:
             if self.param.rsyncPort == "random":
                 self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
             self.rsyncServer = RsyncServer(self.param.listenIp, self.param.rsyncPort, [], McConst.tmpDir, McConst.logDir)   # FIXME
-            self.param.mainloop.call_soon(self.rsyncServer.start)
+            self.param.mainloop.create_task(self.rsyncServer.start())
 
     def dispose(self):
         if self.httpServer is not None:
-            self.param.mainloop.run_until_complete(self.httpServer.stop)
+            self.param.mainloop.run_until_complete(self.httpServer.stop())
             self.httpServer = None
         if self.ftpServer is not None:
-            self.param.mainloop.run_until_complete(self.ftpServer.stop)
+            self.param.mainloop.run_until_complete(self.ftpServer.stop())
             self.ftpServer = None
         if self.rsyncServer is not None:
-            self.param.mainloop.run_until_complete(self.rsyncServer.stop)
+            self.param.mainloop.run_until_complete(self.rsyncServer.stop())
             self.rsyncServer = None
 
 
@@ -133,6 +133,6 @@ class _FtpServer:
         self._bStart = True
 
     async def stop(self):
-        await self._server.cleanup()
+        await self._server.close()
         self._bStart = False
 
