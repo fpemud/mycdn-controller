@@ -13,6 +13,7 @@ class McConst:
     updaterExe = os.path.join(libexecDir, "updater_proc.py")
     cacheDir = "/var/cache/mirrors"
     runDir = "/run/mirrors"
+    apiServerFile = os.path.join(runDir, "api.socket")
     logDir = "/var/log/mirrors"
     tmpDir = "/tmp/mirrors"             # FIXME
 
@@ -38,7 +39,6 @@ class McParam:
         # objects
         self.mainloop = None
         self.pluginManager = None
-        self.apiServer = None
         self.avahiObj = None
         self.updater = None
         self.advertiser = None

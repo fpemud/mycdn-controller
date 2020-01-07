@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
+import os
 import aioftp
+import logging
+import subprocess
 import aiohttp.web
 from mc_util import McUtil
-from mc_util import RsyncServer
 from mc_param import McConst
 
 
@@ -53,8 +55,8 @@ class McAdvertiser:
         if len(self.rsyncMirrorSiteList) > 0:
             if self.param.rsyncPort == "random":
                 self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
-            self.rsyncServer = RsyncServer(self.param.listenIp, self.param.rsyncPort, [], McConst.tmpDir, McConst.logDir)   # FIXME
-            self.param.mainloop.create_task(self.rsyncServer.start())
+            self.rsyncServer = _RsyncServer(self.param.listenIp, self.param.rsyncPort, [], McConst.tmpDir, McConst.logDir)   # FIXME
+            self.param.mainloop.call_soon(self.rsyncServer.start)
 
     def dispose(self):
         if self.httpServer is not None:
@@ -64,7 +66,7 @@ class McAdvertiser:
             self.param.mainloop.run_until_complete(self.ftpServer.stop())
             self.ftpServer = None
         if self.rsyncServer is not None:
-            self.param.mainloop.run_until_complete(self.rsyncServer.stop())
+            self.rsyncServer.stop()
             self.rsyncServer = None
 
 
@@ -83,6 +85,7 @@ class _HttpServer:
 
     @property
     def port(self):
+        assert self._runner is not None
         return self._port
 
     @property
@@ -98,6 +101,7 @@ class _HttpServer:
         await self._runner.setup()
         site = aiohttp.web.TCPSite(self._runner, self._ip, self._port)
         await site.start()
+        logging.info("Advertising server (HTTP) started, listening on port %d." % (self._port))
 
     async def stop(self):
         await self._runner.cleanup()
@@ -119,6 +123,7 @@ class _FtpServer:
 
     @property
     def port(self):
+        assert self._bStart
         return self._port
 
     @property
@@ -131,8 +136,69 @@ class _FtpServer:
     async def start(self):
         await self._server.start(self._ip, self._port)
         self._bStart = True
+        logging.info("Advertising server (FTP) started, listening on port %d." % (self._port))
 
     async def stop(self):
-        await self._server.close()
+        # it seems aioftp.Server.close() has syntax error
+        # await self._server.close()
         self._bStart = False
 
+
+class _RsyncServer:
+
+    def __init__(self, ip, port, dirList, tmpDir, logDir):
+        assert 0 < port < 65536
+        self._ip = ip
+        self._port = port
+        self._dirlist = dirList
+        self.rsyncdCfgFile = os.path.join(tmpDir, "rsyncd.conf")
+        self.rsyncdLockFile = os.path.join(tmpDir, "rsyncd.lock")
+        self.rsyncdLogFile = os.path.join(logDir, "rsyncd.log")
+        self._proc = None
+
+    @property
+    def port(self):
+        assert self._proc is not None
+        return self._port
+
+    @property
+    def running(self):
+        return self._proc is not None
+
+    def start(self):
+        assert self._proc is None
+
+        buf = ""
+        buf += "lock file = %s\n" % (self.rsyncdLockFile)
+        buf += "log file = %s\n" % (self.rsyncdLogFile)
+        buf += "\n"
+        buf += "port = %s\n" % (self._port)
+        buf += "max connections = 1\n"
+        buf += "timeout = 600\n"
+        buf += "hosts allow = 127.0.0.1\n"
+        buf += "\n"
+        buf += "use chroot = yes\n"
+        buf += "uid = root\n"
+        buf += "gid = root\n"
+        buf += "\n"
+        for d in self._dirlist:
+            buf += "[%s]\n" % (os.path.basename(d))
+            buf += "path = %s\n" % (d)
+            buf += "read only = yes\n"
+            buf += "\n"
+        with open(self.rsyncdCfgFile, "w") as f:
+            f.write(buf)
+
+        cmd = ""
+        cmd += "/usr/bin/rsync --daemon --no-detach --config=\"%s\"" % (self.rsyncdCfgFile)
+        self._proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
+
+        logging.info("Advertising server (rsync) started, listening on port %d." % (self._port))
+
+    def stop(self):
+        assert self._proc is not None
+        self._proc.terminate()
+        self._proc.wait()
+        self._proc = None
+        McUtil.forceDelete(self.rsyncdLockFile)
+        McUtil.forceDelete(self.rsyncdCfgFile)

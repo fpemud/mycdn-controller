@@ -35,6 +35,6 @@
         "name": "XMU",
         "description": "Mirror site provided by Xia Men University",
         "country": "CN",
-        "protocol": "rsync",
+        "protocol": "rsync"
     }
 }

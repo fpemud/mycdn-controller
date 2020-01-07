@@ -27,14 +27,6 @@ class Main:
         self.tmpDir = self._readFrom()
         self.mirrorSiteDataDir = self._readFrom()
 
-        self.db = None
-        if True:
-            bHasPublicMirrorDatabase = (self._readFrom() == "1")
-            if bHasPublicMirrorDatabase:
-                jsonOfficial = self._readFrom()
-                jsonExtended = self._readFrom()
-                self.db = McPublicMirrorDatabase.createFromJson(self.mirrorSiteId, jsonOfficial, jsonExtended)
-
         self.realUpdaterObj = None
         if True:
             filename = self._readFrom()
@@ -58,7 +50,10 @@ class Main:
                 self.api.error_occured(sys.exc_info())
 
     def printInfoCallback(self, message):
-        pass
+        obj = ("print-info", message)
+        sys.stdout.buffer.write(pickle.dumps(obj))
+        sys.stdout.buffer.write(b'\n')
+        sys.stdout.buffer.flush()
 
     def printErrorCallback(self, message):
         pass
@@ -111,8 +106,5 @@ class Main:
 ###############################################################################
 
 if __name__ == "__main__":
-    print("Subprocess starts.", file=sys.stderr)
     obj = Main()
-    print("Subprocess starts to run.", file=sys.stderr)
     obj.run()
-    print("Subprocess ends.", file=sys.stderr)

@@ -25,9 +25,13 @@ class McMirrorSiteUpdater:
 
     def __init__(self, param):
         self.param = param
+
         self.invoker = GLibIdleInvoker()
         self.scheduler = GLibCronScheduler()
         self.updaterDict = dict()           # dict<mirror-id,updater-object>
+
+        self.apiServer = _UpdaterApiServer()
+        self.clientDict = dict()            # dict<process-id,mirror-id>
 
         for ms in self.param.mirrorSiteDict.values():
             # initialize data directory
@@ -185,6 +189,36 @@ class _OneMirrorSiteUpdater:
         del self.reInitHandler
         self.initStart()
         return False
+
+
+class _UpdaterApiServer:
+
+    def __init__(self, param):
+        self.param = param
+
+        self.serverSock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.serverSock.bind(FmConst.apiServerFile)
+        self.serverSock.listen(5)
+        self.serverSourceId = GLib.io_add_watch(self.serverSock, GLib.IO_IN | _flagError, self._onServerAccept)
+
+    def dispose(self):
+        GLib.source_remove(self.serverSourceId)
+        self.serverSourceId = None
+        self.serverSock.close()
+        self.serverSock = None
+
+    def _onServerAccept(self, source, cb_condition):
+        assert not (cb_condition & _flagError)
+
+        try:
+            new_sock, addr = source.accept()
+            return True
+        except socket.error as e:
+            logging.debug("McApiServer._onServerAccept: Failed, %s, %s", e.__class__, e)
+            return True
+
+
+_flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL
 
 
 def _initFlagFile(mirrorSite):
