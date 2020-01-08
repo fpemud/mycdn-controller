@@ -16,9 +16,8 @@ PROGRESS_STAGE_3 = 20
 class Initializer:
 
     def run(self, api):
-        db = api.get_public_mirror_database()
-        rsyncSource = db.query(api.get_country(), api.get_location(), ["rsync"], extended=True)[0]
-        fileSource = db.query(api.get_country(), api.get_location(), ["http", "ftp"], True)[0]
+        rsyncSource = "rsync://mirrors.tuna.tsinghua.edu.cn/gentoo"
+        fileSource = "https://mirrors.tuna.tsinghua.edu.cn/gentoo"
 
         # stage1: create directories, get file list, ignore symlinks (file donwloaders can not cope with symlinks)
         api.print_info("Start fetching file list.")

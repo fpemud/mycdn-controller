@@ -56,12 +56,6 @@ class McDaemon:
             # advertiser
             self.param.advertiser = McAdvertiser(self.param)
             logging.info("Advertiser initialized.")
-            if self.param.advertiser.httpServer is not None:
-                logging.info("   HTTP server enableed, listening on port %d." % (self.param.advertiser.httpServer.port))
-            if self.param.advertiser.ftpServer is not None:
-                logging.info("   FTP server enableed, listening on port %d." % (self.param.advertiser.ftpServer.port))
-            if self.param.advertiser.rsyncServer is not None:
-                logging.info("   Rsync server enableed, listening on port %d." % (self.param.advertiser.rsyncServer.port))
 
             # api server
             self.param.apiServer = McApiServer(self.param)

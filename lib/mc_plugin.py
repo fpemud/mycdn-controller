@@ -66,14 +66,14 @@ class McPluginManager:
         # create McMirrorSite objects
         for child in root.xpathEval(".//file-mirror"):
             obj = McMirrorSite(self.param, path, child)
-            assert obj.id not in [x.id for x in self.param.mirrorSiteList]             # FIXME
-            self.param.mirrorSiteList.append(obj)
+            assert obj.id not in self.param.mirrorSiteDict
+            self.param.mirrorSiteDict[obj.id] = obj
 
         # create McMirrorSite objects, use file-mirror and git-mirror as the same yet
         for child in root.xpathEval(".//git-mirror"):
             obj = McMirrorSite(self.param, path, child)
-            assert obj.id not in [x.id for x in self.param.mirrorSiteList]             # FIXME
-            self.param.mirrorSiteList.append(obj)
+            assert obj.id not in self.param.mirrorSiteDict
+            self.param.mirrorSiteDict[obj.id] = obj
 
         # record plugin id
         self.param.pluginList.append(root.prop("id"))
@@ -175,7 +175,7 @@ class McMirrorSite:
 
             # we have grown up, so stop support other runtime any more
             # runtime = elem.xpathEval(".//runtime")[0].getContent()
-            runtime = "thread"
+            runtime = "process"
 
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
@@ -199,7 +199,7 @@ class McMirrorSite:
 
             # we have grown up, so stop support other runtime any more
             # runtime = elem.xpathEval(".//runtime")[0].getContent()
-            runtime = "thread"
+            runtime = "process"
 
             filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
             classname = elem.xpathEval(".//classname")[0].getContent()
@@ -362,14 +362,6 @@ class _UpdaterObjProxyRuntimeProcess:
             self._writeTo(McConst.tmpDir)
             self._writeTo(self.api.get_data_dir())
 
-            pmd = self.api.get_public_mirror_database()
-            if pmd is not None:
-                self._writeTo("1")
-                self._writeTo(json.dumps(pmd.get(False)))
-                self._writeTo(json.dumps(pmd.get(True)))
-            else:
-                self._writeTo("0")
-
             self._writeTo(self.filename)
             self._writeTo(self.classname)
 
@@ -394,24 +386,33 @@ class _UpdaterObjProxyRuntimeProcess:
                 pass                            # process already exited
 
     def onStdout(self, source, cb_condition):
+        print("onStdout")
         line = self.stdout.readline()
         obj = pickle.loads(line)
-        if obj[0] == "progress":
+        if obj[0] == "print-info":
+            print(obj[1])
+            return True
+        elif obj[0] == "progress":
             progress = obj[1]
             self.api.progress_changed(progress)
             if progress == 100:
                 self.api = None
+            return True
         elif obj[0] == "error":
             self.api.error_occured(obj[1])
             self.api = None
+            return True
         elif obj[0] == "error-and-hold-for":
             self.api.error_occured_and_hold_for(obj[1], obj[2])
             self.api = None
+            return True
         else:
             assert False
 
     def onStderr(self, source, cb_condition):
+        print("onStderr")
         logging.error(self.stderr.read())
+        return True
 
     def onExit(self, status, data):
         self._partiallyClear()
@@ -422,6 +423,7 @@ class _UpdaterObjProxyRuntimeProcess:
                 exc_info = (None, None, None)               # FIXME
                 self.api.error_occured(exc_info)
             self.api = None
+        return True
 
     def _writeTo(self, s):
         self.stdin.write(s)
@@ -474,38 +476,7 @@ class TemplateMirrorSiteInitializer:
 
 
 class TemmplateMirrorSiteInitializerApi:
-
-    def get_country(self):
-        assert False
-
-    def get_location(self):
-        assert False
-
-    def get_data_dir(self):
-        assert False
-
-    def get_log_dir(self):
-        assert False
-
-    def get_public_mirror_database(self):
-        # FIXME, should be changed to get_public_mirror
-        assert False
-
-    def print_info(self, message):
-        assert False
-
-    def print_error(self, message):
-        assert False
-
-    def progress_changed(self, progress):
-        assert False
-
-    def error_occured(self, exc_info):
-        assert False
-
-    def error_occured_and_hold_for(self, seconds, exc_info):
-        assert False
-
+-
 
 class TemplateMirrorSiteInitializerRuntimeThread:
 

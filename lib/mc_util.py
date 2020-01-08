@@ -530,64 +530,6 @@ class FtpServer:
             server.serve_forever()
 
 
-class RsyncServer:
-
-    def __init__(self, ip, port, dirList, tmpDir, logDir):
-        assert 0 < port < 65536
-        self._ip = ip
-        self._port = port
-        self._dirlist = dirList
-        self.rsyncdCfgFile = os.path.join(tmpDir, "rsyncd.conf")
-        self.rsyncdLockFile = os.path.join(tmpDir, "rsyncd.lock")
-        self.rsyncdLogFile = os.path.join(logDir, "rsyncd.log")
-        self._proc = None
-
-    @property
-    def port(self):
-        assert self._proc is not None
-        return self._port
-
-    @property
-    def running(self):
-        return self._proc is not None
-
-    def start(self):
-        assert self._proc is None
-
-        buf = ""
-        buf += "lock file = %s\n" % (self.rsyncdLockFile)
-        buf += "log file = %s\n" % (self.rsyncdLogFile)
-        buf += "\n"
-        buf += "port = %s\n" % (self._port)
-        buf += "max connections = 1\n"
-        buf += "timeout = 600\n"
-        buf += "hosts allow = 127.0.0.1\n"
-        buf += "\n"
-        buf += "use chroot = yes\n"
-        buf += "uid = root\n"
-        buf += "gid = root\n"
-        buf += "\n"
-        for d in self._dirlist:
-            buf += "[%s]\n" % (os.path.basename(d))
-            buf += "path = %s\n" % (d)
-            buf += "read only = yes\n"
-            buf += "\n"
-        with open(self.rsyncdCfgFile, "w") as f:
-            f.write(buf)
-
-        cmd = ""
-        cmd += "/usr/bin/rsync --daemon --no-detach --config=\"%s\"" % (self.rsyncdCfgFile)
-        self._proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
-
-    def stop(self):
-        assert self._proc is not None
-        self._proc.terminate()
-        self._proc.wait()
-        self._proc = None
-        McUtil.forceDelete(self.rsyncdLockFile)
-        McUtil.forceDelete(self.rsyncdCfgFile)
-
-
 class AvahiServiceRegister:
 
     """
