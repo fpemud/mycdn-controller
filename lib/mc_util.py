@@ -454,24 +454,24 @@ class GLibCronScheduler:
 
 class UnixDomainSocketApiServer:
 
-    def __init__(self, clientInitFunc, notifyFunc):
+    def __init__(self, serverFile, clientInitFunc, notifyFunc):
         self.flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL
 
         self.clientInitFunc = clientInitFunc
         self.notifyFunc = notifyFunc
 
         self.serverSock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.serverSock.bind(FmConst.apiServerFile)
+        self.serverSock.bind(serverFile)
         self.serverSock.listen(5)
         self.serverSourceId = GLib.io_add_watch(self.serverSock, GLib.IO_IN | self.flagError, self.onServerAccept)
 
         self.clientInfoDict = dict()
 
     def dispose(self):
+        for sock in self.clientInfoDict.keys():
+            sock.close()
         GLib.source_remove(self.serverSourceId)
-        self.serverSourceId = None
         self.serverSock.close()
-        self.serverSock = None
 
     def onServerAccept(self, source, cb_condition):
         assert not (cb_condition & self.flagError)
