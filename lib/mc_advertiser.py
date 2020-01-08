@@ -97,3 +97,41 @@ class HttpServer:
         proc.terminate()
         proc.wait()
         del self._dirDict[dirname]
+
+
+class HttpServer2:
+
+    def __init__(self, param):
+        self.param = param
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def running(self):
+        return False
+
+    def start(self):
+        assert self.soupServer is None
+        self.soupServer = SoupServer()
+        self.soupServer.listen_all()
+        self.soupServer.add_handler (None, server_callback, None, None)
+
+        self.jinaEnv = jinja2.Environment(loader=jinja2.FileSystemLoader(self.param.shareDir),
+                                          autoescape=select_autoescape(['html', 'xml']))
+
+    def stop(self):
+        assert self._proc is not None
+
+    def _callback(self):
+        pass
+
+
+    def _generateHomePage(self):
+        template = self.jinaEnv.get_template('index.html')
+
+        env = None
+        template = jinja2.Template('Hello {{ name }}!')
+        template.render(name='John Doe')
+
