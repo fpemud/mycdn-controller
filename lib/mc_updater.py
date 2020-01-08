@@ -20,17 +20,20 @@ class McMirrorSiteUpdater:
     MIRROR_SITE_UPDATE_STATUS_IDLE = 3
     MIRROR_SITE_UPDATE_STATUS_SYNCING = 4
     MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL = 5
-    MIRROR_SITE_UPDATE_STATUS_ERROR = 6
 
     MIRROR_SITE_RE_INIT_INTERVAL = 60
 
     def __init__(self, param):
         self.param = param
+
         self.invoker = GLibIdleInvoker()
         self.scheduler = GLibCronScheduler()
         self.updaterDict = dict()           # dict<mirror-id,updater-object>
 
-        for ms in self.param.mirrorSiteList:
+        self.apiServer = _UpdaterApiServer()
+        self.clientDict = dict()            # dict<process-id,mirror-id>
+
+        for ms in self.param.mirrorSiteDict.values():
             # initialize data directory
             fullDir = os.path.join(McConst.cacheDir, ms.dataDir)
             if not os.path.exists(fullDir):
@@ -49,6 +52,12 @@ class McMirrorSiteUpdater:
         # FIXME, should use g_main_context_iteration to wait them to stop
         self.scheduler.dispose()
         self.invoker.dispose()
+
+    def isMirrorSiteInitialized(self, mirrorSiteId):
+        ret = self.updaterDict[mirrorSiteId].status
+        if self.MIRROR_SITE_UPDATE_STATUS_INIT <= ret <= self.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL:
+            return False
+        return True
 
     def getMirrorSiteUpdateStatus(self, mirrorSiteId):
         return self.updaterDict[mirrorSiteId].status
@@ -180,6 +189,36 @@ class _OneMirrorSiteUpdater:
         del self.reInitHandler
         self.initStart()
         return False
+
+
+class _UpdaterApiServer:
+
+    def __init__(self, param):
+        self.param = param
+
+        self.serverSock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.serverSock.bind(FmConst.apiServerFile)
+        self.serverSock.listen(5)
+        self.serverSourceId = GLib.io_add_watch(self.serverSock, GLib.IO_IN | _flagError, self._onServerAccept)
+
+    def dispose(self):
+        GLib.source_remove(self.serverSourceId)
+        self.serverSourceId = None
+        self.serverSock.close()
+        self.serverSock = None
+
+    def _onServerAccept(self, source, cb_condition):
+        assert not (cb_condition & _flagError)
+
+        try:
+            new_sock, addr = source.accept()
+            return True
+        except socket.error as e:
+            logging.debug("McApiServer._onServerAccept: Failed, %s, %s", e.__class__, e)
+            return True
+
+
+_flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL
 
 
 def _initFlagFile(mirrorSite):

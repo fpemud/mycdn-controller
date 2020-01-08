@@ -8,5 +8,33 @@
         "name": "163",
         "country": "CN",
         "protocol": "rsync"
+    },
+    "rsync://rsync.mirrors.aliyun.com/gentoo-portage/gentoo-portage": {
+        "name": "aliyun",
+        "country": "CN",
+        "protocol": "rsync"
+    },
+    "rsync//mirror.bit.edu.cn/gentoo-portage": {
+        "name": "BIT",
+        "description": "Mirror site provided by Beijing Inistitute of Technology",
+        "country": "CN",
+        "protocol": "rsync"
+    },
+    "rsync://mirrors.yun-idc.com/gentoo-portage": {
+        "name": "yun-idc",
+        "country": "CN",
+        "protocol": "rsync"
+    },
+    "rsync://mirror.lzu.edu.cn/gentoo-portage": {
+        "name": "LZU",
+        "description": "Mirror site provided by Lan Zhou University",
+        "country": "CN",
+        "protocol": "rsync"
+    },
+    "rsync://mirrors.xmu.edu.cn/gentoo-portage": {
+        "name": "XMU",
+        "description": "Mirror site provided by Xia Men University",
+        "country": "CN",
+        "protocol": "rsync"
     }
 }

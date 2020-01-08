@@ -16,9 +16,8 @@ PROGRESS_STAGE_3 = 20
 class Initializer:
 
     def run(self, api):
-        db = api.get_public_mirror_database()
-        rsyncSource = db.query(api.get_country(), api.get_location(), ["rsync"], extended=True)[0]
-        fileSource = db.query(api.get_country(), api.get_location(), ["http", "ftp"], True)[0]
+        rsyncSource = "rsync://mirrors.tuna.tsinghua.edu.cn/gentoo"
+        fileSource = "https://mirrors.tuna.tsinghua.edu.cn/gentoo"
 
         # stage1: create directories, get file list, ignore symlinks (file donwloaders can not cope with symlinks)
         api.print_info("Start fetching file list.")
@@ -49,14 +48,14 @@ class Initializer:
         # stage3: rsync
         api.print_info("Start rsync.")
         logFile = os.path.join(api.get_log_dir(), "rsync.log")
-        _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (rsyncSource, api.get_data_dir(), logFile))
+        _Util.shellCall("/usr/bin/rsync -a -z --no-motd --delete %s %s >%s 2>&1" % (rsyncSource, api.get_data_dir(), logFile))
         api.print_info("Rsync over.")
 
         # report full progress
         api.progress_changed(100)
 
     def _makeDirAndGetFileList(self, rsyncSource, dataDir):
-        out = _Util.shellCall("/usr/bin/rsync -a --list-only %s 2>&1" % (rsyncSource))
+        out = _Util.shellCall("/usr/bin/rsync -a --no-motd --list-only %s 2>&1" % (rsyncSource))
 
         ret = []
         for line in out.split("\n"):
@@ -85,7 +84,7 @@ class Updater:
         rsyncSource = db.query(api.get_country(), api.get_location(), ["rsync"], True)[0]
         dataDir = api.get_data_dir()
         logFile = os.path.join(api.get_log_dir(), "rsync.log")
-        _Util.shellCall("/usr/bin/rsync -a -z --delete %s %s >%s 2>&1" % (rsyncSource, dataDir, logFile))
+        _Util.shellCall("/usr/bin/rsync -a -z --no-motd --delete %s %s >%s 2>&1" % (rsyncSource, dataDir, logFile))
 
 
 class PortageInitAndUpdater(Updater):

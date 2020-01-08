@@ -9,6 +9,7 @@ import logging
 import threading
 from collections import deque
 from gi.repository import GLib
+from mc_param import FmConst
 
 
 class McApiServer:
@@ -16,37 +17,25 @@ class McApiServer:
     def __init__(self, param):
         self.param = param
 
-        self.serverSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.serverSock.bind((self.param.listenIp, self.param.apiPort))
+        self.serverSock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.serverSock.bind(FmConst.apiServerFile)
         self.serverSock.listen(5)
-        self.serverSock.setblocking(0)
         self.serverSourceId = GLib.io_add_watch(self.serverSock, GLib.IO_IN | _flagError, self._onServerAccept)
-
-        self.clientDict = dict()
-        self.clientDictLock = threading.Lock()
 
     def dispose(self):
         GLib.source_remove(self.serverSourceId)
+        self.serverSourceId = None
         self.serverSock.close()
-
-        with self.clientDictLock:
-            for client in self.clientDict.values():
-                client.stop()
-        while len(self.clientDict) > 0:
-            time.sleep(1.0)
+        self.serverSock = None
 
     def _onServerAccept(self, source, cb_condition):
         assert not (cb_condition & _flagError)
 
         try:
             new_sock, addr = source.accept()
-            with self.clientDictLock:
-                client = ApiClientObj(self, new_sock, addr[0])
-                self.clientDict[addr] = client
-                client.start()
             return True
         except socket.error as e:
-            logging.debug("ApiServer._onServerAccept: Failed, %s, %s", e.__class__, e)
+            logging.debug("McApiServer._onServerAccept: Failed, %s, %s", e.__class__, e)
             return True
 
 

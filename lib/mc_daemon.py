@@ -7,7 +7,8 @@ import signal
 import shutil
 import socket
 import logging
-from gi.repository import GLib
+import asyncio
+import asyncio_glib
 from mc_util import McUtil
 from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
@@ -36,7 +37,8 @@ class McDaemon:
             logging.info("Program begins.")
 
             # create mainloop
-            self.param.mainloop = GLib.MainLoop()
+            asyncio.set_event_loop_policy(asyncio_glib.GLibEventLoopPolicy())
+            self.param.mainloop = asyncio.get_event_loop()
 
             # write pid file
             with open(os.path.join(McConst.runDir, "mirrors.pid"), "w") as f:
@@ -54,12 +56,6 @@ class McDaemon:
             # advertiser
             self.param.advertiser = McAdvertiser(self.param)
             logging.info("Advertiser initialized.")
-            if self.param.advertiser.httpServer is not None:
-                logging.info("   HTTP server enableed, listening on port %d." % (self.param.advertiser.httpServer.port))
-            if self.param.advertiser.ftpServer is not None:
-                logging.info("   FTP server enableed, listening on port %d." % (self.param.advertiser.ftpServer.port))
-            if self.param.advertiser.rsyncServer is not None:
-                logging.info("   Rsync server enableed, listening on port %d." % (self.param.advertiser.rsyncServer.port))
 
             # api server
             self.param.apiServer = McApiServer(self.param)
@@ -73,9 +69,9 @@ class McDaemon:
 
             # start main loop
             logging.info("Mainloop begins.")
-            GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self._sigHandlerINT, None)
-            GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, self._sigHandlerTERM, None)
-            self.param.mainloop.run()
+            self.param.mainloop.add_signal_handler(signal.SIGINT, self._sigHandlerINT)
+            self.param.mainloop.add_signal_handler(signal.SIGTERM, self._sigHandlerTERM)
+            self.param.mainloop.run_forever()
             logging.info("Mainloop exits.")
         finally:
             if self.param.avahiObj is not None:
@@ -90,12 +86,12 @@ class McDaemon:
             shutil.rmtree(McConst.tmpDir)
             shutil.rmtree(McConst.runDir)
 
-    def _sigHandlerINT(self, signum):
+    def _sigHandlerINT(self):
         logging.info("SIGINT received.")
-        self.param.mainloop.quit()
+        self.param.mainloop.stop()
         return True
 
-    def _sigHandlerTERM(self, signum):
+    def _sigHandlerTERM(self):
         logging.info("SIGTERM received.")
-        self.param.mainloop.quit()
+        self.param.mainloop.stop()
         return True
