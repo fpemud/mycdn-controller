@@ -452,6 +452,50 @@ class GLibCronScheduler:
         return croniterIter.get_current()
 
 
+class UnixDomainSocketApiServer:
+
+    def __init__(self, clientInitFunc, notifyFunc):
+        self.flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL
+
+        self.clientInitFunc = clientInitFunc
+        self.notifyFunc = notifyFunc
+
+        self.serverSock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.serverSock.bind(FmConst.apiServerFile)
+        self.serverSock.listen(5)
+        self.serverSourceId = GLib.io_add_watch(self.serverSock, GLib.IO_IN | self.flagError, self.onServerAccept)
+
+        self.clientInfoDict = dict()
+
+    def dispose(self):
+        GLib.source_remove(self.serverSourceId)
+        self.serverSourceId = None
+        self.serverSock.close()
+        self.serverSock = None
+
+    def onServerAccept(self, source, cb_condition):
+        assert not (cb_condition & self.flagError)
+        try:
+            new_sock, addr = source.accept()
+            data = self.clientInitFunc(new_sock)
+            if data is not None:
+                obj = DynObject()
+                obj.inWatch = None
+                obj.buf = b''
+                obj.data = data
+                self.clientInfoDict[new_sock] = obj
+            else:
+                new_sock.close()
+                logging.debug("UnixSocketApiServer.onServerAccept: Reject socket")
+            return True
+        except socket.error as e:
+            logging.debug("UnixSocketApiServer.onServerAccept: Failed, %s, %s", e.__class__, e)
+            return True
+
+    def _onRecv(self, source, cb_condition):
+        pass
+
+
 class HttpFileServer:
 
     def __init__(self, ip, port, dirList, logDir):
