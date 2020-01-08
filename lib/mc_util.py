@@ -480,9 +480,9 @@ class UnixDomainSocketApiServer:
             data = self.clientInitFunc(new_sock)
             if data is not None:
                 obj = DynObject()
-                obj.inWatch = None
-                obj.buf = b''
-                obj.data = data
+                obj.inWatch = GLib.io_add_watch(new_sock, GLib.IO_IN | self.flagError, self.onRecv)
+                obj.recvBuf = b''
+                obj.clientData = data
                 self.clientInfoDict[new_sock] = obj
             else:
                 new_sock.close()
@@ -492,8 +492,30 @@ class UnixDomainSocketApiServer:
             logging.debug("UnixSocketApiServer.onServerAccept: Failed, %s, %s", e.__class__, e)
             return True
 
-    def _onRecv(self, source, cb_condition):
-        pass
+    def onRecv(self, source, cb_condition):
+        obj = self.clientInfoDict[source]
+
+        # receive from socket
+        try:
+            buf = source.recv(4096)
+            if len(buf) == 0:
+                logging.debug("UnixSocketApiServer.onRecv: Client \"%s\" disconnected." % ("XX"))
+                return
+            obj.recvBuf += buf
+        except socket.error as e:
+            logging.debug("UnixSocketApiServer.onRecv: Failed, %s, %s", e.__class__, e)
+            raise
+
+        # parse received json object
+        while True:
+            i = obj.recvBuf.find(b'\n')
+            if i < 0:
+                break
+            jsonObj = json.loads(obj.recvBuf[:i].decode("utf-8"))
+            obj.recvBuf = obj.recvBuf[i + 1:]
+            self._notifyFunc(obj.clientData, jsonObj)
+
+        return True
 
 
 class HttpFileServer:
