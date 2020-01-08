@@ -25,13 +25,11 @@ class McMirrorSiteUpdater:
 
     def __init__(self, param):
         self.param = param
-
         self.invoker = GLibIdleInvoker()
         self.scheduler = GLibCronScheduler()
-        self.updaterDict = dict()           # dict<mirror-id,updater-object>
-
         self.apiServer = _UpdaterApiServer()
-        self.clientDict = dict()            # dict<process-id,mirror-id>
+        self.updaterDict = dict()               # dict<mirror-id,updater-object>
+        self.apiClientDict = dict()             # dict<socket,mirror-id>
 
         for ms in self.param.mirrorSiteDict.values():
             # initialize data directory
@@ -40,7 +38,7 @@ class McMirrorSiteUpdater:
                 os.makedirs(fullDir)
                 McUtil.touchFile(_initFlagFile(ms))
 
-            # record updater object
+            # create updater object
             self.updaterDict[ms.id] = _OneMirrorSiteUpdater(self, ms)
 
     def dispose(self):
