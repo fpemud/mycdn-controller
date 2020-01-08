@@ -7,8 +7,7 @@
     <name>PyPI</name>
     <data-directory>pypi</data-directory>
     <updater>
-      <filename>plugin.py</filename>
-      <classname>Updater</classname>
+      <executable>plugin.py</executable>
       <cron-expression>0 0 * * 0</cron-expression>
     </updater>
     <advertiser>

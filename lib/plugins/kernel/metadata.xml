@@ -7,12 +7,10 @@
     <name>Linux Kernel Release</name>
     <data-directory>kernel</data-directory>
     <initializer>
-      <filename>plugin.py</filename>
-      <classname>InitAndUpdater</classname>
+      <executable>plugin.py</executable>
     </initializer>
     <updater>
-      <filename>plugin.py</filename>
-      <classname>InitAndUpdater</classname>
+      <executable>plugin.py</executable>
       <cron-expression>0 0 * * 0</cron-expression>
     </updater>
     <advertiser>

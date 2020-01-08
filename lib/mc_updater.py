@@ -243,11 +243,13 @@ class _OneMirrorSiteUpdater:
     def _createInitOrUpdateProc(self, schedDatetime=None):
         cmd = [
             self.mirrorSite.updaterExe,
-            self.mirrorSiteId,
-            "init" if schedDatetime is None else "update",
-            self.mirrorSite.dataDir,
-            McConst.tmpDir,
-            McConst.logDir,
+            self.mirrorSiteId,                                  # argument: mirror-site-id
+            "init" if schedDatetime is None else "update",      # argument: update-type
+            self.mirrorSite.dataDir,                            # argument: data-directory
+            McConst.tmpDir,                                     # argument: temp-directory
+            McConst.logDir,                                     # argument: log-directory
+            "CN",                                               # argument: country
+            "",                                                 # argument: location
         ]
         if schedDatetime is not None:
             cmd.append(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))

@@ -11,6 +11,7 @@ import certifi
 import subprocess
 import lxml.html
 import urllib.request
+import libmirrors
 
 
 MAX_PAGE = 10
@@ -18,90 +19,88 @@ PROGRESS_STAGE_1 = 20
 PROGRESS_STAGE_2 = 79
 
 
-class InitAndUpdater:
+def do_init_or_update():
+    linkDict = dict()
+    fnSet = set()
 
-    def run(self, api):
-        linkDict = dict()
-        fnSet = set()
+    # fetch web pages
+    # retrived from "http://driveroff.net/category/dp", it's in russian, do use google webpage translator
+    libmirrors.print_info("Start fetching file list.")
+    for i in range(1, MAX_PAGE):
+        found = False
+        url = "http://www.gigabase.com/folder/cbcv8AZeKsHjAkenvVrjPQBB?page=%d" % (i)
+        root = _Util.getWebPageElementTree(url)
+        for elem in root.xpath(".//a"):
+            if elem.text is None:
+                continue
+            if not elem.text.startswith("DP_"):
+                continue
+            linkDict[elem.text] = elem.attrib["href"]
+            found = True
+        if not found:
+            break
+        libmirrors.progress_changed(PROGRESS_STAGE_1 * i // MAX_PAGE)
+    libmirrors.print_info("File list fetched, total %d files." % (len(linkDict)))
+    libmirrors.progress_changed(PROGRESS_STAGE_1)
 
-        # fetch web pages
-        # retrived from "http://driveroff.net/category/dp", it's in russian, do use google webpage translator
-        api.print_info("Start fetching file list.")
-        for i in range(1, MAX_PAGE):
-            found = False
-            url = "http://www.gigabase.com/folder/cbcv8AZeKsHjAkenvVrjPQBB?page=%d" % (i)
-            root = _Util.getWebPageElementTree(url)
-            for elem in root.xpath(".//a"):
-                if elem.text is None:
-                    continue
-                if not elem.text.startswith("DP_"):
-                    continue
-                linkDict[elem.text] = elem.attrib["href"]
-                found = True
-            if not found:
+    # download driver pack file one by one
+    i = 1
+    total = len(linkDict)
+    for filename, url in _Util.randomSorted(linkDict.items()):
+        fullfn = os.path.join(libmirrors.get_data_dir(), filename)
+        if not os.path.exists(fullfn) or _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
+            libmirrors.print_info("Download file \"%s\"." % (filename))
+
+            # get the real download url, gigabase sucks
+            downloadUrl = None
+            if True:
+                for elem in _Util.getWebPageElementTree(url).xpath(".//a"):
+                    if elem.text == "Download file":
+                        downloadUrl = elem.attrib["href"]
+                        break
+                assert downloadUrl is not None
+
+            # download
+            tmpfn = fullfn + ".tmp"
+            logFile = os.path.join(libmirrors.get_log_dir(), "wget.log")
+            while True:
+                _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (tmpfn, downloadUrl, logFile))
+                # gigabase may show downloading page twice, re-get the real download url
+                if magic.detect_from_filename(tmpfn).mime_type == "text/html":
+                    with open(tmpfn, "r") as f:
+                        found = False
+                        for elem in lxml.html.parse(f).xpath(".//a"):
+                            if elem.text == "Download file":
+                                downloadUrl = elem.attrib["href"]
+                                found = True
+                                break
+                        if found:
+                            time.sleep(5.0)
+                            continue
                 break
-            api.progress_changed(PROGRESS_STAGE_1 * i // MAX_PAGE)
-        api.print_info("File list fetched, total %d files." % (len(linkDict)))
-        api.progress_changed(PROGRESS_STAGE_1)
+            os.rename(tmpfn, fullfn)
+        else:
+            libmirrors.print_info("File \"%s\" exists." % (filename))
 
-        # download driver pack file one by one
-        i = 1
-        total = len(linkDict)
-        for filename, url in _Util.randomSorted(linkDict.items()):
-            fullfn = os.path.join(api.get_data_dir(), filename)
-            if not os.path.exists(fullfn) or _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
-                api.print_info("Download file \"%s\"." % (filename))
+        fnSet.add(filename)
+        libmirrors.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // total)
+        i += 1
 
-                # get the real download url, gigabase sucks
-                downloadUrl = None
-                if True:
-                    for elem in _Util.getWebPageElementTree(url).xpath(".//a"):
-                        if elem.text == "Download file":
-                            downloadUrl = elem.attrib["href"]
-                            break
-                    assert downloadUrl is not None
+    # clear old files in cache
+    for fn in (set(os.listdir(libmirrors.get_data_dir())) - fnSet):
+        libmirrors.print_info("Remove old file \"%s\"." % (fn))
+        fullfn = os.path.join(libmirrors.get_data_dir(), fn)
+        os.unlink(fullfn)
 
-                # download
-                tmpfn = fullfn + ".tmp"
-                logFile = os.path.join(api.get_log_dir(), "wget.log")
-                while True:
-                    _Util.shellCall("/usr/bin/wget -O \"%s\" \"%s\" >\"%s\" 2>&1" % (tmpfn, downloadUrl, logFile))
-                    # gigabase may show downloading page twice, re-get the real download url
-                    if magic.detect_from_filename(tmpfn).mime_type == "text/html":
-                        with open(tmpfn, "r") as f:
-                            found = False
-                            for elem in lxml.html.parse(f).xpath(".//a"):
-                                if elem.text == "Download file":
-                                    downloadUrl = elem.attrib["href"]
-                                    found = True
-                                    break
-                            if found:
-                                time.sleep(5.0)
-                                continue
-                    break
-                os.rename(tmpfn, fullfn)
-            else:
-                api.print_info("File \"%s\" exists." % (filename))
+    # recheck files
+    # it seems sometimes wget download only partial files but there's no error
+    for fn in fnSet:
+        fullfn = os.path.join(libmirrors.get_data_dir(), fn)
+        if _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
+            raise Exception("file %s is not valid, strange?!" % (fn))
 
-            fnSet.add(filename)
-            api.progress_changed(PROGRESS_STAGE_1 + PROGRESS_STAGE_2 * i // total)
-            i += 1
-
-        # clear old files in cache
-        for fn in (set(os.listdir(api.get_data_dir())) - fnSet):
-            api.print_info("Remove old file \"%s\"." % (fn))
-            fullfn = os.path.join(api.get_data_dir(), fn)
-            os.unlink(fullfn)
-
-        # recheck files
-        # it seems sometimes wget download only partial files but there's no error
-        for fn in fnSet:
-            fullfn = os.path.join(api.get_data_dir(), fn)
-            if _Util.shellCallWithRetCode("/usr/bin/7z t %s" % (fullfn))[0] != 0:
-                raise Exception("file %s is not valid, strange?!" % (fn))
-
-        # report full progress
-        api.progress_changed(100)
+    # report full progress
+    libmirrors.progress_changed(100)
 
 
 class _Util:
@@ -152,59 +151,7 @@ class _Util:
         return (ret.returncode, ret.stdout.rstrip())
 
 
-# class _GLibWgetProc:
+###############################################################################
 
-#     def __init__(self, url, dir, filename, logFile, endCallback):
-#         self.dir = dir
-#         self.filename = filename
-#         self.fullfn = os.path.join(dir, filename)
-#         self.tmpfullfn = self.fullfn + ".tmp"
-#         targc, targv = GLib.shell_parse_argv("/bin/sh -c \"/usr/bin/wget -O %s %s >%s 2>&1\"" % (self.tmpfullfn, url, logFile))
-#         ret = GLib.spawn_async(targv, flags=GLib.SpawnFlags.DO_NOT_REAP_CHILD)
-#         if not ret[0]:
-#             raise Exception("failed to create process")
-#         self.pid = ret[1]
-#         self.endCallback = endCallback
-#         self.pidWatch = GLib.child_watch_add(self.pid, self._exitCallback)
-
-#     def terminate(self):
-#         # FIXME
-#         pass
-
-#     def _exitCallback(self, status, data):
-#         try:
-#             GLib.spawn_check_exit_status(status)
-#             os.rename(self.tmpfullfn, self.fullfn)
-#             self.endCallback(self.dir, self.filename, True)
-#         except GLib.GError:
-#             self.endCallback(self.dir, self.filename, False)
-#         finally:
-#             GLib.source_remove(self.pidWatch)
-#             self.pidWatch = None
-#             GLib.spawn_close_pid(self.pid)
-#             self.pid = None
-
-
-# class _GLibUrlOpener:
-
-#     def __init__(self, urlList, urlOpenCallback, endCallback):
-#         self.urlOpenCallback = urlOpenCallback
-#         self.endCallback = endCallback
-
-#         self.session = Soup.Session()
-#         self.retSet = set(range(0, len(urlList)))
-#         for i in range(0, len(urlList)):
-#             url = urlList[i]
-#             msg = Soup.Message("GET", url)
-#             self.session.queue_message(msg, lambda a1, a2: self._urlOpenCallback(a1, a2, i, url))
-
-#     def stop(self):
-#         # FIXME
-#         pass
-
-#     def _urlOpenCallback(self, session, msg, i, url):
-#         self.urlOpenCallback(i, url, msg.status_code, msg.response_body)
-#         self.retSet.remove(i)
-#         if len(self.retSet) == 0:
-#             self.endCallback()
-#             del self.session
+libmirrors.plugin_init()
+do_init_or_update()

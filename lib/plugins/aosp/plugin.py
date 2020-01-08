@@ -5,60 +5,57 @@ import os
 import time
 import shutil
 import subprocess
+import libmirrors
 
 
-class Initializer:
+def do_init():
+    dstFile = os.path.join(libmirrors.get_data_dir(), "aosp-latest.tar")
+    usedFile = dstFile + ".used"
 
-    def run(self, api):
-        dstFile = os.path.join(api.get_data_dir(), "aosp-latest.tar")
-        usedFile = dstFile + ".used"
+    if not os.path.exists(usedFile):
+        # download
+        print("Download \"aosp-latest.tar\".")
+        if True:
+            url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
+            logFile = os.path.join(libmirrors.get_log_dir(), "wget.log")
+            _Util.shellCall("/usr/bin/wget -c -O \"%s\" \"%s\" >\"%s\" 2>&1" % (dstFile, url, logFile))
+        libmirrors.progress_changed(50)
 
-        if not os.path.exists(usedFile):
-            # download
-            api.print_info("Download \"aosp-latest.tar\".")
-            if True:
-                url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
-                logFile = os.path.join(api.get_log_dir(), "wget.log")
-                _Util.shellCall("/usr/bin/wget -c -O \"%s\" \"%s\" >\"%s\" 2>&1" % (dstFile, url, logFile))
-            api.progress_changed(50)
+        # clear directory
+        print("Clear cache directory.")
+        for fn in os.listdir(libmirrors.get_data_dir()):
+            fullfn = os.path.join(libmirrors.get_data_dir(), fn)
+            if fullfn != dstFile:
+                _Util.forceDelete(fullfn)
+        libmirrors.progress_changed(55)
 
-            # clear directory
-            api.print_info("Clear cache directory.")
-            for fn in os.listdir(api.get_data_dir()):
-                fullfn = os.path.join(api.get_data_dir(), fn)
-                if fullfn != dstFile:
-                    _Util.forceDelete(fullfn)
-            api.progress_changed(55)
+        # extract
+        # sometimes tar file contains minor errors
+        print("Extract aosp-latest.tar.")
+        _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (libmirrors.get_data_dir(), dstFile))
+        os.rename(dstFile, usedFile)
+        libmirrors.progress_changed(60)
+    else:
+        print("Found \"aosp-latest.tar.used\".")
+        libmirrors.progress_changed(60)
 
-            # extract
-            # sometimes tar file contains minor errors
-            api.print_info("Extract aosp-latest.tar.")
-            _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (api.get_data_dir(), dstFile))
-            os.rename(dstFile, usedFile)
-            api.progress_changed(60)
-        else:
-            api.print_info("Found \"aosp-latest.tar.used\".")
-            api.progress_changed(60)
+    # sync
+    print("Synchonization starts.")
+    with _TempChdir(libmirrors.get_data_dir()):
+        logFile = os.path.join(libmirrors.get_log_dir(), "repo.log")
+        _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
+    print("Synchonization over.")
+    libmirrors.progress_changed(99)
 
-        # sync
-        api.print_info("Synchonization starts.")
-        with _TempChdir(api.get_data_dir()):
-            logFile = os.path.join(api.get_log_dir(), "repo.log")
-            _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
-        api.print_info("Synchonization over.")
-        api.progress_changed(99)
-
-        # all done, delete the tar file
-        _Util.forceDelete(usedFile)
-        api.progress_changed(100)
+    # all done, delete the tar file
+    _Util.forceDelete(usedFile)
+    libmirrors.progress_changed(100)
 
 
-class Updater:
-
-    def run(self, api):
-        with _TempChdir(api.get_data_dir()):
-            logFile = os.path.join(api.get_log_dir(), "repo.log")
-            _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
+def do_update(self):
+    with _TempChdir(libmirrors.get_data_dir()):
+        logFile = os.path.join(libmirrors.get_log_dir(), "repo.log")
+        _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
 
 
 class _Util:
@@ -105,3 +102,15 @@ class _TempChdir:
 
     def __exit__(self, type, value, traceback):
         os.chdir(self.olddir)
+
+
+###############################################################################
+
+libmirrors.plugin_init()
+
+if libmirrors.get_operation_type() == libmirrors.OPERATION_TYPE_INIT:
+    do_init()
+elif libmirrors.get_operation_type() == libmirrors.OPERATION_TYPE_UPDATE:
+    do_update()
+else:
+    assert False
