@@ -5,60 +5,76 @@ import os
 import time
 import shutil
 import subprocess
-import libmirrors
 
 
 def do_init():
-    dstFile = os.path.join(libmirrors.get_data_dir(), "aosp-latest.tar")
-    usedFile = dstFile + ".used"
+    sock = _Util.connect()
+    try:
+        dataDir = sys.argv[1]
+        dstFile = os.path.join(dataDir, "aosp-latest.tar")
+        usedFile = dstFile + ".used"
 
-    if not os.path.exists(usedFile):
-        # download
-        print("Download \"aosp-latest.tar\".")
-        if True:
-            url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
-            logFile = os.path.join(libmirrors.get_log_dir(), "wget.log")
-            _Util.shellCall("/usr/bin/wget -c -O \"%s\" \"%s\" >\"%s\" 2>&1" % (dstFile, url, logFile))
-        libmirrors.progress_changed(50)
+        if not os.path.exists(usedFile):
+            # download
+            print("Download \"aosp-latest.tar\".")
+            if True:
+                url = "https://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/aosp-latest.tar"
+                logFile = os.path.join(dataDir, "wget.log")
+                _Util.shellCall("/usr/bin/wget -c -O \"%s\" \"%s\" >\"%s\" 2>&1" % (dstFile, url, logFile))
+            _Util.progress_changed(sock, 50)
 
-        # clear directory
-        print("Clear cache directory.")
-        for fn in os.listdir(libmirrors.get_data_dir()):
-            fullfn = os.path.join(libmirrors.get_data_dir(), fn)
-            if fullfn != dstFile:
-                _Util.forceDelete(fullfn)
-        libmirrors.progress_changed(55)
+            # clear directory
+            print("Clear cache directory.")
+            for fn in os.listdir(dataDir):
+                fullfn = os.path.join(dataDir, fn)
+                if fullfn != dstFile:
+                    _Util.forceDelete(fullfn)
+            _Util.progress_changed(sock, 55)
 
-        # extract
-        # sometimes tar file contains minor errors
-        print("Extract aosp-latest.tar.")
-        _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (libmirrors.get_data_dir(), dstFile))
-        os.rename(dstFile, usedFile)
-        libmirrors.progress_changed(60)
-    else:
-        print("Found \"aosp-latest.tar.used\".")
-        libmirrors.progress_changed(60)
+            # extract
+            # sometimes tar file contains minor errors
+            print("Extract aosp-latest.tar.")
+            _Util.shellCallIgnoreResult("/bin/tar -x --strip-components=1 -C \"%s\" -f \"%s\"" % (dataDir, dstFile))
+            os.rename(dstFile, usedFile)
+            _Util.progress_changed(sock, 60)
+        else:
+            print("Found \"aosp-latest.tar.used\".")
+            _Util.progress_changed(sock, 60)
 
-    # sync
-    print("Synchonization starts.")
-    with _TempChdir(libmirrors.get_data_dir()):
-        logFile = os.path.join(libmirrors.get_log_dir(), "repo.log")
-        _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
-    print("Synchonization over.")
-    libmirrors.progress_changed(99)
+        # sync
+        print("Synchonization starts.")
+        with _TempChdir(dataDir):
+            logFile = os.path.join(dataDir, "repo.log")
+            _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
+        print("Synchonization over.")
+        _Util.progress_changed(sock, 99)
 
-    # all done, delete the tar file
-    _Util.forceDelete(usedFile)
-    libmirrors.progress_changed(100)
-
-
-def do_update(self):
-    with _TempChdir(libmirrors.get_data_dir()):
-        logFile = os.path.join(libmirrors.get_log_dir(), "repo.log")
-        _Util.shellCall("/usr/bin/repo sync >\"%s\" 2>&1" % (logFile))
+        # all done, delete the tar file
+        _Util.forceDelete(usedFile)
+        _Util.progress_changed(sock, 100)
+    except:
+        _Util.error_occured(sock, sys.exc_info())
+        raise
+    finally:
+        sock.close()
 
 
 class _Util:
+
+    @staticmethod
+    def connect():
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect("/run/mirrors/api.socket")
+        return sock
+
+    @staticmethod
+    def progress_changed(sock, progress):
+        sock.send(json.dumps({
+            "message": "progress",
+            "data": {
+                "progress": progress,
+            },
+        }).encoding("utf-8"))
 
     @staticmethod
     def forceDelete(filename):
@@ -106,11 +122,5 @@ class _TempChdir:
 
 ###############################################################################
 
-libmirrors.plugin_init()
-
-if libmirrors.get_operation_type() == libmirrors.OPERATION_TYPE_INIT:
+if __name__ == "__main__":
     do_init()
-elif libmirrors.get_operation_type() == libmirrors.OPERATION_TYPE_UPDATE:
-    do_update()
-else:
-    assert False
