@@ -41,15 +41,15 @@ class McAdvertiser:
             self.param.mainloop.create_task(self.httpServer.start())
 
         self.ftpServer = None
-        if len(self.ftpMirrorSiteList) > 0:
-            if self.param.ftpPort == "random":
-                self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
-            self.ftpServer = _FtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
-            for msId in self.ftpMirrorSiteList:
-                # if self.param.updater.isMirrorSiteInitialized(msId):
-                if True:
-                    self.ftpServer.addFileDir(msId, self.param.mirrorSiteDict[msId].dataDir)
-            self.param.mainloop.create_task(self.ftpServer.start())
+        # if len(self.ftpMirrorSiteList) > 0:
+        #     if self.param.ftpPort == "random":
+        #         self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
+        #     self.ftpServer = _FtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
+        #     for msId in self.ftpMirrorSiteList:
+        #         # if self.param.updater.isMirrorSiteInitialized(msId):
+        #         if True:
+        #             self.ftpServer.addFileDir(msId, self.param.mirrorSiteDict[msId].dataDir)
+        #     self.param.mainloop.create_task(self.ftpServer.start())
 
         self.rsyncServer = None
         if len(self.rsyncMirrorSiteList) > 0:
