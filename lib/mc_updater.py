@@ -263,7 +263,7 @@ class _ApiServer(UnixDomainSocketApiServer):
 
     def __init__(self, parent):
         self.updaterDict = parent.updaterDict
-        super().__init__(self._clientInitFunc, self._clientNoitfyFunc)
+        super().__init__(FmConst.apiServerFile, self._clientInitFunc, self._clientNoitfyFunc)
 
     def _clientInitFunc(self, sock):
         pid = None
