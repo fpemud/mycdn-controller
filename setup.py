@@ -33,14 +33,14 @@ classif = [
 setup(
     name='libmirrors',
     version='0.0.1',
-    description='Operating passwd/group/shadow in a strict manner',
+    description='Framework for implementing mirrors plugins',
     author='Fpemud',
     author_email='fpemud@sina.com',
     license='GPLv3 License',
     platforms='Linux',
     classifiers=classif,
-    url='http://github.com/fpemud/strict_pgs',
+    url='http://github.com/fpemud/mirrors',
     download_url='',
-    py_modules=['strict_pgs'],
+    py_modules=['libmirrors'],
     package_dir={'': 'python3'},
 )
