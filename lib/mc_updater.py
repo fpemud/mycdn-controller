@@ -2,13 +2,16 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import struct
+import socket
 import logging
+import subprocess
 from datetime import datetime
 from gi.repository import GLib
 from mc_util import McUtil
-from mc_util import DynObject
 from mc_util import GLibIdleInvoker
 from mc_util import GLibCronScheduler
+from mc_util import UnixDomainSocketApiServer
 from mc_param import McConst
 
 
@@ -40,7 +43,7 @@ class McMirrorSiteUpdater:
             # create updater object
             self.updaterDict[ms.id] = _OneMirrorSiteUpdater(self, ms)
 
-        self.apiServer = _ApiServer()
+        self.apiServer = _ApiServer(self)
 
     def dispose(self):
         self.apiServer.dispose()
@@ -71,7 +74,7 @@ class _OneMirrorSiteUpdater:
         self.scheduler = parent.scheduler
         self.mirrorSite = mirrorSite
 
-        bInit = os.path.exists(_initFlagFile(self.mirrorSite)):
+        bInit = os.path.exists(_initFlagFile(self.mirrorSite))
 
         if bInit:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
@@ -150,6 +153,8 @@ class _OneMirrorSiteUpdater:
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         else:
+            exc_info = (None, None, None)       # FIXME
+
             self.pidWatch = None
             self.proc = None
             self.progress = -1
@@ -228,6 +233,8 @@ class _OneMirrorSiteUpdater:
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         else:
+            exc_info = (None, None, None)       # FIXME
+
             self.pidWatch = None
             self.proc = None
             self.progress = -1
@@ -241,18 +248,27 @@ class _OneMirrorSiteUpdater:
             self.excInfo = None
 
     def _createInitOrUpdateProc(self, schedDatetime=None):
-        cmd = [
-            self.mirrorSite.updaterExe,
-            self.mirrorSiteId,                                  # argument: mirror-site-id
-            "init" if schedDatetime is None else "update",      # argument: update-type
-            self.mirrorSite.dataDir,                            # argument: data-directory
-            McConst.tmpDir,                                     # argument: temp-directory
-            McConst.logDir,                                     # argument: log-directory
-            "CN",                                               # argument: country
-            "",                                                 # argument: location
-        ]
-        if schedDatetime is not None:
-            cmd.append(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))
+        cmd = []
+
+        # executable
+        if schedDatetime is None:
+            cmd.append(self.mirrorSite.initializerExe)
+        else:
+            cmd.append(self.mirrorSite.updater)
+
+        # argument: data-directory
+        cmd.append(self.mirrorSite.dataDir)
+
+        # arguments for advanced users
+        if True:
+            if schedDatetime is not None:
+                cmd.append(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))      # argument: schedule-datetime
+            cmd += [
+                McConst.logDir,                                                                     # argument: log-directory
+                "CN",                                                                               # argument: country
+                "",                                                                                 # argument: location
+            ]
+
         return subprocess.Popen(cmd)
 
     def _reInitCallback(self):
@@ -265,7 +281,7 @@ class _ApiServer(UnixDomainSocketApiServer):
 
     def __init__(self, parent):
         self.updaterDict = parent.updaterDict
-        super().__init__(FmConst.apiServerFile, self._clientInitFunc, self._clientNoitfyFunc)
+        super().__init__(McConst.apiServerFile, self._clientInitFunc, self._clientNoitfyFunc)
 
     def _clientInitFunc(self, sock):
         pid = None

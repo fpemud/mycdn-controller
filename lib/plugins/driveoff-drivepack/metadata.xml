@@ -4,10 +4,10 @@
     <name>Driveoff Driver Pack</name>
     <data-directory>driveoff-drivepack</data-directory>
     <initializer>
-      <executable>plugin.py</executable>
+      <executable>updater.py</executable>
     </initializer>
     <updater>
-      <executable>plugin.py</executable>
+      <executable>updater.py</executable>
       <cron-expression>0 0 * * 0</cron-expression>
     </updater>
     <advertiser>

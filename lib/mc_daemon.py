@@ -14,7 +14,6 @@ from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
 from mc_param import McConst
 from mc_plugin import McPluginManager
-from mc_api_server import McApiServer
 from mc_updater import McMirrorSiteUpdater
 from mc_advertiser import McAdvertiser
 
@@ -57,10 +56,6 @@ class McDaemon:
             self.param.advertiser = McAdvertiser(self.param)
             logging.info("Advertiser initialized.")
 
-            # api server
-            self.param.apiServer = McApiServer(self.param)
-            logging.info("API server initialized, listening on port %d." % (self.param.apiPort))
-
             # register serivce
             if self.param.avahiSupport:
                 self.param.avahiObj = AvahiServiceRegister()
@@ -76,8 +71,6 @@ class McDaemon:
         finally:
             if self.param.avahiObj is not None:
                 self.param.avahiObj.stop()
-            if self.param.apiServer is not None:
-                self.param.apiServer.dispose()
             if self.param.updater is not None:
                 self.param.updater.dispose()
             if self.param.advertiser is not None:
