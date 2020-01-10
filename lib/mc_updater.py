@@ -254,7 +254,7 @@ class _OneMirrorSiteUpdater:
         if schedDatetime is None:
             cmd.append(self.mirrorSite.initializerExe)
         else:
-            cmd.append(self.mirrorSite.updater)
+            cmd.append(self.mirrorSite.updaterExe)
 
         # argument: data-directory
         cmd.append(self.mirrorSite.dataDir)

@@ -83,14 +83,14 @@ class McMirrorSite:
         self.dataDir = os.path.join(McConst.cacheDir, self.dataDir)
 
         # initializer
-        self.initializerExec = None
+        self.initializerExe = None
         if True:
             elem = rootElem.xpathEval(".//initializer")[0]
             self.initializerExe = elem.xpathEval(".//executable")[0].getContent()
             self.initializerExe = os.path.join(pluginDir, self.initializerExe)
 
         # updater
-        self.updaterExec = None
+        self.updaterExe = None
         self.schedExpr = None
         if True:
             elem = rootElem.xpathEval(".//updater")[0]
