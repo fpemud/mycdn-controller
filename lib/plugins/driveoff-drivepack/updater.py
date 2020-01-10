@@ -3,15 +3,17 @@
 
 import os
 import io
+import sys
 import gzip
 import time
+import json
 import magic
 import random
 import certifi
+import socket
 import subprocess
 import lxml.html
 import urllib.request
-import libmirrors
 
 
 MAX_PAGE = 10
@@ -125,6 +127,15 @@ class _Util:
             "message": "progress",
             "data": {
                 "progress": progress,
+            },
+        }).encoding("utf-8"))
+
+    @staticmethod
+    def error_occured(sock, exc_info):
+        sock.send(json.dumps({
+            "message": "error_occured",
+            "data": {
+                "exc_info": "abc",
             },
         }).encoding("utf-8"))
 

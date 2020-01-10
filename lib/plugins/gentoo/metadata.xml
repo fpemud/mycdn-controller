@@ -5,10 +5,10 @@
     <estimated-size>550GiB</estimated-size>
     <data-directory>gentoo</data-directory>
     <initializer>
-      <executable>plugin.py</executable>
+      <executable>gentoo_initializer.py</executable>
     </initializer>
     <updater>
-      <executable>plugin.py</executable>
+      <executable>gentoo_updater.py</executable>
       <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>
@@ -21,10 +21,10 @@
     <estimated-size>700MiB</estimated-size>
     <data-directory>gentoo-portage</data-directory>
     <initializer>
-      <executable>plugin.py</executable>
+      <executable>portage_updater.py</executable>
     </initializer>
     <updater>
-      <executable>plugin.py</executable>
+      <executable>portage_updater.py</executable>
       <cron-expression>0 */4 * * *</cron-expression>
     </updater>
     <advertiser>

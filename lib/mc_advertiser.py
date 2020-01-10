@@ -26,6 +26,8 @@ class McAdvertiser:
                     self.ftpMirrorSiteList.append(ms.id)
                 elif proto == "rsync":
                     self.rsyncMirrorSiteList.append(ms.id)
+                elif proto == "git-http":
+                    pass    # FIXME
                 else:
                     assert False
 

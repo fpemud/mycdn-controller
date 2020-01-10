@@ -2,8 +2,11 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import sys
+import json
 import time
 import shutil
+import socket
 import subprocess
 
 
@@ -73,6 +76,15 @@ class _Util:
             "message": "progress",
             "data": {
                 "progress": progress,
+            },
+        }).encoding("utf-8"))
+
+    @staticmethod
+    def error_occured(sock, exc_info):
+        sock.send(json.dumps({
+            "message": "error_occured",
+            "data": {
+                "exc_info": "abc",
             },
         }).encoding("utf-8"))
 

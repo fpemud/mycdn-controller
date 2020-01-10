@@ -11,8 +11,7 @@
       <cron-expression>0 0 * * 0</cron-expression>
     </updater>
     <advertiser>
-      <!--<protocol>git</protocol>-->
-      <protocol>http</protocol>
+      <protocol>git-http</protocol>
     </advertiser>
   </git-mirror>
 </plugin>
