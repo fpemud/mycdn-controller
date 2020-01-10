@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# libmirrors.py - framework for implementing mirrors plugins
+# libmirrors.plugin - framework for implementing mirrors plugins
 #
 # Copyright (c) 2005-2019 Fpemud <fpemud@sina.com>
 #
@@ -23,7 +23,7 @@
 # THE SOFTWARE.
 
 """
-libmirrors
+libmirrors.plugin
 
 @author: Fpemud
 @license: GPLv3 License
@@ -51,7 +51,7 @@ OPERATION_TYPE_INIT = 1
 OPERATION_TYPE_UPDATE = 2
 
 
-def plugin_init(argv):
+def init(argv):
     global _mirror_site_id
     global _operation_type
     global _country
