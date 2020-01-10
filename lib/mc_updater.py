@@ -261,13 +261,13 @@ class _OneMirrorSiteUpdater:
 
         # arguments for advanced usage
         if True:
-            if schedDatetime is not None:
-                cmd.append(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))      # argument: schedule-datetime
             cmd += [
                 McConst.logDir,                                                                     # argument: log-directory
                 "CN",                                                                               # argument: country
                 "",                                                                                 # argument: location
             ]
+            if schedDatetime is not None:
+                cmd.append(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))      # argument: schedule-datetime
 
         return subprocess.Popen(cmd)
 
@@ -292,7 +292,7 @@ class _ApiServer(UnixDomainSocketApiServer):
             pid, uid, gid = struct.unpack(pattern, ret)
 
         for mirrorId, obj in self.updaterDict.items():
-            if obj.proc is not None and obj.pid == pid:
+            if obj.proc is not None and obj.proc.pid == pid:
                 return mirrorId
         return None
 

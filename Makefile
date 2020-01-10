@@ -11,8 +11,8 @@ install:
 
 	install -d -m 0755 "$(DESTDIR)/$(prefix)/lib64/mirrors"
 	cp -r lib/* "$(DESTDIR)/$(prefix)/lib64/mirrors"
-	find "$(DESTDIR)/$(prefix)/lib64/mirrors" -type f | xargs chmod 644
-	find "$(DESTDIR)/$(prefix)/lib64/mirrors" -type d | xargs chmod 755
+	find "$(DESTDIR)/$(prefix)/lib64/mirrors" -type f -maxdepth 1 | xargs chmod 644
+	find "$(DESTDIR)/$(prefix)/lib64/mirrors" -type d -maxdepth 1 | xargs chmod 755
 
 	install -d -m 0755 "$(DESTDIR)/etc/mirrors"
 
