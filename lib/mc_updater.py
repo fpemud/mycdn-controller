@@ -259,7 +259,7 @@ class _OneMirrorSiteUpdater:
         # argument: data-directory
         cmd.append(self.mirrorSite.dataDir)
 
-        # arguments for advanced users
+        # arguments for advanced usage
         if True:
             if schedDatetime is not None:
                 cmd.append(datetime.strftime(self.api.get_sched_datetime(), "%Y-%m-%d %H:%M"))      # argument: schedule-datetime
