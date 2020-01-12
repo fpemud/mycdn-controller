@@ -146,181 +146,126 @@ class _FtpServer(aioftp.AbstractPathIO):
         self._bStart = False
 
 
-class _FtpServerPathIO:
+class _FtpServerPathIO(AbstractPathIO):
 
-    def __init__(self, *, timeout=None, loop=None, root=None):
-        super().__init__(timeout=timeout, loop=loop)
-        self.root = root
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._dirDict = dict()
 
-    def __repr__(self):
-        return repr(self.root)
+    def getDirDict(self):
+        return self._dirDict
 
-    def get_node(self, path):
-        node = None
-        nodes = [self.root]
-        for part in path.parts:
-            if not isinstance(nodes, list):
-                return
+    def _convertPath(self, path):
+        s = str(path)
+        if s in self._dirDict:
+            return pathlib.Path(self._dirDict[s])
+        for name, realPath in self._dirDict.items():
+            if s.startswith(name + "/"):
+                s = s.replace(name + "/", realPath + "/")
+                return pathlib.Path(s)
+        raise errors.PathIOError(message="file not found???")
 
-            for node in nodes:
-                if node.name == part:
-                    nodes = node.content
-                    break
-            else:
-                return
-
-        return node
-
+    @_ftp_server_universal_exception
     async def exists(self, path):
-        return self.get_node(path) is not None
+        path = self._convertPath(path)
+        return path.exists()
 
+    @_ftp_server_universal_exception
     async def is_dir(self, path):
-        node = self.get_node(path)
-        return not (node is None or node.kind != ItemKind.room)
+        path = self._convertPath(path)
+        return path.is_dir()
 
+    @_ftp_server_universal_exception
     async def is_file(self, path):
-        node = self.get_node(path)
-        return not (node is None or node.kind == ItemKind.room)
+        path = self._convertPath(path)
+        return path.is_file()
 
-    async def mkdir(self, path, *, parents=False):
-        if self.get_node(path):
-            raise FileExistsError
-        elif not parents:
-            parent = self.get_node(path.parent)
-            if parent is None:
-                raise FileNotFoundError
-            elif not parent.kind == ItemKind.room:
-                raise FileExistsError
-            node = Room(path.name)
-            parent.add_child(node)
-        else:
-            nodes = [self.root]
-            parent = self.root
-            for part in path.parts:
-                if isinstance(nodes, list):
-                    for node in nodes:
-                        if node.name == part:
-                            nodes = node.content
-                            parent = node
-                            break
-                    else:
-                        new_node = Room(name=part)
-                        parent.add_child(new_node)
-                        nodes = new_node.content
-                        parent = new_node
-                else:
-                    raise FileExistsError
+    @_ftp_server_universal_exception
+    async def mkdir(self, path, *, parents=False, exist_ok=False):
+        path = self._convertPath(path)
+        return path.mkdir(parents=parents, exist_ok=exist_ok)
 
+    @_ftp_server_universal_exception
     async def rmdir(self, path):
-        node = self.get_node(path)
-        if node is None:
-            raise FileNotFoundError
-        elif node.kind != ItemKind.room:
-            raise NotADirectoryError
-        elif node.content:
-            raise OSError("Directory not empty")
-        else:
-            node.remove()
+        path = self._convertPath(path)
+        return path.rmdir()
 
+    @_ftp_server_universal_exception
     async def unlink(self, path):
-        node = self.get_node(path)
-        if node is None:
-            raise FileNotFoundError
-        elif node.kind == ItemKind.room:
-            raise IsADirectoryError
-        else:
-            node.remove()
+        path = self._convertPath(path)
+        return path.unlink()
 
-    async def list(self, path):
-        node = self.get_node(path)
-        if node is None or node.kind != ItemKind.room:
-            return ()
-        else:
-            names = map(operator.attrgetter("name"), node.content)
-            paths = map(lambda name: path / name, names)
-            return tuple(paths)
+    def list(self, path):
+        path = self._convertPath(path)
 
+        class Lister(AbstractAsyncLister):
+            iter = None
+
+            @_ftp_server_universal_exception
+            async def __anext__(self):
+                if self.iter is None:
+                    self.iter = path.glob("*")
+                try:
+                    return next(self.iter)
+                except StopIteration:
+                    raise StopAsyncIteration
+
+        return Lister(timeout=self.timeout)
+
+    @_ftp_server_universal_exception
     async def stat(self, path):
-        node = self.get_node(path)
-        if node is None:
-            raise FileNotFoundError
-        else:
-            size = len(node.content)
-            return self.Stats(
-                size,
-                0,
-                0,
-                1,
-                0o100777,
-            )
+        path = self._convertPath(path)
+        return path.stat()
 
-    async def open(self, path, mode="rb", *args, **kwargs):
-        if mode == "rb":
-            node = self.get_node(path)
-            if node is None:
-                raise FileNotFoundError
-            data = node.content.encode('utf-8')
-            file_like = io.BytesIO(data)
-        elif mode in ("wb", "ab"):
-            node = self.get_node(path)
-            parent = self.get_node(path.parent)
-            if parent is None or parent.kind != ItemKind.room:
-                raise FileNotFoundError
+    @_ftp_server_universal_exception
+    async def _open(self, path, *args, **kwargs):
+        path = self._convertPath(path)
+        return path.open(*args, **kwargs)
 
-            if node is None:
-                file_like = (io.BytesIO(), parent, path.name)
-            elif node.kind != ItemKind.regular:
-                raise IsADirectoryError
-            else:
-                previous_content = node.content
-                node.remove()
-                if mode == "wb":
-                    file_like = (io.BytesIO(), parent, path.name)
-                else:
-                    file_like = (io.BytesIO(previous_content.encode('utf-8')), parent, path.name)
-        else:
-            raise ValueError(str.format("invalid mode: {}", mode))
+    @_ftp_server_universal_exception
+    @defend_file_methods
+    async def seek(self, file, *args, **kwargs):
+        return file.seek(*args, **kwargs)
 
-        return file_like
+    @_ftp_server_universal_exception
+    @defend_file_methods
+    async def write(self, file, *args, **kwargs):
+        return file.write(*args, **kwargs)
 
-    async def write(self, file, data):
-        if isinstance(file, tuple):
-            (stream, parent, name) = file
-            stream.write(data)
-            # file.mtime = int(time.time())
+    @_ftp_server_universal_exception
+    @defend_file_methods
+    async def read(self, file, *args, **kwargs):
+        return file.read(*args, **kwargs)
 
-    async def read(self, file, count=None):
-        return file.read(count)
-
+    @_ftp_server_universal_exception
+    @defend_file_methods
     async def close(self, file):
-        if isinstance(file, tuple):
-            # we're writing to a file, so commit the whole thing to the item tree
-            (stream, parent, name) = file
+        return file.close()
 
-            data = stream.getvalue().decode()
-            parent.add_child(GameItem(name, content=data))
-        else:
-            pass
-
+    @_ftp_server_universal_exception
     async def rename(self, source, destination):
-        if source != destination:
-            sparent = self.get_node(source.parent)
-            dparent = self.get_node(destination.parent)
-            snode = self.get_node(source)
-            if None in (snode, dparent):
-                raise FileNotFoundError
+        source = self._convertPath(source)
+        destination = self._convertPath(destination)
+        return source.rename(destination)
 
-            for i, node in enumerate(sparent.content):
-                if node.name == source.name:
-                    node.remove()
 
-            snode.name = destination.name
-            for i, node in enumerate(dparent.content):
-                if node.name == destination.name:
-                    dparent.content[i] = snode
-                    break
-            else:
-                dparent.add_child(snode)
+def _ftp_server_universal_exception(coro):
+    """
+    Decorator. Reraising any exception (except `CancelledError` and `NotImplementedError`) with universal exception :py:class:`aioftp.PathIOError`
+    """
+    @functools.wraps(coro)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await coro(*args, **kwargs)
+        except (asyncio.CancelledError, NotImplementedError,
+                StopAsyncIteration):
+            raise
+        except Exception:
+            raise errors.PathIOError(reason=sys.exc_info())
+
+    return wrapper
+
+
 class _RsyncServer:
 
     def __init__(self, ip, port, dirList, tmpDir, logDir):
