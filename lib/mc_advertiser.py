@@ -186,7 +186,7 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
 
     @_ftp_server_universal_exception
     async def exists(self, path):
-        print("exists %s" % str(path))
+        print("aaexists %s" % str(path))
         path = self._convertPath(path)
         return path.exists()
 
