@@ -300,20 +300,20 @@ class _ApiServer(UnixDomainSocketApiServer):
         obj = self.updaterDict[mirrorId]
         if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
             if data["message"] == "progress":
-                obj.initProgressCallback(data["progress"])
+                obj.initProgressCallback(data["data"]["progress"])
             elif data["message"] == "error":
-                obj.initErrorCallback(data["exc_info"])
+                obj.initErrorCallback(data["data"]["exc_info"])
             elif data["message"] == "error-and-hold-for":
-                obj.initErrorAndHoldForCallback(data["seconds"], data["exc_info"])
+                obj.initErrorAndHoldForCallback(data["data"]["seconds"], data["data"]["exc_info"])
             else:
                 assert False
         elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
             if data["message"] == "progress":
-                obj.updateProgressCallback(data["progress"])
+                obj.updateProgressCallback(data["data"]["progress"])
             elif data["message"] == "error":
-                obj.updateErrorCallback(data["exc_info"])
+                obj.updateErrorCallback(data["data"]["exc_info"])
             elif data["message"] == "error-and-hold-for":
-                obj.updateErrorAndHoldForCallback(data["seconds"], data["exc_info"])
+                obj.updateErrorAndHoldForCallback(data["seconds"], data["data"]["exc_info"])
             else:
                 assert False
         else:

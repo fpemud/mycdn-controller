@@ -6,6 +6,7 @@ import sys
 import imp
 import dbus
 import math
+import json
 import fcntl
 import struct
 import shutil
@@ -513,7 +514,7 @@ class UnixDomainSocketApiServer:
                 break
             jsonObj = json.loads(obj.recvBuf[:i].decode("utf-8"))
             obj.recvBuf = obj.recvBuf[i + 1:]
-            self._notifyFunc(obj.clientData, jsonObj)
+            self.notifyFunc(obj.clientData, jsonObj)
 
         return True
 

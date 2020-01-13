@@ -2,8 +2,12 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import sys
 import aioftp
+import pathlib
 import logging
+import asyncio
+import functools
 import subprocess
 import aiohttp.web
 from mc_util import McUtil
@@ -32,33 +36,33 @@ class McAdvertiser:
                     assert False
 
         self.httpServer = None
-        if len(self.httpMirrorSiteList) > 0:
-            if self.param.httpPort == "random":
-                self.param.httpPort = McUtil.getFreeSocketPort("tcp")
-            self.httpServer = _HttpServer(self.param.mainloop, self.param.listenIp, self.param.httpPort, McConst.logDir)
-            for msId in self.httpMirrorSiteList:
-                # if self.param.updater.isMirrorSiteInitialized(msId):
-                if True:
-                    self.httpServer.addFileDir(msId, self.param.mirrorSiteDict[msId].dataDir)
-            self.param.mainloop.create_task(self.httpServer.start())
-
-        self.ftpServer = None
-        # if len(self.ftpMirrorSiteList) > 0:
-        #     if self.param.ftpPort == "random":
-        #         self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
-        #     self.ftpServer = _FtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
-        #     for msId in self.ftpMirrorSiteList:
+        # if len(self.httpMirrorSiteList) > 0:
+        #     if self.param.httpPort == "random":
+        #         self.param.httpPort = McUtil.getFreeSocketPort("tcp")
+        #     self.httpServer = _HttpServer(self.param.mainloop, self.param.listenIp, self.param.httpPort, McConst.logDir)
+        #     for msId in self.httpMirrorSiteList:
         #         # if self.param.updater.isMirrorSiteInitialized(msId):
         #         if True:
-        #             self.ftpServer.addFileDir(msId, self.param.mirrorSiteDict[msId].dataDir)
-        #     self.param.mainloop.create_task(self.ftpServer.start())
+        #             self.httpServer.addFileDir(msId, self.param.mirrorSiteDict[msId].dataDir)
+        #     self.param.mainloop.create_task(self.httpServer.start())
+
+        self.ftpServer = None
+        if len(self.ftpMirrorSiteList) > 0:
+            if self.param.ftpPort == "random":
+                self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
+            self.ftpServer = _FtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
+            for msId in self.ftpMirrorSiteList:
+                # if self.param.updater.isMirrorSiteInitialized(msId):
+                if True:
+                    self.ftpServer.addFileDir(msId, self.param.mirrorSiteDict[msId].dataDir)
+            self.param.mainloop.create_task(self.ftpServer.start())
 
         self.rsyncServer = None
-        if len(self.rsyncMirrorSiteList) > 0:
-            if self.param.rsyncPort == "random":
-                self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
-            self.rsyncServer = _RsyncServer(self.param.listenIp, self.param.rsyncPort, [], McConst.tmpDir, McConst.logDir)   # FIXME
-            self.param.mainloop.call_soon(self.rsyncServer.start)
+        # if len(self.rsyncMirrorSiteList) > 0:
+        #     if self.param.rsyncPort == "random":
+        #         self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
+        #     self.rsyncServer = _RsyncServer(self.param.listenIp, self.param.rsyncPort, [], McConst.tmpDir, McConst.logDir)   # FIXME
+        #     self.param.mainloop.call_soon(self.rsyncServer.start)
 
     def dispose(self):
         if self.httpServer is not None:
@@ -109,7 +113,35 @@ class _HttpServer:
         await self._runner.cleanup()
 
 
-class _FtpServer(aioftp.AbstractPathIO):
+def _ftp_server_universal_exception(coro):
+    """
+    Decorator. Reraising any exception (except `CancelledError` and `NotImplementedError`) with universal exception :py:class:`aioftp.PathIOError`
+    """
+    @functools.wraps(coro)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await coro(*args, **kwargs)
+        except (asyncio.CancelledError, NotImplementedError, StopAsyncIteration):
+            raise
+        except Exception:
+            raise aioftp.errors.PathIOError(reason=sys.exc_info())
+
+    return wrapper
+
+
+def _ftp_server_defend_file_methods(coro):
+    """
+    Decorator. Raises exception when file methods called with wrapped by :py:class:`aioftp.AsyncPathIOContext` file object.
+    """
+    @functools.wraps(coro)
+    async def wrapper(self, file, *args, **kwargs):
+        if isinstance(file, AsyncPathIOContext):
+            raise ValueError("Native path io file methods can not be used with wrapped file object")
+        return await coro(self, file, *args, **kwargs)
+    return wrapper
+
+
+class _FtpServer:
 
     def __init__(self, mainloop, ip, port, logDir):
         assert 0 < port < 65536
@@ -120,7 +152,7 @@ class _FtpServer(aioftp.AbstractPathIO):
         self._dirDict = dict()
         self._logDir = logDir
 
-        self._server = aioftp.Server(path_io_factory=self)
+        self._server = aioftp.Server(path_io_factory=functools.partial(_FtpServerPathIO, parent=self))
         self._bStart = False
 
     @property
@@ -146,56 +178,50 @@ class _FtpServer(aioftp.AbstractPathIO):
         self._bStart = False
 
 
-class _FtpServerPathIO(AbstractPathIO):
+class _FtpServerPathIO(aioftp.AbstractPathIO):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._dirDict = dict()
-
-    def getDirDict(self):
-        return self._dirDict
-
-    def _convertPath(self, path):
-        s = str(path)
-        if s in self._dirDict:
-            return pathlib.Path(self._dirDict[s])
-        for name, realPath in self._dirDict.items():
-            if s.startswith(name + "/"):
-                s = s.replace(name + "/", realPath + "/")
-                return pathlib.Path(s)
-        raise errors.PathIOError(message="file not found???")
+    def __init__(self, *kargs, parent=None, **kwargs):
+        super().__init__(kargs, kwargs)
+        self._dirDict = parent._dirDict
 
     @_ftp_server_universal_exception
     async def exists(self, path):
+        print("exists %s" % str(path))
         path = self._convertPath(path)
         return path.exists()
 
     @_ftp_server_universal_exception
     async def is_dir(self, path):
+        print("exists2 %s" % str(path))
         path = self._convertPath(path)
         return path.is_dir()
 
     @_ftp_server_universal_exception
     async def is_file(self, path):
+        print("3exists2 %s" % str(path))
         path = self._convertPath(path)
         return path.is_file()
 
     @_ftp_server_universal_exception
     async def mkdir(self, path, *, parents=False, exist_ok=False):
+        print("4exists2 %s" % str(path))
         path = self._convertPath(path)
         return path.mkdir(parents=parents, exist_ok=exist_ok)
 
     @_ftp_server_universal_exception
     async def rmdir(self, path):
+        print("5exists2 %s" % str(path))
         path = self._convertPath(path)
         return path.rmdir()
 
     @_ftp_server_universal_exception
     async def unlink(self, path):
+        print("6exists2 %s" % str(path))
         path = self._convertPath(path)
         return path.unlink()
 
     def list(self, path):
+        print("list %s" % str(path))
         path = self._convertPath(path)
 
         class Lister(AbstractAsyncLister):
@@ -214,56 +240,56 @@ class _FtpServerPathIO(AbstractPathIO):
 
     @_ftp_server_universal_exception
     async def stat(self, path):
+        print("33list %s" % str(path))
         path = self._convertPath(path)
         return path.stat()
 
     @_ftp_server_universal_exception
     async def _open(self, path, *args, **kwargs):
+        print("4list %s" % str(path))
         path = self._convertPath(path)
         return path.open(*args, **kwargs)
 
     @_ftp_server_universal_exception
-    @defend_file_methods
+    @_ftp_server_defend_file_methods
     async def seek(self, file, *args, **kwargs):
+        print("seek")
         return file.seek(*args, **kwargs)
 
     @_ftp_server_universal_exception
-    @defend_file_methods
+    @_ftp_server_defend_file_methods
     async def write(self, file, *args, **kwargs):
+        print("write")
         return file.write(*args, **kwargs)
 
     @_ftp_server_universal_exception
-    @defend_file_methods
+    @_ftp_server_defend_file_methods
     async def read(self, file, *args, **kwargs):
+        print("read")
         return file.read(*args, **kwargs)
 
     @_ftp_server_universal_exception
-    @defend_file_methods
+    @_ftp_server_defend_file_methods
     async def close(self, file):
+        print("close")
         return file.close()
 
     @_ftp_server_universal_exception
     async def rename(self, source, destination):
+        print("rename %s %s" % (str(source), str(destination)))
         source = self._convertPath(source)
         destination = self._convertPath(destination)
         return source.rename(destination)
 
-
-def _ftp_server_universal_exception(coro):
-    """
-    Decorator. Reraising any exception (except `CancelledError` and `NotImplementedError`) with universal exception :py:class:`aioftp.PathIOError`
-    """
-    @functools.wraps(coro)
-    async def wrapper(*args, **kwargs):
-        try:
-            return await coro(*args, **kwargs)
-        except (asyncio.CancelledError, NotImplementedError,
-                StopAsyncIteration):
-            raise
-        except Exception:
-            raise errors.PathIOError(reason=sys.exc_info())
-
-    return wrapper
+    def _convertPath(self, path):
+        s = str(path)
+        if s in self._dirDict:
+            return pathlib.Path(self._dirDict[s])
+        for name, realPath in self._dirDict.items():
+            if s.startswith(name + "/"):
+                s = s.replace(name + "/", realPath + "/")
+                return pathlib.Path(s)
+        raise aioftp.errors.PathIOError(message="file not found???")
 
 
 class _RsyncServer:
