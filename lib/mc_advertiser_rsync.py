@@ -57,7 +57,7 @@ class McRsyncServer:
         buf += "uid = root\n"           # FIXME
         buf += "gid = root\n"           # FIXME
         buf += "\n"
-        for name, d in self._dirDict:
+        for name, d in self._dirDict.items():
             buf += "[%s]\n" % (name)
             buf += "path = %s\n" % (d)
             buf += "read only = yes\n"
