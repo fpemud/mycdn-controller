@@ -102,7 +102,7 @@ class _OneMirrorSiteUpdater:
             self.excInfo = None
             self.holdFor = None
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
-        except:
+        except Exception:
             self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
             self.holdFor = None
             self.excInfo = None
@@ -132,7 +132,7 @@ class _OneMirrorSiteUpdater:
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
         assert self.excInfo is None
         self.excInfo = exc_info
- 
+
     def initErrorAndHoldForCallback(self, seconds, exc_info):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
         assert self.excInfo is None
@@ -184,7 +184,7 @@ class _OneMirrorSiteUpdater:
             self.excInfo = None
             self.holdFor = None
             logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, tstr))
-        except:
+        except Exception:
             self.holdFor = None
             self.excInfo = None
             if self.pidWatch is not None:
@@ -213,7 +213,7 @@ class _OneMirrorSiteUpdater:
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
         assert self.excInfo is None
         self.excInfo = exc_info
- 
+
     def updateErrorAndHoldForCallback(self, seconds, exc_info):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
         assert self.excInfo is None

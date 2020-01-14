@@ -3,7 +3,6 @@
 FILES="./mirrors"
 LIBFILES=""
 LIBFILES="${LIBFILES} $(find ./lib -name '*.py' | tr '\n' ' ')"
-LIBFILES="${LIBFILES} $(find ./libexec -name '*.py' | tr '\n' ' ')"
 ERRFLAG=0
 
 OUTPUT=`pyflakes ${FILES} ${LIBFILES} 2>&1`

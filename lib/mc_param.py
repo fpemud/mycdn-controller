@@ -9,8 +9,6 @@ class McConst:
     etcDir = "/etc/mirrors"
     libDir = "/usr/lib64/mirrors"
     pluginsDir = os.path.join(libDir, "plugins")
-    libexecDir = "/usr/libexec/mirrors"
-    updaterExe = os.path.join(libexecDir, "updater_proc.py")
     cacheDir = "/var/cache/mirrors"
     runDir = "/run/mirrors"
     apiServerFile = os.path.join(runDir, "api.socket")

@@ -33,7 +33,7 @@ class McUtil:
             m = imp.load_module(filename[:-3], f, filename, ('.py', 'r', imp.PY_SOURCE))
             objClass = getattr(m, classname)
             return objClass(*args)
-        except:
+        except Exception:
             raise Exception("syntax error")
 
     @staticmethod
@@ -108,7 +108,7 @@ class McUtil:
         try:
             int(s)
             return True
-        except:
+        except Exception:
             return False
 
     @staticmethod
@@ -246,7 +246,7 @@ class McUtil:
                     continue
                 try:
                     tlist += list(n2.address_exclude(n))            # successful to substract
-                except:
+                except Exception:
                     pass                                            # substract to none
             netlist = tlist
         return netlist
@@ -519,6 +519,21 @@ class UnixDomainSocketApiServer:
         return True
 
 
+class AsyncIteratorExecuter:
+
+    def __init__(self, iter):
+        self.iter = iter
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        try:
+            return next(self.iter)
+        except StopIteration:
+            raise StopAsyncIteration
+
+
 class HttpFileServer:
 
     def __init__(self, ip, port, dirList, logDir):
@@ -659,7 +674,7 @@ class AvahiServiceRegister:
             if self._server.GetState() == 2:    # avahi.SERVER_RUNNING
                 self._registerService()
             self._server.connect_to_signal("StateChanged", self.onSeverStateChanged)
-        except:
+        except Exception:
             logging.error("Avahi create server failed, retry in %d seconds" % (self.retryInterval), exc_info=True)
             self._releaseServer()
             self._retryCreateServer()
@@ -695,7 +710,7 @@ class AvahiServiceRegister:
                                             "")                 # txt
             self._entryGroup.Commit()
             self._entryGroup.connect_to_signal("StateChanged", self.onEntryGroupStateChanged)
-        except:
+        except Exception:
             logging.error("Avahi register service failed, retry in %d seconds" % (self.retryInterval), exc_info=True)
             self._unregisterService()
             self._retryRegisterService()
