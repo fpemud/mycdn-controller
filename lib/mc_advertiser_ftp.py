@@ -38,6 +38,7 @@ class McFtpServer:
         self._dirDict[name] = realPath
 
     def start(self, mainloop):
+        assert not self.bStart
         self._mainloop.create_task(self._start())
 
     def stop(self, mainloop):

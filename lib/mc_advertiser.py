@@ -1,13 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
-import os
 import logging
-import subprocess
 import aiohttp.web
 from mc_util import McUtil
 from mc_param import McConst
 from mc_advertiser_ftp import McFtpServer
+from mc_advertiser_rsync import McRsyncServer
 
 
 class McAdvertiser:
@@ -48,11 +47,11 @@ class McAdvertiser:
                 self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
             self.ftpServer = McFtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
             self.ftpServer.start()
-        # if len(self.rsyncMirrorSiteList) > 0:
-        #     if self.param.rsyncPort == "random":
-        #         self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
-        #     self.rsyncServer = _RsyncServer(self.param.listenIp, self.param.rsyncPort, [], McConst.tmpDir, McConst.logDir)   # FIXME
-        #     self.param.mainloop.call_soon(self.rsyncServer.start)
+        if bHasRsyncMirrorSite:
+            if self.param.rsyncPort == "random":
+                self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
+            self.rsyncServer = McRsyncServer(self.param.mainloop, self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
+            self.rsyncServer.start()
 
     def advertiseMirrorSite(self, mirrorSiteId):
         msObj = self.param.mirrorSiteDict[mirrorSiteId]
@@ -63,9 +62,7 @@ class McAdvertiser:
         if "ftp" in msObj.advertiseProtocolList:
             self.ftpServer.addFileDir(msObj.id, msObj.dataDir)
         if "rsync" in msObj.advertiseProtocolList:
-            # FIXME
-            pass
-            # self.rsyncServer.addFileDir(msObj.id, msObj.dataDir)
+            self.rsyncServer.addFileDir(msObj.id, msObj.dataDir)
         if "git-http" in msObj.advertiseProtocolList:
             # FIXME
             pass
@@ -123,74 +120,6 @@ class _HttpServer:
 
     async def _stop(self):
         await self._runner.cleanup()
-
-
-class _RsyncServer:
-
-    def __init__(self, ip, port, dirList, tmpDir, logDir):
-        assert 0 < port < 65536
-        self._ip = ip
-        self._port = port
-        self._dirlist = dirList
-        self.rsyncdCfgFile = os.path.join(tmpDir, "rsyncd.conf")
-        self.rsyncdLockFile = os.path.join(tmpDir, "rsyncd.lock")
-        self.rsyncdLogFile = os.path.join(logDir, "rsyncd.log")
-        self._proc = None
-
-    @property
-    def port(self):
-        assert self._proc is not None
-        return self._port
-
-    @property
-    def running(self):
-        return self._proc is not None
-
-    def start(self):
-        assert self._proc is None
-
-        buf = ""
-        buf += "lock file = %s\n" % (self.rsyncdLockFile)
-        buf += "log file = %s\n" % (self.rsyncdLogFile)
-        buf += "\n"
-        buf += "port = %s\n" % (self._port)
-        buf += "max connections = 1\n"
-        buf += "timeout = 600\n"
-        buf += "hosts allow = 127.0.0.1\n"
-        buf += "\n"
-        buf += "use chroot = yes\n"
-        buf += "uid = root\n"
-        buf += "gid = root\n"
-        buf += "\n"
-        for d in self._dirlist:
-            buf += "[%s]\n" % (os.path.basename(d))
-            buf += "path = %s\n" % (d)
-            buf += "read only = yes\n"
-            buf += "\n"
-        with open(self.rsyncdCfgFile, "w") as f:
-            f.write(buf)
-
-        cmd = ""
-        cmd += "/usr/bin/rsync --daemon --no-detach --config=\"%s\"" % (self.rsyncdCfgFile)
-        self._proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
-
-        logging.info("Advertising server (rsync) started, listening on port %d." % (self._port))
-
-    def stop(self):
-        pass
-
-    def addFileDir(self, dirname, realPath):
-        port = McUtil.getFreeSocketPort("tcp")
-        logfile = os.path.join(self._logDir, "httpd-%d.log" % (port))
-        cmd = "/usr/bin/bozohttpd -b -f -H -I %d -s -X %s 2>%s" % (port, realPath, logfile)
-        proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
-        self._dirDict[dirname] = (realPath, port, proc)
-
-    def removeFileDir(self, dirname):
-        realPath, port, proc = self._dirDict[dirname]
-        proc.terminate()
-        proc.wait()
-        del self._dirDict[dirname]
 
 
 class HttpServer2:
