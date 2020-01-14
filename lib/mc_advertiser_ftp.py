@@ -37,11 +37,11 @@ class McFtpServer:
     def addFileDir(self, name, realPath):
         self._dirDict[name] = realPath
 
-    def start(self, mainloop):
-        assert not self.bStart
+    def start(self):
+        assert not self._bStart
         self._mainloop.create_task(self._start())
 
-    def stop(self, mainloop):
+    def stop(self):
         self._mainloop.run_until_complete(self._stop())
 
     async def _start(self):
