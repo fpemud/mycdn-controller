@@ -51,13 +51,11 @@ class McRsyncServer:
         buf += "log file = %s\n" % (self.rsyncdLogFile)
         buf += "\n"
         buf += "port = %s\n" % (self._port)
-        buf += "max connections = 1\n"
         buf += "timeout = 600\n"
-        buf += "hosts allow = 127.0.0.1\n"
         buf += "\n"
         buf += "use chroot = yes\n"
-        buf += "uid = root\n"
-        buf += "gid = root\n"
+        buf += "uid = root\n"           # FIXME
+        buf += "gid = root\n"           # FIXME
         buf += "\n"
         for name, d in self._dirDict:
             buf += "[%s]\n" % (name)
