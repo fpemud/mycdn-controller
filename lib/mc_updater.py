@@ -89,6 +89,7 @@ class _OneMirrorSiteUpdater:
         if bInit:
             self.invoker.add(self.initStart)
         else:
+            self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
 
     def initStart(self):
@@ -151,6 +152,7 @@ class _OneMirrorSiteUpdater:
             self.progress = -1
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
+            self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         else:
             exc_info = (None, None, None)       # FIXME

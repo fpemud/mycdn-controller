@@ -48,13 +48,13 @@ class McDaemon:
             self.pluginManager.loadPlugins()
             logging.info("Plugins loaded: %s" % (",".join(self.param.pluginList)))
 
-            # updater
-            self.param.updater = McMirrorSiteUpdater(self.param)
-            logging.info("Mirror site updater initialized.")
-
             # advertiser
             self.param.advertiser = McAdvertiser(self.param)
             logging.info("Advertiser initialized.")
+
+            # updater
+            self.param.updater = McMirrorSiteUpdater(self.param)
+            logging.info("Mirror site updater initialized.")
 
             # register serivce
             if self.param.avahiSupport:

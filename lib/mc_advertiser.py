@@ -46,13 +46,29 @@ class McAdvertiser:
         if bHasFtpMirrorSite:
             if self.param.ftpPort == "random":
                 self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
-            self.ftpServer = FtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
+            self.ftpServer = McFtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
             self.ftpServer.start()
         # if len(self.rsyncMirrorSiteList) > 0:
         #     if self.param.rsyncPort == "random":
         #         self.param.rsyncPort = McUtil.getFreeSocketPort("tcp")
         #     self.rsyncServer = _RsyncServer(self.param.listenIp, self.param.rsyncPort, [], McConst.tmpDir, McConst.logDir)   # FIXME
         #     self.param.mainloop.call_soon(self.rsyncServer.start)
+
+    def advertiseMirrorSite(self, mirrorSiteId):
+        msObj = self.param.mirrorSiteDict[mirrorSiteId]
+        if "http" in msObj.advertiseProtocolList:
+            # FIXME
+            pass
+            # self.httpServer.addFileDir(msObj.id, msObj.dataDir)
+        if "ftp" in msObj.advertiseProtocolList:
+            self.ftpServer.addFileDir(msObj.id, msObj.dataDir)
+        if "rsync" in msObj.advertiseProtocolList:
+            # FIXME
+            pass
+            # self.rsyncServer.addFileDir(msObj.id, msObj.dataDir)
+        if "git-http" in msObj.advertiseProtocolList:
+            # FIXME
+            pass
 
     def dispose(self):
         if self.httpServer is not None:
