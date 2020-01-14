@@ -3,11 +3,13 @@
 
 import os
 import sys
-import aioftp
+import jinja2
 import pathlib
 import logging
 import asyncio
 import functools
+import aiohttp.web
+import aiohttp_jinja2
 from mc_util import AsyncIteratorExecuter
 
 
@@ -23,6 +25,8 @@ class McHttpServer:
         self._logDir = logDir
 
         self._app = aiohttp.web.Application(loop=self._mainloop)
+        aiohttp_jinja2.setup(self._app, loader=jinja2.FileSystemLoader('/usr/share/mirrors'))
+
         self._runner = None
 
     @property
@@ -53,11 +57,32 @@ class McHttpServer:
     async def _stop(self):
         await self._runner.cleanup()
 
+    @aiohttp_jinja2.template('index.jinja2')
+    def _handler(self, request):
+        ret = {
+            "static": {
+                "title": "mirror site",
+                "name": "镜像名",
+                "update_time": "上次更新时间",
+                "help": "使用帮助",
+            }
+        }
 
+        ret["mirror_site_list"] = []
+        for msId, msObj in self.param.mirrorSiteDict.items():
+            msData = {
+                "id": msObj.id,
+                "is_initialized": self.param.updater.isMirrorSiteInitialized(msObj.id),
+                "update_status": None,
+                "last_update_time": None,
+                "help": {
+                    "title": None,
+                    "filename": None,
+                }
+            }
+            ret["mirror_site_list"].append(msData)
 
-
-
-
+        return ret
 
 
 

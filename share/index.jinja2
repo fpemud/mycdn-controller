@@ -4,10 +4,10 @@
         <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
         <link rel="stylesheet" type="text/css" href="/resources/mirror.css" media="screen" />
         <link rel="shortcut icon" href="/resources/favicon.ico" />
-        <title>@@TITLE@@</title>
+        <title>{{ static.title }}</title>
     </head>
     <body>
-        <h1>@@TITLE@@</h1>
+        <h1>{{ static.title }}</h1>
         <table id="mirror-site-table" cellpadding="0" cellspacing="0">
             <colgroup>
                 <col width="50%"/>
@@ -16,22 +16,22 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th>镜像名</th>
-                    <th>上次更新时间</th>
-                    <th>使用帮助</th>
+                    <th>{{ static.mirror_name }}</th>
+                    <th>{{ staic.update_time }}</th>
+                    <th>{{ static.help }}</th>
                 </tr>
             </thead>
             <tbody>
-                {% for ms in mirrorSiteList %}
+                {% for ms in mirror_site_list %}
                     <tr class="odd">
-                        {% if ms.isInitialized %}
+                        {% if ms.is_initialized %}
                             <td><span>ms.id</span></td>
                             <td>N/A</td>
                         {% else %}
                             <td><a href="/{{ ms.id }}">ms.id</a></td>
-                            <td>{{ ms.lastUpdateTime}}</td>
+                            <td>{{ ms.last_update_time}}</td>
                         {% endif %}
-                        {% if ms.hasHelp %}
+                        {% if ms.has_help %}
                             <td><span>N/A</span></td>
                         {% else %}
                             <td><a href="/.help/{{ ms.helpFile }}">{{ ms.helpFileTitle }}</a></td>
