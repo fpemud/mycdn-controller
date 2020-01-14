@@ -11,6 +11,50 @@ import functools
 from mc_util import AsyncIteratorExecuter
 
 
+class McFtpServer:
+
+    def __init__(self, mainloop, ip, port, logDir):
+        assert 0 < port < 65536
+
+        self._mainloop = mainloop
+        self._ip = ip
+        self._port = port
+        self._dirDict = dict()
+        self._logDir = logDir
+
+        self._server = None
+        self._bStart = False
+
+    @property
+    def port(self):
+        assert self._bStart
+        return self._port
+
+    @property
+    def running(self):
+        return self._bStart
+
+    def addFileDir(self, name, realPath):
+        self._dirDict[name] = realPath
+
+    def start(self, mainloop):
+        self._mainloop.create_task(self._start())
+
+    def stop(self, mainloop):
+        self._mainloop.run_until_complete(self._stop())
+
+    async def _start(self):
+        self._server = aioftp.Server(path_io_factory=functools.partial(_FtpServerPathIO, parent=self))
+        await self._server.start(self._ip, self._port)
+        self._bStart = True
+        logging.info("Advertising server (FTP) started, listening on port %d." % (self._port))
+
+    async def _stop(self):
+        # it seems aioftp.Server.close() has syntax error
+        # await self._server.close()
+        self._bStart = False
+
+
 def _ftp_server_universal_exception(func):
     """
     Decorator. Reraising any exception (with exceptions) with universal exception :py:class:`aioftp.PathIOError`
@@ -173,47 +217,3 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
             return "/"
         else:
             return path
-
-
-class McFtpServer:
-
-    def __init__(self, mainloop, ip, port, logDir):
-        assert 0 < port < 65536
-
-        self._mainloop = mainloop
-        self._ip = ip
-        self._port = port
-        self._dirDict = dict()
-        self._logDir = logDir
-
-        self._server = None
-        self._bStart = False
-
-    @property
-    def port(self):
-        assert self._bStart
-        return self._port
-
-    @property
-    def running(self):
-        return self._bStart
-
-    def addFileDir(self, name, realPath):
-        self._dirDict[name] = realPath
-
-    def start(self, mainloop):
-        self._mainloop.create_task(self._start())
-
-    def stop(self, mainloop):
-        self._mainloop.run_until_complete(self._stop())
-
-    async def _start(self):
-        self._server = aioftp.Server(path_io_factory=functools.partial(_FtpServerPathIO, parent=self))
-        await self._server.start(self._ip, self._port)
-        self._bStart = True
-        logging.info("Advertising server (FTP) started, listening on port %d." % (self._port))
-
-    async def _stop(self):
-        # it seems aioftp.Server.close() has syntax error
-        # await self._server.close()
-        self._bStart = False
