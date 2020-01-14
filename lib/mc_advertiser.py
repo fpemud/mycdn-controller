@@ -7,6 +7,7 @@ import subprocess
 import aiohttp.web
 from mc_util import McUtil
 from mc_param import McConst
+from mc_advertiser_ftp import McFtpServer
 
 
 class McAdvertiser:
@@ -45,7 +46,7 @@ class McAdvertiser:
         if bHasFtpMirrorSite:
             if self.param.ftpPort == "random":
                 self.param.ftpPort = McUtil.getFreeSocketPort("tcp")
-            self.ftpServer = _FtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
+            self.ftpServer = FtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
             self.ftpServer.start()
         # if len(self.rsyncMirrorSiteList) > 0:
         #     if self.param.rsyncPort == "random":

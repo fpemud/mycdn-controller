@@ -175,7 +175,7 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
             return path
 
 
-class FtpServer:
+class McFtpServer:
 
     def __init__(self, mainloop, ip, port, logDir):
         assert 0 < port < 65536
