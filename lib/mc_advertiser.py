@@ -1,10 +1,9 @@
 #!/usr/bin/python3
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
-import logging
-import aiohttp.web
 from mc_util import McUtil
 from mc_param import McConst
+from mc_advertiser_http import McHttpServer
 from mc_advertiser_ftp import McFtpServer
 from mc_advertiser_rsync import McRsyncServer
 

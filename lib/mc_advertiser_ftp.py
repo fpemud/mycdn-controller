@@ -26,6 +26,10 @@ class McFtpServer:
         self._bStart = False
 
     @property
+    def portStandard(self):
+        return 21
+
+    @property
     def port(self):
         assert self._bStart
         return self._port

@@ -20,6 +20,10 @@ class McRsyncServer:
         self._proc = None
 
     @property
+    def portStandard(self):
+        return 873
+
+    @property
     def port(self):
         assert self._proc is not None
         return self._port
