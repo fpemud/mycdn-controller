@@ -38,7 +38,7 @@ class McRsyncServer:
 
     def start(self):
         assert self._proc is None
-        self._mainloop.call_soon(self.start)
+        self._mainloop.call_soon(self._start)
 
     def stop(self):
         pass
