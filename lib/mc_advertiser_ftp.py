@@ -161,7 +161,7 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
             return AsyncIteratorExecuter(ret)
         else:
             newPath = self._convertPath(path)
-            print("return %s" % (list(path.glob("*"))))
+            print("return %s" % (self._listDir(path, newPath)))
             return AsyncIteratorExecuter(_ftp_server_universal_exception(self._listDir)(path, newPath))
 
     @_async_ftp_server_universal_exception
@@ -223,7 +223,8 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
     def _listDir(self, path, newPath):
         tl = [x.as_posix() for x in newPath.glob("*")]
         tl = [x.replace(newPath.as_posix(), path.as_posix()) for x in tl]
-        return tl
+        tl = [pathlib.Path(x) for x in tl]
+        return iter(tl)
 
     def _showName(self, path):
         if path == ".":
