@@ -218,9 +218,3 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
         tl = [x.replace(newPath.as_posix(), path.as_posix()) for x in tl]
         tl = [pathlib.Path(x) for x in tl]
         return iter(tl)
-
-    def _showName(self, path):
-        if path == ".":
-            return "/"
-        else:
-            return path
