@@ -48,6 +48,7 @@ class McHttpServer:
         self._mainloop.run_until_complete(self._stop())
 
     async def _start(self):
+        self._app.router.add_route('*', '/mirrors', self.collection_endpoint.dispatch)
         self._runner = aiohttp.web.AppRunner(self._app)
         await self._runner.setup()
         site = aiohttp.web.TCPSite(self._runner, self._ip, self._port)
@@ -84,8 +85,34 @@ class McHttpServer:
 
         return ret
 
+    async def hello(request):
+        return web.Response(text="Hello, world")
 
 
+
+
+async def dispatch(self, request: Request):
+        method = self.methods.get(request.method.upper())
+        if not method:
+            raise HttpMethodNotAllowed()
+
+        wanted_args = list(inspect.signature(method).parameters.keys())
+        available_args = request.match_info.copy()
+        available_args.update({'request': request})
+
+        unsatisfied_args = set(wanted_args) - set(available_args.keys())
+        if unsatisfied_args:
+            # Expected match info that doesn't exist
+            raise HttpBadRequest('')
+
+        return await method(**{arg_name: available_args[arg_name] for arg_name in wanted_args})
+
+
+
+router.add_route('*', '/{name}'.format(name=self.name), self.collection_endpoint.dispatch)
+        router.add_route('*', '/{name}/{{instance_id}}'.format(name=self.name), self.instance_endpoint.dispatch)
+        router.add_route('*', '/{name}/{{instance_id}}/{{property_name}}'.format(name=self.name),
+                         self.property_endpoint.dispatch)
 
 
 
