@@ -32,7 +32,7 @@ class McParam:
         self.apiPort = 2300
         self.httpPort = 80      # can be "random"
         self.ftpPort = 21       # can be "random"
-        self.rsyncPort = 1001   # can be "random"       # FIXME
+        self.rsyncPort = 873    # can be "random"
 
         # objects
         self.mainloop = None
