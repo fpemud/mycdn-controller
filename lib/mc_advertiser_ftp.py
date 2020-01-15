@@ -222,7 +222,7 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
 
     def _listDir(self, path, newPath):
         tl = [x.as_posix() for x in newPath.glob("*")]
-        tl = [x.replace(newPath.as_posix(), path.as_posix) for x in tl]
+        tl = [x.replace(newPath.as_posix(), path.as_posix()) for x in tl]
         return tl
 
     def _showName(self, path):
