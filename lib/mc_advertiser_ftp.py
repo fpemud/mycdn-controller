@@ -68,10 +68,8 @@ def _ftp_server_universal_exception(func):
         try:
             return func(*args, **kwargs)
         except (NotImplementedError, aioftp.errors.PathIOError) as e:
-            print(str(e))
             raise
         except Exception as e:
-            print(str(e))
             raise aioftp.errors.PathIOError(reason=sys.exc_info())
 
     return wrapper
@@ -86,10 +84,8 @@ def _async_ftp_server_universal_exception(coro):
         try:
             return await coro(*args, **kwargs)
         except (asyncio.CancelledError, NotImplementedError, StopAsyncIteration, aioftp.errors.PathIOError) as e:
-            print(str(e))
             raise
         except Exception as e:
-            print(str(e))
             raise aioftp.errors.PathIOError(reason=sys.exc_info())
 
     return wrapper
@@ -153,15 +149,12 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
         assert False
 
     def list(self, path):
-        print("arg %s" % (str(path)))
         if path.as_posix() == ".":
             ret = sorted(self._dirDict.keys())
             ret = (pathlib.Path(x) for x in ret)
-            print("return %s" % (list(ret)))
             return AsyncIteratorExecuter(ret)
         else:
             newPath = self._convertPath(path)
-            print("return %s" % (self._listDir(path, newPath)))
             return AsyncIteratorExecuter(_ftp_server_universal_exception(self._listDir)(path, newPath))
 
     @_async_ftp_server_universal_exception
