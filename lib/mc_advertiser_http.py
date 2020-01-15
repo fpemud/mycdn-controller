@@ -51,7 +51,9 @@ class McHttpServer:
         return self._runner is None
 
     def addFileDir(self, name, realPath):
-        self._app.router.add_static("/" + name + "/", realPath, name=name, show_index=True, follow_symlinks=True)
+        pass
+        # FIXME
+        # self._app.router.add_static("/m/" + name + "/", realPath, name=name, show_index=True, follow_symlinks=True)
 
     def start(self):
         self._mainloop.create_task(self._start())
@@ -61,8 +63,8 @@ class McHttpServer:
 
     async def _start(self):
         aiohttp_jinja2.setup(self._app, loader=jinja2.FileSystemLoader('/usr/share/mirrors'))
-        self._app.router.add_route("get", "/api/mirrors", self._mirrorsHandler)
-        self._app.router.add_route("get", "/", self._indexHandler)
+        self._app.router.add_route("GET", "/api/mirrors", self._apiMirrorsHandler)
+        self._app.router.add_route("GET", "/", self._indexHandler)
         self._runner = aiohttp.web.AppRunner(self._app)
         await self._runner.setup()
         site = aiohttp.web.TCPSite(self._runner, self._ip, self._port)
@@ -84,7 +86,7 @@ class McHttpServer:
         }
         return aiohttp_jinja2.render_template('index.jinja2', request, data)
 
-    async def _mirrorsHandler(self, request):
+    async def _apiMirrorsHandler(self, request):
         return aiohttp.web.json_response(self.__getMirrorSiteDict())
 
     def __getMirrorSiteDict(self):
@@ -93,6 +95,7 @@ class McHttpServer:
             ret[msId] = {
                 "is_initialized": self.param.updater.isMirrorSiteInitialized(msId),
                 "update_status": self.param.updater.getMirrorSiteUpdateStatus(msId),
+                "update_progress": -1,
                 "last_update_time": "",
                 "help": {
                     "title": "",
