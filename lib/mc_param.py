@@ -11,9 +11,12 @@ class McConst:
     pluginsDir = os.path.join(libDir, "plugins")
     cacheDir = "/var/cache/mirrors"
     runDir = "/run/mirrors"
-    apiServerFile = os.path.join(runDir, "api.socket")
     logDir = "/var/log/mirrors"
     tmpDir = "/tmp/mirrors"             # FIXME
+
+    apiServerFile = os.path.join(runDir, "api.socket")
+
+    avahiSupport = True
 
 
 class McParam:
@@ -30,8 +33,6 @@ class McParam:
         self.httpPort = 80      # can be "random"
         self.ftpPort = 21       # can be "random"
         self.rsyncPort = 1001   # can be "random"       # FIXME
-
-        self.avahiSupport = True
 
         # objects
         self.mainloop = None

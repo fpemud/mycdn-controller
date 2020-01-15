@@ -57,7 +57,7 @@ class McDaemon:
             logging.info("Mirror site updater initialized.")
 
             # register serivce
-            if self.param.avahiSupport:
+            if McConst.avahiSupport:
                 self.param.avahiObj = AvahiServiceRegister()
                 self.param.avahiObj.add_service(socket.gethostname(), "_mirrors._tcp", self.param.apiPort)
                 self.param.avahiObj.start()
