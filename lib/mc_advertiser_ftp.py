@@ -153,13 +153,16 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
         assert False
 
     def list(self, path):
+        print("arg %s" % (str(path)))
         if path.as_posix() == ".":
             ret = sorted(self._dirDict.keys())
             ret = (pathlib.Path(x) for x in ret)
+            print("return %s" % (list(ret)))
             return AsyncIteratorExecuter(ret)
         else:
-            path = self._convertPath(path)
-            return AsyncIteratorExecuter(_ftp_server_universal_exception(path.glob)("*"))
+            newPath = self._convertPath(path)
+            print("return %s" % (list(path.glob("*"))))
+            return AsyncIteratorExecuter(_ftp_server_universal_exception(self._listDir)(path, newPath))
 
     @_async_ftp_server_universal_exception
     async def stat(self, path):
@@ -216,6 +219,11 @@ class _FtpServerPathIO(aioftp.AbstractPathIO):
         if prefix not in self._dirDict:
             raise FileNotFoundError("No such file or directory: '%s'" % (s))
         return pathlib.Path(self._dirDict[prefix], *dirParts)
+
+    def _listDir(self, path, newPath):
+        tl = [x.as_posix() for x in newPath.glob("*")]
+        tl = [x.replace(newPath.as_posix(), path.as_posix) for x in tl]
+        return tl
 
     def _showName(self, path):
         if path == ".":
