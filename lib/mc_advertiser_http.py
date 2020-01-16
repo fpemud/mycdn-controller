@@ -51,9 +51,12 @@ class McHttpServer:
         return self._runner is None
 
     def addFileDir(self, name, realPath):
-        pass
-        # FIXME
-        # self._app.router.add_static("/m/" + name + "/", realPath, name=name, show_index=True, follow_symlinks=True)
+        tmp = self._app.router._frozen
+        try:
+            self._app.router._frozen = False
+            self._app.router.add_static("/m/" + name + "/", realPath, name=name, show_index=True, follow_symlinks=True)
+        finally:
+            self._app.router._frozen = tmp
 
     def start(self):
         self._mainloop.create_task(self._start())
