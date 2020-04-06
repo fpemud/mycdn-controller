@@ -42,18 +42,34 @@ def loadInitializerAndUpdater(path, mirrorSiteId):
     return dataDir, initExec, updateExec
 
 
-def createInitOrUpdateProc(execFile, dataDir, bInitOrUpdate):
-    cmd = [
-        execFile,
-        dataDir,
-        McConst.logDir,
-        "1",               # set debug flag
-        "CN",
-        "",
-    ]
-    if not bInitOrUpdate:
-        cmd.append(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"))
-    return subprocess.Popen(cmd)
+class InitOrUpdateProc:
+
+    def __init__(self, execFile, dataDir, debugFlag, bInitOrUpdate):
+        assert debugFlag in ["0", "1"]
+
+        cmd = [
+            execFile,
+            dataDir,
+            McConst.logDir,
+            debugFlag,
+            "CN",
+            "",
+        ]
+        if not bInitOrUpdate:
+            cmd.append(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"))
+
+        self.proc = subprocess.Popen(cmd)
+        self.pidWatch = GLib.child_watch_add(self.proc.pid, self._exitCallback)
+
+    def dispose(self):
+        if self.proc is not None:
+            self.proc.terminate()
+            self.proc.wait()
+            self.proc = None
+
+    def _exitCallback(self, status, data):
+        mainloop.quit()
+        self.proc = None
 
 
 class ApiServer(UnixDomainSocketApiServer):
@@ -82,34 +98,42 @@ class ApiServer(UnixDomainSocketApiServer):
 
 
 if len(sys.argv) < 3:
-    print("syntax: test-plugin-updater.py <plugin-directory> <mirror-site-id>")
+    print("syntax: test-plugin-updater.py <plugin-directory> <mirror-site-id> [debug-flag]")
     sys.exit(1)
 
 pluginDir = sys.argv[1]
 mirrorSiteId = sys.argv[2]
+if len(sys.argv) >= 4:
+    debugFlag = sys.argv[3]
+    if debugFlag not in ["0", "1"]:
+        raise Exception("debug-flag must be 0 or 1")
+else:
+    debugFlag = "0"
 
 apiServer = None
+proc = None
 mainloop = GLib.MainLoop()
 dataDir, initExec, updateExec = loadInitializerAndUpdater(pluginDir, mirrorSiteId)
 initFlagFile = dataDir + ".uninitialized"
 
 McUtil.mkDirAndClear(McConst.runDir)
-apiServer = ApiServer(mirrorSiteId)
 
 if not os.path.exists(dataDir):
     os.makedirs(dataDir)
     McUtil.touchFile(initFlagFile)
 
+apiServer = ApiServer(mirrorSiteId)
 if os.path.exists(initFlagFile):
     print("init start begin")
-    proc = createInitOrUpdateProc(initExec, dataDir, True)
+    proc = InitOrUpdateProc(initExec, dataDir, debugFlag, True)
     mainloop.run()
-    print("init start end")
+    print("init start end, we don't delete the init-flag-file")
 else:
     print("update start begin")
-    proc = createInitOrUpdateProc(updateExec, dataDir, False)
+    proc = InitOrUpdateProc(updateExec, dataDir, debugFlag, False)
     mainloop.run()
     print("update start end")
 
+proc.dispose()
 apiServer.dispose()
 shutil.rmtree(McConst.runDir)
