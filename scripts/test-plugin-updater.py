@@ -6,6 +6,7 @@ import sys
 import imp
 import json
 import libxml2
+import subprocess
 from datetime import datetime
 from gi.repository import GLib
 sys.path.append("/usr/lib64/mirrors")
@@ -13,51 +14,6 @@ from mc_util import McUtil
 from mc_util import DynObject
 from mc_param import McConst
 from mc_plugin import McPublicMirrorDatabase
-
-
-def _progress_changed(runtime, progress):
-    print("progress %s" % (progress))
-    if progress == 100 and runtime == "glib-mainloop":
-        mainloop.quit()
-
-
-def _error_occured(runtime, exc_info):
-    print("error %s" % (str(exc_info)))
-    if runtime == "glib-mainloop":
-        mainloop.quit()
-
-
-def _error_occured_and_hold_for(runtime, seconds, exc_info):
-    print("error_and_hold_for %d %s" % (seconds, str(exc_info)))
-    if runtime == "glib-mainloop":
-        mainloop.quit()
-
-
-def createInitOrUpdateApi(db, dataDir, runtime, bInitOrUpdate):
-    api = DynObject()
-    api.get_country = lambda: "CN"
-    api.get_location = lambda: None
-    api.get_data_dir = lambda: dataDir
-    api.get_log_dir = lambda: McConst.logDir
-    api.get_public_mirror_database = lambda: db
-    if not bInitOrUpdate:
-        schedDatetime = datetime.now()
-        api.get_sched_datetime = lambda: schedDatetime
-    api.progress_changed = lambda progress: _progress_changed(runtime, progress)
-    api.error_occured = lambda exc_info: _error_occured(runtime, exc_info)
-    api.error_occured_and_hold_for = lambda seconds, exc_info: _error_occured_and_hold_for(runtime, seconds, exc_info)
-    return api
-
-
-def loadPublicMirrorDatabase(path, publicMirrorDatabaseId):
-    metadata_file = os.path.join(path, "metadata.xml")
-    root = libxml2.parseFile(metadata_file).getRootElement()
-
-    # create McPublicMirrorDatabase objects
-    for child in root.xpathEval(".//public-mirror-database"):
-        if child.prop("id") == publicMirrorDatabaseId:
-            return McPublicMirrorDatabase.createFromPlugin(path, child)
-    return None
 
 
 def loadInitializerAndUpdater(path, mirrorSiteId):
@@ -78,40 +34,60 @@ def loadInitializerAndUpdater(path, mirrorSiteId):
                 break
     assert msRoot is not None
 
-    # load dataDir
+    # load elements
     dataDir = os.path.join(McConst.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
+    initExec = msRoot.xpathEval(".//initializer")[0].xpathEval(".//executable")[0].getContent()
+    updateExec = msRoot.xpathEval(".//updater")[0].xpathEval(".//executable")[0].getContent()
 
-    # load initializer
-    initializerRuntime = None
-    initializerObj = None
-    if True:
-        elem = msRoot.xpathEval(".//initializer")[0]
+    return dataDir, initExec, updateExec
 
-        initializerRuntime = "glib-mainloop"
-        if len(elem.xpathEval(".//runtime")) > 0:
-            initializerRuntime = elem.xpathEval(".//runtime")[0].getContent()
-            assert initializerRuntime in ["glib-mainloop", "thread", "process"]
 
-        filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
-        classname = elem.xpathEval(".//classname")[0].getContent()
-        initializerObj = McUtil.loadObject(filename, classname)
+def createInitOrUpdateProc(execFile, dataDir, bInitOrUpdate):
+    cmd = [
+        execFile, 
+        dataDir,
+        McConst.logDir,
+        "CN",
+        "",
+    ]
+    if not bInitOrUpdate:
+        cmd.append(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"))
+    return subprocess.Popen(cmd)
 
-    # load updater
-    updaterRuntime = None
-    updaterObj = None
-    if True:
-        elem = msRoot.xpathEval(".//updater")[0]
 
-        runtime = "glib-mainloop"
-        if len(elem.xpathEval(".//runtime")) > 0:
-            runtime = elem.xpathEval(".//runtime")[0].getContent()
-            assert runtime in ["glib-mainloop", "thread", "process"]
+class ApiServer(UnixDomainSocketApiServer):
 
-        filename = os.path.join(pluginDir, elem.xpathEval(".//filename")[0].getContent())
-        classname = elem.xpathEval(".//classname")[0].getContent()
-        updaterObj = McUtil.loadObject(filename, classname)
+    def __init__(self, mirrorSiteId):
+        self.mirrorSiteId = mirrorSiteId
+        super().__init__(McConst.apiServerFile, self._clientInitFunc, self._clientNoitfyFunc)
 
-    return dataDir, initializerRuntime, initializerObj, updaterRuntime, updaterObj
+    def _clientInitFunc(self, sock):
+        pid = None
+        if True:
+            pattern = "=iii"
+            length = struct.calcsize(pattern)
+            ret = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, length)
+            pid, uid, gid = struct.unpack(pattern, ret)
+
+        for mirrorId, obj in self.updaterDict.items():
+            if obj.proc is not None and obj.proc.pid == pid:
+                return mirrorId
+        return None
+
+    def _clientNoitfyFunc(self, mirrorId, data):
+        if data["message"] == "progress":
+            progress = data["data"]["progress"]
+            print("progress %s" % (progress))
+            if progress == 100:
+                mainloop.quit()
+        elif data["message"] == "error":
+            print("error %s" % (data["data"]["exc_info"]))
+            mainloop.quit()
+        elif data["message"] == "error-and-hold-for":
+            print("error_and_hold_for %d %s" % (data["data"]["seconds"], data["data"]["exc_info"]))
+            mainloop.quit()
+        else:
+            assert False
 
 
 if len(sys.argv) < 3:
@@ -122,8 +98,7 @@ pluginDir = sys.argv[1]
 mirrorSiteId = sys.argv[2]
 
 mainloop = GLib.MainLoop()
-db = loadPublicMirrorDatabase(pluginDir, mirrorSiteId)
-dataDir, initRuntime, initerObj, updaterRuntime, updaterObj = loadInitializerAndUpdater(pluginDir, mirrorSiteId)
+dataDir, initExec, updateExec = loadInitializerAndUpdater(pluginDir, mirrorSiteId)
 initFlagFile = dataDir + ".uninitialized"
 
 if not os.path.exists(dataDir):
@@ -132,29 +107,11 @@ if not os.path.exists(dataDir):
 
 if os.path.exists(initFlagFile):
     print("init start begin")
-    api = createInitOrUpdateApi(db, dataDir, initRuntime, True)
-    if initRuntime == "glib-mainloop":
-        initerObj.start(api)
-    elif initRuntime == "thread":
-        api.is_stopped = lambda: False
-        initerObj.run(api)
-    elif initRuntime == "process":
-        initerObj.run(api)
-    else:
-        assert False
+    proc = createInitOrUpdateProc(initExec, updateExec, True)
     print("init start end")
 else:
     print("update start begin")
-    api = createInitOrUpdateApi(db, dataDir, updaterRuntime, False)
-    if updaterRuntime == "glib-mainloop":
-        updaterObj.start(api)
-    elif updaterRuntime == "thread":
-        api.is_stopped = lambda: False
-        updaterObj.run(api)
-    elif updaterRuntime == "process":
-        updaterObj.run(api)
-    else:
-        assert False
+    proc = createInitOrUpdateProc(initExec, updateExec, False)
     print("update start end")
 
 mainloop.run()
