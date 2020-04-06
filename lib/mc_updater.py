@@ -43,7 +43,7 @@ class McMirrorSiteUpdater:
             # create updater object
             self.updaterDict[ms.id] = _OneMirrorSiteUpdater(self, ms)
 
-        self.apiServer = McMirrorSiteUpdaterApiServer(self)
+        self.apiServer = _ApiServer(self)
 
     def dispose(self):
         self.apiServer.dispose()
@@ -279,7 +279,7 @@ class _OneMirrorSiteUpdater:
         return False
 
 
-class McMirrorSiteUpdaterApiServer(UnixDomainSocketApiServer):
+class _ApiServer(UnixDomainSocketApiServer):
 
     def __init__(self, parent):
         self.updaterDict = parent.updaterDict
