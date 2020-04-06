@@ -47,6 +47,7 @@ def createInitOrUpdateProc(execFile, dataDir, bInitOrUpdate):
         execFile,
         dataDir,
         McConst.logDir,
+        "1",               # set debug flag
         "CN",
         "",
     ]
@@ -102,12 +103,13 @@ if not os.path.exists(dataDir):
 if os.path.exists(initFlagFile):
     print("init start begin")
     proc = createInitOrUpdateProc(initExec, dataDir, True)
+    mainloop.run()
     print("init start end")
 else:
     print("update start begin")
     proc = createInitOrUpdateProc(updateExec, dataDir, False)
+    mainloop.run()
     print("update start end")
 
-mainloop.run()
 apiServer.dispose()
 shutil.rmtree(McConst.runDir)

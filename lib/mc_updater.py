@@ -265,6 +265,7 @@ class _OneMirrorSiteUpdater:
         if True:
             cmd += [
                 McConst.logDir,                                                                     # argument: log-directory
+                "0",                                                                                # argument: debug-flag
                 "CN",                                                                               # argument: country
                 "",                                                                                 # argument: location
             ]
