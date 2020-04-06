@@ -3,17 +3,17 @@
 
 import os
 import sys
-import imp
-import json
+import struct
+import socket
+import shutil
 import libxml2
 import subprocess
 from datetime import datetime
 from gi.repository import GLib
 sys.path.append("/usr/lib64/mirrors")
 from mc_util import McUtil
-from mc_util import DynObject
+from mc_util import UnixDomainSocketApiServer
 from mc_param import McConst
-from mc_plugin import McPublicMirrorDatabase
 
 
 def loadInitializerAndUpdater(path, mirrorSiteId):
@@ -36,15 +36,15 @@ def loadInitializerAndUpdater(path, mirrorSiteId):
 
     # load elements
     dataDir = os.path.join(McConst.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
-    initExec = msRoot.xpathEval(".//initializer")[0].xpathEval(".//executable")[0].getContent()
-    updateExec = msRoot.xpathEval(".//updater")[0].xpathEval(".//executable")[0].getContent()
+    initExec = os.path.join(path, msRoot.xpathEval(".//initializer")[0].xpathEval(".//executable")[0].getContent())
+    updateExec = os.path.join(path, msRoot.xpathEval(".//updater")[0].xpathEval(".//executable")[0].getContent())
 
     return dataDir, initExec, updateExec
 
 
 def createInitOrUpdateProc(execFile, dataDir, bInitOrUpdate):
     cmd = [
-        execFile, 
+        execFile,
         dataDir,
         McConst.logDir,
         "CN",
@@ -62,17 +62,7 @@ class ApiServer(UnixDomainSocketApiServer):
         super().__init__(McConst.apiServerFile, self._clientInitFunc, self._clientNoitfyFunc)
 
     def _clientInitFunc(self, sock):
-        pid = None
-        if True:
-            pattern = "=iii"
-            length = struct.calcsize(pattern)
-            ret = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, length)
-            pid, uid, gid = struct.unpack(pattern, ret)
-
-        for mirrorId, obj in self.updaterDict.items():
-            if obj.proc is not None and obj.proc.pid == pid:
-                return mirrorId
-        return None
+        return self.mirrorSiteId
 
     def _clientNoitfyFunc(self, mirrorId, data):
         if data["message"] == "progress":
@@ -97,9 +87,13 @@ if len(sys.argv) < 3:
 pluginDir = sys.argv[1]
 mirrorSiteId = sys.argv[2]
 
+apiServer = None
 mainloop = GLib.MainLoop()
 dataDir, initExec, updateExec = loadInitializerAndUpdater(pluginDir, mirrorSiteId)
 initFlagFile = dataDir + ".uninitialized"
+
+McUtil.mkDirAndClear(McConst.runDir)
+apiServer = ApiServer(mirrorSiteId)
 
 if not os.path.exists(dataDir):
     os.makedirs(dataDir)
@@ -107,11 +101,13 @@ if not os.path.exists(dataDir):
 
 if os.path.exists(initFlagFile):
     print("init start begin")
-    proc = createInitOrUpdateProc(initExec, updateExec, True)
+    proc = createInitOrUpdateProc(initExec, dataDir, True)
     print("init start end")
 else:
     print("update start begin")
-    proc = createInitOrUpdateProc(initExec, updateExec, False)
+    proc = createInitOrUpdateProc(updateExec, dataDir, False)
     print("update start end")
 
 mainloop.run()
+apiServer.dispose()
+shutil.rmtree(McConst.runDir)
