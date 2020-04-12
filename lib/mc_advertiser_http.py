@@ -111,7 +111,7 @@ class McHttpServer:
                     port = self.param.advertiser.httpServer.port
                     portStandard = self.param.advertiser.httpServer.portStandard
                     ret[msId]["protocol"]["http"] = {
-                        "url": "http://{IP}%s/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                        "url": "http://{IP}%s/m/%s" % (":%d" % (port) if port != portStandard else "", msId)
                     }
                     # port = self.param.advertiser.httpServer.portHttps
                     # portStandard = self.param.advertiser.httpServer.portHttpsStandard
