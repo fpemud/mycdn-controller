@@ -73,6 +73,13 @@ class McMirrorSite:
         self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
         self.dataDir = os.path.join(McConst.cacheDir, self.dataDir)
 
+        # availablity mode
+        self.availablityMode = "initialized"
+        if True:
+            slist = rootElem.xpathEval(".//availablity")
+            if len(slist) > 0 and len(slist[0].xpathEval(".//always")) > 0:
+                self.availMode = "always"
+
         # initializer
         self.initializerExe = None
         if True:

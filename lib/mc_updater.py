@@ -47,7 +47,7 @@ class McMirrorSiteUpdater:
 
     def dispose(self):
         self.apiServer.dispose()
-        for msId, updater in self.updaterDict.items():
+        for updater in self.updaterDict.values():
             if updater.status == self.MIRROR_SITE_UPDATE_STATUS_INITING:
                 updater.initStop()
             elif updater.status == self.MIRROR_SITE_UPDATE_STATUS_SYNCING:

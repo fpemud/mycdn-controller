@@ -24,7 +24,7 @@
             <tbody>
                 {% for ms in mirror_site_list %}
                     <tr class="odd">
-                        {% if ms.is_initialized %}
+                        {% if ms.available %}
                             <td><span>ms.id</span></td>
                             <td>N/A</td>
                         {% else %}

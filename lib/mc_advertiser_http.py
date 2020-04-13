@@ -95,8 +95,11 @@ class McHttpServer:
     def __getMirrorSiteDict(self):
         ret = dict()
         for msId, msObj in self.param.mirrorSiteDict.items():
+            bAvail = True
+            if msObj.availablityMode == "initialized":
+                bAvail = self.param.updater.isMirrorSiteInitialized(msId)
             ret[msId] = {
-                "is_initialized": self.param.updater.isMirrorSiteInitialized(msId),
+                "available": bAvail,
                 "update_status": self.param.updater.getMirrorSiteUpdateStatus(msId),
                 "update_progress": -1,
                 "last_update_time": "",
