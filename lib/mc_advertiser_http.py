@@ -95,9 +95,13 @@ class McHttpServer:
     def __getMirrorSiteDict(self):
         ret = dict()
         for msId, msObj in self.param.mirrorSiteDict.items():
-            bAvail = True
-            if msObj.availablityMode == "initialized":
+            if msObj.availablityMode == "always":
+                bAvail = True
+            elif msObj.availablityMode == "initialized":
                 bAvail = self.param.updater.isMirrorSiteInitialized(msId)
+            else:
+                assert False
+
             ret[msId] = {
                 "available": bAvail,
                 "update_status": self.param.updater.getMirrorSiteUpdateStatus(msId),
@@ -109,6 +113,7 @@ class McHttpServer:
                 },
                 "protocol": {},
             }
+
             for proto in msObj.advertiseProtocolList:
                 if proto == "http":
                     port = self.param.advertiser.httpServer.port
@@ -138,6 +143,7 @@ class McHttpServer:
                     continue
                 if proto == "git-http":
                     assert False
+
         return ret
 
 
