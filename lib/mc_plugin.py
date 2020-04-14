@@ -78,7 +78,7 @@ class McMirrorSite:
         if True:
             slist = rootElem.xpathEval(".//availablity")
             if len(slist) > 0 and len(slist[0].xpathEval(".//always")) > 0:
-                self.availMode = "always"
+                self.availablityMode = "always"
 
         # initializer
         self.initializerExe = None
