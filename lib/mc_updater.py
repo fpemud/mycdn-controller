@@ -2,6 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import json
 import struct
 import socket
 import logging
@@ -101,7 +102,7 @@ class _OneMirrorSiteUpdater:
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
             self.progress = 0
-            self.proc = self.__createInitOrUpdateProc()
+            self.proc = self._createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
@@ -167,7 +168,7 @@ class _OneMirrorSiteUpdater:
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
             self.progress = 0
-            self.proc = self.__createInitOrUpdateProc(schedDatetime)
+            self.proc = self._createInitOrUpdateProc(schedDatetime)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
@@ -240,7 +241,7 @@ class _OneMirrorSiteUpdater:
         self.progress = -1
         self.status = status
 
-    def __createInitOrUpdateProc(self, schedDatetime=None):
+    def _createInitOrUpdateProc(self, schedDatetime=None):
         cmd = []
 
         # executable
@@ -249,19 +250,17 @@ class _OneMirrorSiteUpdater:
         else:
             cmd.append(self.mirrorSite.updaterExe)
 
-        # argument: data-directory
-        cmd.append(self.mirrorSite.dataDir)
-
-        # arguments for advanced usage
+        # argument
         if True:
-            cmd += [
-                McConst.logDir,                                                                     # argument: log-directory
-                "0",                                                                                # argument: debug-flag
-                "CN",                                                                               # argument: country
-                "",                                                                                 # argument: location
-            ]
+            args = {
+                "data-directory": self.mirrorSite.dataDir,
+                "debug-flag": "",
+                "country": "CN",
+                "location": "",
+            }
             if schedDatetime is not None:
-                cmd.append(datetime.strftime(schedDatetime, "%Y-%m-%d %H:%M"))                      # argument: schedule-datetime
+                args["sched-datetime"] = datetime.strftime(schedDatetime, "%Y-%m-%d %H:%M")
+        cmd.append(json.dumps(args))
 
         return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
