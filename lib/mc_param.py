@@ -14,6 +14,9 @@ class McConst:
     logDir = "/var/log/mirrors"
     tmpDir = "/tmp/mirrors"             # FIXME
 
+    updaterLogFileSize = 10 * 1024 * 1024
+    updaterLogFileCount = 2
+
     apiServerFile = os.path.join(runDir, "api.socket")
 
     avahiSupport = True

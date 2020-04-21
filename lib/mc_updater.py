@@ -9,6 +9,7 @@ import subprocess
 from datetime import datetime
 from gi.repository import GLib
 from mc_util import McUtil
+from mc_util import RotatingFile
 from mc_util import GLibIdleInvoker
 from mc_util import GLibCronScheduler
 from mc_util import UnixDomainSocketApiServer
@@ -103,7 +104,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self.__createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
-            self.logger = self.__createLogger()
+            self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
             self.holdFor = None
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
@@ -169,7 +170,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self.__createInitOrUpdateProc(schedDatetime)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
-            self.logger = self.__createLogger()
+            self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
             self.holdFor = None
             logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, tstr))
@@ -224,7 +225,7 @@ class _OneMirrorSiteUpdater:
         self.holdFor = None
         self.excInfo = None
         if self.logger is not None:
-            self.__disposeLogger(self.logger)
+            self.logger.close()
             self.logger = None
         if self.stdoutWatch is not None:
             GLib.source_remove(self.stdoutWatch)
@@ -263,27 +264,6 @@ class _OneMirrorSiteUpdater:
                 cmd.append(datetime.strftime(schedDatetime, "%Y-%m-%d %H:%M"))                      # argument: schedule-datetime
 
         return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    def __createLogger(self):
-        # create log directory if neccessary
-        McUtil.ensureDir(McConst.logDir)
-
-        # create rotating handler
-        handler = logging.handlers.RotatingFileHandler(filename=os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)),
-                                                       maxBytes=10*1024*1024,
-                                                       backupCount=2)
-        handler.terminator = ""
-
-        # create logger
-        logger = logging.getLogger("updater.%s" % (self.mirrorSite.id))
-        logger.propagate = False
-        logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)      # logs all messages
-
-        return logger
-
-    def __disposeLogger(self, logger):
-        logging.shutdown(handlerList=logger.handlers)
 
     def _reInitCallback(self):
         del self.reInitHandler

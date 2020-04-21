@@ -760,3 +760,73 @@ class AvahiServiceRegister:
         self._retryRegisterServiceTimer = None
         self._registerService()                 # no exception in self._registerService()
         return False
+
+
+class RotatingFile:
+    """
+    By default, the file grows indefinitely. You can specify particular
+    values of maxBytes and backupCount to allow the file to rollover at
+    a predetermined size.
+    Rollover occurs whenever the current file is nearly maxBytes in
+    length. File length never reachs maxBytes unless the current line of
+    data exceeds maxBytes.
+    If backupCount is >= 1, the system will successively create
+    new files with the same pathname as the base file, but with extensions
+    ".1", ".2" etc. appended to it. For example, with a backupCount of 5
+    and a base file name of "app.log", you would get "app.log",
+    "app.log.1", "app.log.2", ... through to "app.log.5". The file being
+    written to is always "app.log" - when it gets filled up, it is closed
+    and renamed to "app.log.1", and if files "app.log.1", "app.log.2" etc.
+    exist, then they are renamed to "app.log.2", "app.log.3" etc.
+    respectively.
+    """
+
+    def __init__(self, filename, maxBytes, backupCount):
+        assert maxBytes > 0 and backupCount > 0
+        self.baseFilename = filename
+        self.maxBytes = maxBytes
+        self.backupCount = backupCount
+        self.f = open(self.baseFilename, "a")
+
+    def write(self, s):
+        assert self.f is not None
+        while s != "":
+            # process one line at a time
+            try:
+                i = s.index("\n")
+                sCur = s[:i+1]
+                s = s[i+1:]
+            except ValueError:
+                sCur = s
+                s = ""
+
+            # do roll over
+            if self.f.tell() > 0 and self.f.tell() + len(sCur) >= self.maxBytes:
+                self._doRollover()
+
+            # write line
+            self.f.write(sCur)
+
+    def close(self):
+        assert self.f is not None
+        self.f.close()
+        self.f = None
+
+    def _doRollover(self):
+        self.f.close()
+        self.f = None
+
+        for i in range(self.backupCount - 1, 0, -1):
+            sfn = "%s.%d" % (self.baseFilename, i)
+            dfn = "%s.%d" % (self.baseFilename, i + 1)
+            if os.path.exists(sfn):
+                if os.path.exists(dfn):
+                    os.remove(dfn)
+                os.rename(sfn, dfn)
+
+        dfn = self.baseFilename + ".1"
+        if os.path.exists(dfn):
+            os.remove(dfn)
+        os.rename(self.baseFilename, dfn)
+
+        self.f = open(self.baseFilename, "a")
