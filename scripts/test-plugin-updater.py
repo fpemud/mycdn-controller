@@ -46,13 +46,11 @@ def loadInitializerAndUpdater(path, mirrorSiteId):
 class InitOrUpdateProc:
 
     def __init__(self, execFile, dataDir, debugFlag, bInitOrUpdate):
-        assert debugFlag in ["0", "1"]
-
         cmd = [execFile]
 
         args = {
             "data-directory": dataDir,
-            "debug-flag": "show-ui",
+            "debug-flag": debugFlag,
             "country": "CN",
             "location": "",
         }
@@ -107,10 +105,8 @@ pluginDir = sys.argv[1]
 mirrorSiteId = sys.argv[2]
 if len(sys.argv) >= 4:
     debugFlag = sys.argv[3]
-    if debugFlag not in ["0", "1"]:
-        raise Exception("debug-flag must be 0 or 1")
 else:
-    debugFlag = "0"
+    debugFlag = ""
 
 apiServer = None
 proc = None
