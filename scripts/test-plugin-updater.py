@@ -3,6 +3,7 @@
 
 import os
 import sys
+import json
 import struct
 import socket
 import shutil
@@ -47,18 +48,19 @@ class InitOrUpdateProc:
     def __init__(self, execFile, dataDir, debugFlag, bInitOrUpdate):
         assert debugFlag in ["0", "1"]
 
-        cmd = [
-            execFile,
-            dataDir,
-            McConst.logDir,
-            debugFlag,
-            "CN",
-            "",
-        ]
-        if not bInitOrUpdate:
-            cmd.append(datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"))
+        cmd = [execFile]
 
-        self.proc = subprocess.Popen(cmd)
+        args = {
+            "data-directory": dataDir,
+            "debug-flag": "show-ui",
+            "country": "CN",
+            "location": "",
+        }
+        if not bInitOrUpdate:
+            args["sched-datetime"] = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M")
+        cmd.append(json.dumps(args))
+
+        self.proc = subprocess.Popen(cmd, universal_newlines=True)
         self.pidWatch = GLib.child_watch_add(self.proc.pid, self._exitCallback)
 
     def dispose(self):

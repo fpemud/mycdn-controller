@@ -220,7 +220,7 @@ class _OneMirrorSiteUpdater:
                 logging.error("Mirror site \"%s\" updates failed, hold for %d seconds." % (self.mirrorSite.id, holdFor), exc_info=excInfo)
 
     def stdoutCallback(self, source, cb_condition):
-        self.logger.info(source.read())
+        self.logger.write(source.read())
 
     def _clearVars(self, status):
         self.holdFor = None
@@ -262,7 +262,7 @@ class _OneMirrorSiteUpdater:
                 args["sched-datetime"] = datetime.strftime(schedDatetime, "%Y-%m-%d %H:%M")
         cmd.append(json.dumps(args))
 
-        return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
 
     def _reInitCallback(self):
         del self.reInitHandler
