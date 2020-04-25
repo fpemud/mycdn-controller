@@ -456,7 +456,7 @@ class GLibCronScheduler:
 class UnixDomainSocketApiServer:
 
     def __init__(self, serverFile, clientInitFunc, notifyFunc):
-        self.flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL
+        self.flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP
 
         self.clientInitFunc = clientInitFunc
         self.notifyFunc = notifyFunc
@@ -502,8 +502,6 @@ class UnixDomainSocketApiServer:
             print("IO_ERR")
         if (cb_condition & GLib.IO_HUP):
             print("IO_HUP")
-        if (cb_condition & GLib.IO_NVAL):
-            print("IO_NVAL")
 
         obj = self.clientInfoDict[source]
 
