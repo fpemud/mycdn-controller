@@ -104,7 +104,7 @@ class _OneMirrorSiteUpdater:
             self.progress = 0
             self.proc = self._createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
-            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
+            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | GLib.IO_HUP, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
             self.holdFor = None
@@ -170,7 +170,7 @@ class _OneMirrorSiteUpdater:
             self.progress = 0
             self.proc = self._createInitOrUpdateProc(schedDatetime)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
-            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
+            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | GLib.IO_HUP, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
             self.holdFor = None
@@ -220,7 +220,11 @@ class _OneMirrorSiteUpdater:
                 logging.error("Mirror site \"%s\" updates failed, hold for %d seconds." % (self.mirrorSite.id, holdFor), exc_info=excInfo)
 
     def stdoutCallback(self, source, cb_condition):
-        self.logger.write(source.read())
+        if (cb_condition & GLib.IO_IN):
+            self.logger.write(source.read())
+        if (cb_condition & GLib.IO_HUP):
+            print("debug-xxxx")
+            self.stdoutWatch = None
 
     def _clearVars(self, status):
         self.holdFor = None
