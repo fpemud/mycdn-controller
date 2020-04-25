@@ -233,8 +233,7 @@ class _OneMirrorSiteUpdater:
             print(ret)
             print("debug-xxxx-2")
         if (cb_condition & GLib.IO_HUP):
-            print("debug-yyyy, %d" % (source.fileno()))
-            self.stdoutWatch = None                         # it seems io_watch for pipe is auto destroyed when pipe is hang-up
+            self.stdoutWatch = None                         # it seems io_watch for pipe would be auto destroyed when pipe hangs up
 
     def _clearVars(self, status):
         self.holdFor = None
@@ -278,7 +277,7 @@ class _OneMirrorSiteUpdater:
 
         # create process
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, bufsize=0)
-        fcntl.fcntl(proc.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+        fcntl.fcntl(proc.stdout.fileno(), fcntl.F_SETFL, fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL) | os.O_NONBLOCK)
         return proc
 
     def _reInitCallback(self):
