@@ -104,7 +104,7 @@ class _OneMirrorSiteUpdater:
             self.progress = 0
             self.proc = self._createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
-            print("pidWatch %d" % (self.pidWatch))
+            print("pidWatch %d" % (self.proc.pid))
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | GLib.IO_HUP, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
@@ -171,7 +171,7 @@ class _OneMirrorSiteUpdater:
             self.progress = 0
             self.proc = self._createInitOrUpdateProc(schedDatetime)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
-            print("pidWatch %d" % (self.pidWatch))
+            print("pidWatch %d" % (self.proc.pid))
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | GLib.IO_HUP, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
