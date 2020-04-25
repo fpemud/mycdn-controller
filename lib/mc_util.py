@@ -456,15 +456,13 @@ class GLibCronScheduler:
 class UnixDomainSocketApiServer:
 
     def __init__(self, serverFile, clientInitFunc, notifyFunc):
-        self.flagError = GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP
-
         self.clientInitFunc = clientInitFunc
         self.notifyFunc = notifyFunc
 
         self.serverSock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.serverSock.bind(serverFile)
         self.serverSock.listen(5)
-        self.serverSourceId = GLib.io_add_watch(self.serverSock, GLib.IO_IN | self.flagError, self.onServerAccept)
+        self.serverSourceId = GLib.io_add_watch(self.serverSock, GLib.IO_IN, self.onServerAccept)
 
         self.clientInfoDict = dict()
 
@@ -475,13 +473,12 @@ class UnixDomainSocketApiServer:
         self.serverSock.close()
 
     def onServerAccept(self, source, cb_condition):
-        assert not (cb_condition & self.flagError)
         try:
             new_sock, addr = source.accept()
             data = self.clientInitFunc(new_sock)
             if data is not None:
                 obj = DynObject()
-                obj.inWatch = GLib.io_add_watch(new_sock, GLib.IO_IN | self.flagError, self.onRecv)
+                obj.inWatch = GLib.io_add_watch(new_sock, GLib.IO_IN, self.onRecv)
                 obj.recvBuf = b''
                 obj.clientData = data
                 self.clientInfoDict[new_sock] = obj
@@ -494,15 +491,6 @@ class UnixDomainSocketApiServer:
             return True
 
     def onRecv(self, source, cb_condition):
-        if (cb_condition & GLib.IO_IN):
-            print("IO_IN")
-        if (cb_condition & GLib.IO_PRI):
-            print("IO_PRI")
-        if (cb_condition & GLib.IO_ERR):
-            print("IO_ERR")
-        if (cb_condition & GLib.IO_HUP):
-            print("IO_HUP")
-
         obj = self.clientInfoDict[source]
 
         # receive from socket
