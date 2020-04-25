@@ -106,6 +106,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self._createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
             print("pidWatch %d" % (self.proc.pid))
+            print("pidWatch %d" % (self.proc.stdout.fileno()))
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | GLib.IO_HUP, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
@@ -173,6 +174,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self._createInitOrUpdateProc(schedDatetime)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
             print("pidWatch %d" % (self.proc.pid))
+            print("pidWatch %d" % (self.proc.stdout.fileno()))
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | GLib.IO_HUP, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
@@ -224,11 +226,11 @@ class _OneMirrorSiteUpdater:
 
     def stdoutCallback(self, source, cb_condition):
         if (cb_condition & GLib.IO_IN):
-            print("debug-xxxx")
+            print("debug-xxxx, %d" % (source.fileno()))
             self.logger.write(source.read())
             print("debug-xxxx-2")
         if (cb_condition & GLib.IO_HUP):
-            print("debug-yyyy")
+            print("debug-yyyy, %d" % (source.fileno()))
             self.stdoutWatch = None
 
     def _clearVars(self, status):
