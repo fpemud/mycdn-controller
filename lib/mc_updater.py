@@ -262,7 +262,7 @@ class _OneMirrorSiteUpdater:
                 args["sched-datetime"] = datetime.strftime(schedDatetime, "%Y-%m-%d %H:%M")
         cmd.append(json.dumps(args))
 
-        return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, bufsize=0)
 
     def _reInitCallback(self):
         del self.reInitHandler
