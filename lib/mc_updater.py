@@ -3,6 +3,7 @@
 
 import os
 import json
+import fcntl
 import struct
 import socket
 import logging
@@ -225,6 +226,7 @@ class _OneMirrorSiteUpdater:
         if (cb_condition & GLib.IO_IN):
             print("debug-xxxx")
             self.logger.write(source.read())
+            print("debug-xxxx-2")
         if (cb_condition & GLib.IO_HUP):
             print("debug-yyyy")
             self.stdoutWatch = None
@@ -269,7 +271,10 @@ class _OneMirrorSiteUpdater:
                 args["sched-datetime"] = datetime.strftime(schedDatetime, "%Y-%m-%d %H:%M")
         cmd.append(json.dumps(args))
 
-        return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, bufsize=0)
+        # create process
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, bufsize=0)
+        fcntl.fcntl(proc.stdout.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
+        return proc
 
     def _reInitCallback(self):
         del self.reInitHandler
