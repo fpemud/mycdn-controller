@@ -494,6 +494,17 @@ class UnixDomainSocketApiServer:
             return True
 
     def onRecv(self, source, cb_condition):
+        if (cb_condition & GLib.IO_IN):
+            print("IO_IN")
+        if (cb_condition & GLib.IO_PRI):
+            print("IO_PRI")
+        if (cb_condition & GLib.IO_ERR):
+            print("IO_ERR")
+        if (cb_condition & GLib.IO_HUP):
+            print("IO_HUP")
+        if (cb_condition & GLib.IO_NVAL):
+            print("IO_NVAL")
+
         obj = self.clientInfoDict[source]
 
         # receive from socket
