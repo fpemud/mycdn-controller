@@ -227,11 +227,14 @@ class _OneMirrorSiteUpdater:
     def stdoutCallback(self, source, cb_condition):
         if (cb_condition & GLib.IO_IN):
             print("debug-xxxx, %d" % (source.fileno()))
-            self.logger.write(source.read())
+            # self.logger.write(source.read())
+            ret = source.read()
+            self.logger.write(ret)
+            print(ret)
             print("debug-xxxx-2")
         if (cb_condition & GLib.IO_HUP):
             print("debug-yyyy, %d" % (source.fileno()))
-            self.stdoutWatch = None
+            self.stdoutWatch = None                         # it seems io_watch for pipe is auto destroyed when pipe is hang-up
 
     def _clearVars(self, status):
         self.holdFor = None
