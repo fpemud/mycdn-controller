@@ -105,8 +105,6 @@ class _OneMirrorSiteUpdater:
             self.progress = 0
             self.proc = self._createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
-            print("pidWatch %d" % (self.proc.pid))
-            print("pidWatch %d" % (self.proc.stdout.fileno()))
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
@@ -151,13 +149,12 @@ class _OneMirrorSiteUpdater:
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         else:
             holdFor = self.holdFor
-            excInfo = (None, None, None)       # FIXME
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL)
             if holdFor is None:
-                logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL), exc_info=excInfo)
+                logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL))
                 self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
             else:
-                logging.error("Mirror site \"%s\" initialization failed, hold for %d seconds before re-initialization." % (self.mirrorSite.id, holdFor), exc_info=excInfo)
+                logging.error("Mirror site \"%s\" initialization failed, hold for %d seconds before re-initialization." % (self.mirrorSite.id, holdFor))
                 self.reInitHandler = GLib.timeout_add_seconds(holdFor, self._reInitCallback)
 
     def updateStart(self, schedDatetime):
@@ -173,8 +170,6 @@ class _OneMirrorSiteUpdater:
             self.progress = 0
             self.proc = self._createInitOrUpdateProc(schedDatetime)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
-            print("pidWatch %d" % (self.proc.pid))
-            print("pidWatch %d" % (self.proc.stdout.fileno()))
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
@@ -216,22 +211,18 @@ class _OneMirrorSiteUpdater:
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         else:
             holdFor = self.holdFor
-            excInfo = (None, None, None)       # FIXME
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL)
             if holdFor is None:
-                logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info=excInfo)
+                logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id))
             else:
                 self.scheduler.pauseJob(self.mirrorSite.id, datetime.now() + datetime.timedelta(seconds=holdFor))
-                logging.error("Mirror site \"%s\" updates failed, hold for %d seconds." % (self.mirrorSite.id, holdFor), exc_info=excInfo)
+                logging.error("Mirror site \"%s\" updates failed, hold for %d seconds." % (self.mirrorSite.id, holdFor))
 
     def stdoutCallback(self, source, cb_condition):
-        print("debug-xxxx, %d" % (source.fileno()))
-        # self.logger.write(source.read())
-        ret = source.read()
-        self.logger.write(ret)
-        print(ret)
-        print("debug-xxxx-2")
-        return True
+        try:
+            self.logger.write(source.read())
+        finally:
+            return True
 
     def _clearVars(self, status):
         self.holdFor = None
