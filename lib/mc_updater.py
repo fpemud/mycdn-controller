@@ -107,7 +107,7 @@ class _OneMirrorSiteUpdater:
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
             print("pidWatch %d" % (self.proc.pid))
             print("pidWatch %d" % (self.proc.stdout.fileno()))
-            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | GLib.IO_HUP, self.stdoutCallback)
+            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
             self.holdFor = None
@@ -175,7 +175,7 @@ class _OneMirrorSiteUpdater:
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
             print("pidWatch %d" % (self.proc.pid))
             print("pidWatch %d" % (self.proc.stdout.fileno()))
-            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN | GLib.IO_HUP, self.stdoutCallback)
+            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
             self.holdFor = None
@@ -225,15 +225,13 @@ class _OneMirrorSiteUpdater:
                 logging.error("Mirror site \"%s\" updates failed, hold for %d seconds." % (self.mirrorSite.id, holdFor), exc_info=excInfo)
 
     def stdoutCallback(self, source, cb_condition):
-        if (cb_condition & GLib.IO_IN):
-            print("debug-xxxx, %d" % (source.fileno()))
-            # self.logger.write(source.read())
-            ret = source.read()
-            self.logger.write(ret)
-            print(ret)
-            print("debug-xxxx-2")
-        if (cb_condition & GLib.IO_HUP):
-            self.stdoutWatch = None                         # it seems io_watch for pipe would be auto destroyed when pipe hangs up
+        print("debug-xxxx, %d" % (source.fileno()))
+        # self.logger.write(source.read())
+        ret = source.read()
+        self.logger.write(ret)
+        print(ret)
+        print("debug-xxxx-2")
+        return True
 
     def _clearVars(self, status):
         self.holdFor = None
