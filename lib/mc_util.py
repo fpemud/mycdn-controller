@@ -500,10 +500,10 @@ class UnixDomainSocketApiServer:
             buf = source.recv(4096)
             if len(buf) == 0:
                 print("buf0 IO_IN, %d" % (cb_condition & GLib.IO_IN))
-                print("buf0 IO_PRI, %d" % (cb_condition & GLib.IO_IN))
-                print("buf0 IO_ERR, %d" % (cb_condition & GLib.IO_IN))
-                print("buf0 IO_HUP, %d" % (cb_condition & GLib.IO_IN))
-                print("buf0 IO_NVAL, %d" % (cb_condition & GLib.IO_IN))
+                print("buf0 IO_PRI, %d" % (cb_condition & GLib.IO_PRI))
+                print("buf0 IO_ERR, %d" % (cb_condition & GLib.IO_ERR))
+                print("buf0 IO_HUP, %d" % (cb_condition & GLib.IO_HUP))
+                print("buf0 IO_NVAL, %d" % (cb_condition & GLib.IO_NVAL))
                 logging.debug("UnixSocketApiServer.onRecv: Client \"%s\" disconnected." % ("XX"))
                 source.close()
                 del self.clientInfoDict[source]
@@ -522,10 +522,10 @@ class UnixDomainSocketApiServer:
             return True
         except Exception as e:
             print("excp IO_IN, %d" % (cb_condition & GLib.IO_IN))
-            print("excp IO_PRI, %d" % (cb_condition & GLib.IO_IN))
-            print("excp IO_ERR, %d" % (cb_condition & GLib.IO_IN))
-            print("excp IO_HUP, %d" % (cb_condition & GLib.IO_IN))
-            print("excp IO_NVAL, %d" % (cb_condition & GLib.IO_IN))
+            print("excp IO_PRI, %d" % (cb_condition & GLib.IO_PRI))
+            print("excp IO_ERR, %d" % (cb_condition & GLib.IO_ERR))
+            print("excp IO_HUP, %d" % (cb_condition & GLib.IO_HUP))
+            print("excp IO_NVAL, %d" % (cb_condition & GLib.IO_NVAL))
             logging.debug("UnixSocketApiServer.onRecv: Failed, %s, %s", e.__class__, e)
             # source.close(), FIXME
             del self.clientInfoDict[source]
