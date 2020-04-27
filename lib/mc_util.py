@@ -496,21 +496,8 @@ class UnixDomainSocketApiServer:
         try:
             obj = self.clientInfoDict[source]
 
-            # receive from socket
-            buf = source.recv(4096)
-            if len(buf) == 0:
-                print("buf0 IO_IN, %d" % (cb_condition & GLib.IO_IN))
-                print("buf0 IO_PRI, %d" % (cb_condition & GLib.IO_PRI))
-                print("buf0 IO_ERR, %d" % (cb_condition & GLib.IO_ERR))
-                print("buf0 IO_HUP, %d" % (cb_condition & GLib.IO_HUP))
-                print("buf0 IO_NVAL, %d" % (cb_condition & GLib.IO_NVAL))
-                logging.debug("UnixSocketApiServer.onRecv: Client \"%s\" disconnected." % ("XX"))
-                source.close()
-                del self.clientInfoDict[source]
-                return False
-            obj.recvBuf += buf
-
-            # parse received json object
+            # receive and parse
+            obj.recvBuf += source.recv(4096)
             while True:
                 i = obj.recvBuf.find(b'\n')
                 if i < 0:
@@ -518,6 +505,10 @@ class UnixDomainSocketApiServer:
                 jsonObj = json.loads(obj.recvBuf[:i].decode("utf-8"))
                 obj.recvBuf = obj.recvBuf[i + 1:]
                 self.notifyFunc(obj.clientData, jsonObj)
+
+            # remote closed
+            if (cb_condition & GLib.IO_HUP):
+                raise Exception("remove closed")
 
             return True
         except Exception as e:
@@ -527,7 +518,7 @@ class UnixDomainSocketApiServer:
             print("excp IO_HUP, %d" % (cb_condition & GLib.IO_HUP))
             print("excp IO_NVAL, %d" % (cb_condition & GLib.IO_NVAL))
             logging.debug("UnixSocketApiServer.onRecv: Failed, %s, %s", e.__class__, e)
-            # source.close(), FIXME
+            source.close()
             del self.clientInfoDict[source]
             return False
 
