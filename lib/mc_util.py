@@ -783,7 +783,7 @@ class RotatingFile:
         self.baseFilename = filename
         self.maxBytes = maxBytes
         self.backupCount = backupCount
-        self.f = open(self.baseFilename, "ab")
+        self.f = open(self.baseFilename, "ab", buffering=0)
 
     def write(self, s):
         assert self.f is not None
