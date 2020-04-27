@@ -478,10 +478,9 @@ class UnixDomainSocketApiServer:
             new_sock, addr = source.accept()
             try:
                 data = self.clientInitFunc(new_sock)
-            except Exception as e:
-                new_sock.close()
-                logging.debug("UnixSocketApiServer.onServerAccept: Reject socket, %s, %s", e.__class__, e)
-                return True
+            except Exception:
+                # exception should be recorded in self.clientInitFunc()
+                raise
             obj = DynObject()
             obj.inWatch = GLib.io_add_watch(new_sock, GLib.IO_IN | GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL, self.onRecv)
             obj.recvBuf = b''
@@ -490,6 +489,7 @@ class UnixDomainSocketApiServer:
             return True
         except Exception as e:
             logging.debug("UnixSocketApiServer.onServerAccept: Failed, %s, %s", e.__class__, e)
+            new_sock.close()
             return True
 
     def onRecv(self, source, cb_condition):
@@ -504,7 +504,11 @@ class UnixDomainSocketApiServer:
                     break
                 jsonObj = json.loads(obj.recvBuf[:i].decode("utf-8"))
                 obj.recvBuf = obj.recvBuf[i + 1:]
-                self.notifyFunc(obj.clientData, jsonObj)
+                try:
+                    self.notifyFunc(obj.clientData, jsonObj)
+                except Exception:
+                    # exception should be recorded in self.notifyFunc()
+                    raise
 
             # remote closed
             if (cb_condition & GLib.IO_HUP):
