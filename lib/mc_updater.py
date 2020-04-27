@@ -292,7 +292,8 @@ class _ApiServer(UnixDomainSocketApiServer):
         for mirrorId, obj in self.updaterDict.items():
             if obj.proc is not None and obj.proc.pid == pid:
                 return mirrorId
-        return None
+
+        raise Exception("client not found")
 
     def _clientNoitfyFunc(self, mirrorId, data):
         obj = self.updaterDict[mirrorId]
@@ -304,7 +305,7 @@ class _ApiServer(UnixDomainSocketApiServer):
             elif data["message"] == "error-and-hold-for":
                 obj.initErrorAndHoldForCallback(data["data"]["seconds"], data["data"]["exc_info"])
             else:
-                assert False
+                raise Exception("message type not supported")
         elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
             if data["message"] == "progress":
                 obj.updateProgressCallback(data["data"]["progress"])
@@ -313,9 +314,9 @@ class _ApiServer(UnixDomainSocketApiServer):
             elif data["message"] == "error-and-hold-for":
                 obj.updateErrorAndHoldForCallback(data["seconds"], data["data"]["exc_info"])
             else:
-                assert False
+                raise Exception("message type not supported")
         else:
-            assert False
+            raise Exception("invalid status")
 
 
 def _initFlagFile(mirrorSite):

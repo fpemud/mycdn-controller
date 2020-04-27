@@ -467,7 +467,8 @@ class UnixDomainSocketApiServer:
         self.clientInfoDict = dict()
 
     def dispose(self):
-        for sock in self.clientInfoDict.keys():
+        for sock, obj in self.clientInfoDict.items():
+            GLib.source_remove(obj.inWatch)
             sock.close()
         GLib.source_remove(self.serverSourceId)
         self.serverSock.close()
@@ -475,45 +476,60 @@ class UnixDomainSocketApiServer:
     def onServerAccept(self, source, cb_condition):
         try:
             new_sock, addr = source.accept()
-            data = self.clientInitFunc(new_sock)
-            if data is not None:
-                obj = DynObject()
-                obj.inWatch = GLib.io_add_watch(new_sock, GLib.IO_IN, self.onRecv)
-                obj.recvBuf = b''
-                obj.clientData = data
-                self.clientInfoDict[new_sock] = obj
-            else:
+            try:
+                data = self.clientInitFunc(new_sock)
+            except Exception as e:
                 new_sock.close()
-                logging.debug("UnixSocketApiServer.onServerAccept: Reject socket")
+                logging.debug("UnixSocketApiServer.onServerAccept: Reject socket, %s, %s", e.__class__, e)
+                return True
+            obj = DynObject()
+            obj.inWatch = GLib.io_add_watch(new_sock, GLib.IO_IN | GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL, self.onRecv)
+            obj.recvBuf = b''
+            obj.clientData = data
+            self.clientInfoDict[new_sock] = obj
             return True
-        except socket.error as e:
+        except Exception as e:
             logging.debug("UnixSocketApiServer.onServerAccept: Failed, %s, %s", e.__class__, e)
             return True
 
     def onRecv(self, source, cb_condition):
-        obj = self.clientInfoDict[source]
-
-        # receive from socket
         try:
+            obj = self.clientInfoDict[source]
+
+            # receive from socket
             buf = source.recv(4096)
             if len(buf) == 0:
+                print("buf0 IO_IN, %d" % (cb_condition & GLib.IO_IN))
+                print("buf0 IO_PRI, %d" % (cb_condition & GLib.IO_IN))
+                print("buf0 IO_ERR, %d" % (cb_condition & GLib.IO_IN))
+                print("buf0 IO_HUP, %d" % (cb_condition & GLib.IO_IN))
+                print("buf0 IO_NVAL, %d" % (cb_condition & GLib.IO_IN))
                 logging.debug("UnixSocketApiServer.onRecv: Client \"%s\" disconnected." % ("XX"))
-                return
+                source.close()
+                del self.clientInfoDict[source]
+                return False
             obj.recvBuf += buf
-        except socket.error as e:
+
+            # parse received json object
+            while True:
+                i = obj.recvBuf.find(b'\n')
+                if i < 0:
+                    break
+                jsonObj = json.loads(obj.recvBuf[:i].decode("utf-8"))
+                obj.recvBuf = obj.recvBuf[i + 1:]
+                self.notifyFunc(obj.clientData, jsonObj)
+
+            return True
+        except Exception as e:
+            print("excp IO_IN, %d" % (cb_condition & GLib.IO_IN))
+            print("excp IO_PRI, %d" % (cb_condition & GLib.IO_IN))
+            print("excp IO_ERR, %d" % (cb_condition & GLib.IO_IN))
+            print("excp IO_HUP, %d" % (cb_condition & GLib.IO_IN))
+            print("excp IO_NVAL, %d" % (cb_condition & GLib.IO_IN))
             logging.debug("UnixSocketApiServer.onRecv: Failed, %s, %s", e.__class__, e)
-            raise
-
-        # parse received json object
-        while True:
-            i = obj.recvBuf.find(b'\n')
-            if i < 0:
-                break
-            jsonObj = json.loads(obj.recvBuf[:i].decode("utf-8"))
-            obj.recvBuf = obj.recvBuf[i + 1:]
-            self.notifyFunc(obj.clientData, jsonObj)
-
-        return True
+            # source.close(), FIXME
+            del self.clientInfoDict[source]
+            return False
 
 
 class AsyncIteratorExecuter:
