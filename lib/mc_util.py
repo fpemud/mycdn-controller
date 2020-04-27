@@ -783,19 +783,19 @@ class RotatingFile:
         self.baseFilename = filename
         self.maxBytes = maxBytes
         self.backupCount = backupCount
-        self.f = open(self.baseFilename, "a")
+        self.f = open(self.baseFilename, "ab")
 
     def write(self, s):
         assert self.f is not None
-        while s != "":
+        while s != b'':
             # process one line at a time
             try:
-                i = s.index("\n")
+                i = s.index(b'\n')
                 sCur = s[:i+1]
                 s = s[i+1:]
             except ValueError:
                 sCur = s
-                s = ""
+                s = b''
 
             # do roll over
             if self.f.tell() > 0 and self.f.tell() + len(sCur) >= self.maxBytes:
