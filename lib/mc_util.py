@@ -13,6 +13,7 @@ import shutil
 import random
 import socket
 import logging
+import traceback
 import ipaddress
 import subprocess
 import multiprocessing
@@ -474,23 +475,24 @@ class UnixDomainSocketApiServer:
         self.serverSock.close()
 
     def onServerAccept(self, source, cb_condition):
+        # event callback, no exception is allowed
+
+        new_sock, addr = source.accept()
+
         try:
-            new_sock, addr = source.accept()
-            try:
-                data = self.clientInitFunc(new_sock)
-            except Exception:
-                # exception should be recorded in self.clientInitFunc()
-                raise
-            obj = DynObject()
-            obj.inWatch = GLib.io_add_watch(new_sock, GLib.IO_IN | GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL, self.onRecv)
-            obj.recvBuf = b''
-            obj.clientData = data
-            self.clientInfoDict[new_sock] = obj
-            return True
-        except Exception as e:
-            logging.debug("UnixSocketApiServer.onServerAccept: Failed, %s, %s", e.__class__, e)
+            data = self.clientInitFunc(new_sock)
+        except Exception:
+            # absorb exception raised by upper layer function
+            traceback.print_exc()
             new_sock.close()
             return True
+
+        obj = DynObject()
+        obj.inWatch = GLib.io_add_watch(new_sock, GLib.IO_IN | GLib.IO_PRI | GLib.IO_ERR | GLib.IO_HUP | GLib.IO_NVAL, self.onRecv)
+        obj.recvBuf = b''
+        obj.clientData = data
+        self.clientInfoDict[new_sock] = obj
+        return True
 
     def onRecv(self, source, cb_condition):
         try:
@@ -507,7 +509,7 @@ class UnixDomainSocketApiServer:
                 try:
                     self.notifyFunc(obj.clientData, jsonObj)
                 except Exception:
-                    # exception should be recorded in self.notifyFunc()
+                    # absorb exception raised by upper layer function, FIXME
                     raise
 
             # remote closed
@@ -516,7 +518,7 @@ class UnixDomainSocketApiServer:
 
             return True
         except Exception as e:
-            print("excp IO_IN, %d" % (cb_condition & GLib.IO_IN))
+            print("excp IO_IN, %d" % (cb_condition & GLib.IO_IN))               # FIXME
             print("excp IO_PRI, %d" % (cb_condition & GLib.IO_PRI))
             print("excp IO_ERR, %d" % (cb_condition & GLib.IO_ERR))
             print("excp IO_HUP, %d" % (cb_condition & GLib.IO_HUP))
