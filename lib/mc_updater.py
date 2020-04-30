@@ -141,7 +141,13 @@ class _OneMirrorSiteUpdater:
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
         self.proc = None
 
-        if status == 0:
+        try:
+            GLib.spawn_check_exit_status(status)
+            bSuccess = True
+        except GLib.GError:
+            bSuccess = False
+
+        if bSuccess:
             McUtil.forceDelete(_initFlagFile(self.mirrorSite))
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
@@ -205,7 +211,13 @@ class _OneMirrorSiteUpdater:
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
         self.proc = None
 
-        if status == 0:
+        try:
+            GLib.spawn_check_exit_status(status)
+            bSuccess = True
+        except GLib.GError:
+            bSuccess = False
+
+        if bSuccess:
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
