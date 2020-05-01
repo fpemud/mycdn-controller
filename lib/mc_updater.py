@@ -119,10 +119,13 @@ class _OneMirrorSiteUpdater:
 
     def initProgressCallback(self, progress):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
-        assert 0 <= progress <= 100 and progress >= self.progress
         if progress > self.progress:
             self.progress = progress
             logging.info("Mirror site \"%s\" initialization progress %d%%." % (self.mirrorSite.id, self.progress))
+        elif progress == self.progress:
+            pass
+        else:
+            raise Exception("invalid progress")
 
     def initErrorCallback(self, exc_info):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
@@ -189,10 +192,13 @@ class _OneMirrorSiteUpdater:
 
     def updateProgressCallback(self, progress):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
-        assert 0 <= progress <= 100 and progress >= self.progress
         if progress > self.progress:
             self.progress = progress
             logging.info("Mirror site \"%s\" update progress %d%%." % (self.mirrorSite.id, self.progress))
+        elif progress == self.progress:
+            pass
+        else:
+            raise Exception("invalid progress")
 
     def updateErrorCallback(self, exc_info):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
