@@ -510,6 +510,8 @@ class UnixDomainSocketApiServer:
                     self.notifyFunc(obj.clientData, jsonObj)
                 except Exception:
                     # absorb exception raised by upper layer function, FIXME
+                    print("upper layer exception")
+                    traceback.print_exc()
                     raise
 
             # remote closed
@@ -517,13 +519,13 @@ class UnixDomainSocketApiServer:
                 raise Exception("remove closed")
 
             return True
-        except Exception as e:
+        except Exception:
             print("excp IO_IN, %d" % (cb_condition & GLib.IO_IN))               # FIXME
             print("excp IO_PRI, %d" % (cb_condition & GLib.IO_PRI))
             print("excp IO_ERR, %d" % (cb_condition & GLib.IO_ERR))
             print("excp IO_HUP, %d" % (cb_condition & GLib.IO_HUP))
             print("excp IO_NVAL, %d" % (cb_condition & GLib.IO_NVAL))
-            logging.debug("UnixSocketApiServer.onRecv: Failed, %s, %s", e.__class__, e)
+            traceback.print_exc()
             source.close()
             del self.clientInfoDict[source]
             return False
