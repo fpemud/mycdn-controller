@@ -4,8 +4,6 @@
 import os
 import json
 import fcntl
-import struct
-import socket
 import logging
 import subprocess
 from datetime import datetime
@@ -294,41 +292,63 @@ class _ApiServer(UnixDomainSocketApiServer):
         super().__init__(McConst.apiServerFile, self._clientInitFunc, self._clientNoitfyFunc)
 
     def _clientInitFunc(self, sock):
-        pid = None
-        if True:
-            pattern = "=iii"
-            length = struct.calcsize(pattern)
-            ret = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, length)
-            pid, uid, gid = struct.unpack(pattern, ret)
-
+        pid = McUtil.getUnixDomainSocketPeerInfo(sock)[0]
         for mirrorId, obj in self.updaterDict.items():
             if obj.proc is not None and obj.proc.pid == pid:
                 return mirrorId
-
         raise Exception("client not found")
 
     def _clientNoitfyFunc(self, mirrorId, data):
         obj = self.updaterDict[mirrorId]
-        if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
-            if data["message"] == "progress":
+
+        if "message" not in data:
+            raise Exception("\"message\" field does not exist in notification")
+        if "data" not in data:
+            raise Exception("\"data\" field does not exist in notification")
+
+        if data["message"] == "progress":
+            if "progress" not in data["data"]:
+                raise Exception("\"data.progress\" field does not exist in notification")
+            if not isinstance(data["data"]["progress"], int):
+                raise Exception("\"data.progress\" field is not of type number")
+
+            if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
                 obj.initProgressCallback(data["data"]["progress"])
-            elif data["message"] == "error":
-                obj.initErrorCallback(data["data"]["exc_info"])
-            elif data["message"] == "error-and-hold-for":
-                obj.initErrorAndHoldForCallback(data["data"]["seconds"], data["data"]["exc_info"])
-            else:
-                raise Exception("message type not supported")
-        elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
-            if data["message"] == "progress":
+            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
                 obj.updateProgressCallback(data["data"]["progress"])
-            elif data["message"] == "error":
-                obj.updateErrorCallback(data["data"]["exc_info"])
-            elif data["message"] == "error-and-hold-for":
-                obj.updateErrorAndHoldForCallback(data["seconds"], data["data"]["exc_info"])
             else:
-                raise Exception("message type not supported")
-        else:
-            raise Exception("invalid status")
+                assert False
+            return
+
+        if data["message"] == "error":
+            if "exc_info" not in data["data"]:
+                raise Exception("\"data.exc_info\" field does not exist in notification")
+
+            if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
+                obj.initErrorCallback(data["data"]["exc_info"])
+            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
+                obj.updateErrorCallback(data["data"]["exc_info"])
+            else:
+                assert False
+            return
+
+        if data["message"] == "error-and-hold-for":
+            if "seconds" not in data["data"]:
+                raise Exception("\"data.seconds\" field does not exist in notification")
+            if not isinstance(data["data"]["seconds"], int):
+                raise Exception("\"data.seconds\" field is not of type number")
+            if "exc_info" not in data["data"]:
+                raise Exception("\"data.exc_info\" field does not exist in notification")
+
+            if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
+                obj.initErrorAndHoldForCallback(data["data"]["seconds"], data["data"]["exc_info"])
+            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
+                obj.updateErrorAndHoldForCallback(data["data"]["seconds"], data["data"]["exc_info"])
+            else:
+                assert False
+            return
+
+        raise Exception("message type is not supported")
 
 
 def _initFlagFile(mirrorSite):
