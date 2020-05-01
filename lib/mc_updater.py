@@ -310,7 +310,9 @@ class _ApiServer(UnixDomainSocketApiServer):
             if "progress" not in data["data"]:
                 raise Exception("\"data.progress\" field does not exist in notification")
             if not isinstance(data["data"]["progress"], int):
-                raise Exception("\"data.progress\" field is not of type number")
+                raise Exception("\"data.progress\" field does not contain an integer value")
+            if not (0 <= data["data"]["progress"] <= 100):
+                raise Exception("\"data.progress\" must be in range [0,100]")
 
             if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
                 obj.initProgressCallback(data["data"]["progress"])
@@ -336,7 +338,9 @@ class _ApiServer(UnixDomainSocketApiServer):
             if "seconds" not in data["data"]:
                 raise Exception("\"data.seconds\" field does not exist in notification")
             if not isinstance(data["data"]["seconds"], int):
-                raise Exception("\"data.seconds\" field is not of type number")
+                raise Exception("\"data.seconds\" field does not contain an integer value")
+            if data["data"]["seconds"] <= 0:
+                raise Exception("\"data.seconds\" must be greater than 0")
             if "exc_info" not in data["data"]:
                 raise Exception("\"data.exc_info\" field does not exist in notification")
 
