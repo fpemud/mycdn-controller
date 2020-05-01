@@ -262,6 +262,10 @@ class _OneMirrorSiteUpdater:
     def _createInitOrUpdateProc(self, schedDatetime=None):
         cmd = []
 
+        # create log directory
+        logDir = os.path.join(McConst.logDir, self.mirrorSite.id)
+        McUtil.ensureDir(logDir)
+
         # executable
         if schedDatetime is None:
             cmd.append(self.mirrorSite.initializerExe)
@@ -272,6 +276,7 @@ class _OneMirrorSiteUpdater:
         if True:
             args = {
                 "data-directory": self.mirrorSite.dataDir,
+                "log-directory": logDir,
                 "debug-flag": "",
                 "country": "CN",
                 "location": "",
