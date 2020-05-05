@@ -45,11 +45,16 @@ def loadInitializerAndUpdater(path, mirrorSiteId):
 
 class InitOrUpdateProc:
 
-    def __init__(self, execFile, dataDir, debugFlag, bInitOrUpdate):
+    def __init__(self, mirrorSiteId, execFile, dataDir, debugFlag, bInitOrUpdate):
         cmd = [execFile]
+
+        # create log directory
+        logDir = os.path.join(McConst.logDir, mirrorSiteId)
+        McUtil.ensureDir(logDir)
 
         args = {
             "data-directory": dataDir,
+            "log-directory": logDir,
             "debug-flag": debugFlag,
             "country": "CN",
             "location": "",
@@ -123,12 +128,12 @@ if not os.path.exists(dataDir):
 apiServer = ApiServer(mirrorSiteId)
 if os.path.exists(initFlagFile):
     print("init start begin")
-    proc = InitOrUpdateProc(initExec, dataDir, debugFlag, True)
+    proc = InitOrUpdateProc(mirrorSiteId, initExec, dataDir, debugFlag, True)
     mainloop.run()
     print("init start end, we don't delete the init-flag-file")
 else:
     print("update start begin")
-    proc = InitOrUpdateProc(updateExec, dataDir, debugFlag, False)
+    proc = InitOrUpdateProc(mirrorSiteId, updateExec, dataDir, debugFlag, False)
     mainloop.run()
     print("update start end")
 
