@@ -524,7 +524,7 @@ class UnixDomainSocketApiServer:
 
             # remote closed
             if (cb_condition & GLib.IO_HUP):
-                raise Exception("remove closed")
+                raise Exception("remote closed")
 
             return True
         except Exception:
