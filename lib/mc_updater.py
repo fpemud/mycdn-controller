@@ -146,6 +146,7 @@ class _OneMirrorSiteUpdater:
             GLib.spawn_check_exit_status(status)
             bSuccess = True
         except GLib.GError:
+            print(status)
             bSuccess = False
 
         if bSuccess:
@@ -219,6 +220,7 @@ class _OneMirrorSiteUpdater:
             GLib.spawn_check_exit_status(status)
             bSuccess = True
         except GLib.GError:
+            print(status)
             bSuccess = False
 
         if bSuccess:
@@ -363,7 +365,7 @@ class _ApiServer(UnixDomainSocketApiServer):
                 assert False
             return
 
-        raise Exception("message type is not supported")
+        raise Exception("message type \"%s\" is not supported" % (data["message"]))
 
 
 def _initFlagFile(mirrorSite):
