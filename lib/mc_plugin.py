@@ -2,6 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import json
 import libxml2
 from mc_param import McConst
 
@@ -19,9 +20,14 @@ class McPluginManager:
             pluginPath = os.path.join(McConst.pluginsDir, pluginName)
             if not os.path.isdir(pluginPath):
                 raise Exception("Invalid configuration file %s" % (fn))
-            self._load(pluginName, pluginPath)
+            pluginCfg = dict()
+            with open(fn, "r") as f:
+                buf = f.read()
+                if buf != "":
+                    pluginCfg = json.loads(buf)
+            self._load(pluginName, pluginPath, pluginCfg)
 
-    def _load(self, name, path):
+    def _load(self, name, path, cfgDict):
         # get metadata.xml file
         metadata_file = os.path.join(path, "metadata.xml")
         if not os.path.exists(metadata_file):
@@ -50,13 +56,13 @@ class McPluginManager:
 
         # create McMirrorSite objects
         for child in root.xpathEval(".//file-mirror"):
-            obj = McMirrorSite(self.param, path, child)
+            obj = McMirrorSite(self.param, path, child, cfgDict)
             assert obj.id not in self.param.mirrorSiteDict
             self.param.mirrorSiteDict[obj.id] = obj
 
         # create McMirrorSite objects, use file-mirror and git-mirror as the same yet
         for child in root.xpathEval(".//git-mirror"):
-            obj = McMirrorSite(self.param, path, child)
+            obj = McMirrorSite(self.param, path, child, cfgDict)
             assert obj.id not in self.param.mirrorSiteDict
             self.param.mirrorSiteDict[obj.id] = obj
 
@@ -66,8 +72,9 @@ class McPluginManager:
 
 class McMirrorSite:
 
-    def __init__(self, param, pluginDir, rootElem):
+    def __init__(self, param, pluginDir, rootElem, cfgDict):
         self.id = rootElem.prop("id")
+        self.cfgDict = cfgDict
 
         # data directory
         self.dataDir = rootElem.xpathEval(".//data-directory")[0].getContent()
