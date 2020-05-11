@@ -21,7 +21,7 @@ class McPluginManager:
             if not os.path.isdir(pluginPath):
                 raise Exception("Invalid configuration file %s" % (fn))
             pluginCfg = dict()
-            with open(fn, "r") as f:
+            with open(os.path.join(McConst.etcDir, fn), "r") as f:
                 buf = f.read()
                 if buf != "":
                     pluginCfg = json.loads(buf)
