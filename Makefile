@@ -21,13 +21,13 @@ install:
 
 	install -d -m 0755 "$(DESTDIR)/etc/mirrors"
 
-	install -d -m 0755 "$(DESTDIR)/$(prefix)/lib/systemd/system"
-	install -m 0644 data/mirrors.service "$(DESTDIR)/$(prefix)/lib/systemd/system"
+	install -d -m 0755 "$(DESTDIR)/lib/systemd/system"
+	install -m 0644 data/mirrors.service "$(DESTDIR)/lib/systemd/system"
 
 uninstall:
-	rm -f "$(DESTDIR)/$(prefix)/sbin/mirrors"
-	rm -f "$(DESTDIR)/$(prefix)/lib/systemd/system/mirrors.service"
-	rm -rf "$(DESTDIR)/$(prefix)/lib64/mirrors"
+	rm -f "$(DESTDIR)/lib/systemd/system/mirrors.service"
 	rm -rf "$(DESTDIR)/etc/mirrors"
+	rm -rf "$(DESTDIR)/$(prefix)/lib64/mirrors"
+	rm -f "$(DESTDIR)/$(prefix)/sbin/mirrors"
 
 .PHONY: all clean install uninstall
