@@ -145,8 +145,11 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             bSuccess = True
-        except GLib.GError:
+        except GLib.Error as e:
             print(status)
+            print(e.domain)
+            print(e.message)
+            print(e.code)
             bSuccess = False
 
         if bSuccess:
@@ -219,8 +222,11 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             bSuccess = True
-        except GLib.GError:
+        except GLib.Error as e:
             print(status)
+            print(e.domain)
+            print(e.message)
+            print(e.code)
             bSuccess = False
 
         if bSuccess:
