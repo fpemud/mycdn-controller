@@ -309,9 +309,12 @@ class _ApiServer(UnixDomainSocketApiServer):
 
     def __init__(self, parent):
         self.updaterDict = parent.updaterDict
-        super().__init__(McConst.apiServerFile, self._clientInitFunc, self._clientNoitfyFunc)
+        super().__init__(McConst.apiServerFile,
+                         self._clientAppearFunc,
+                         None,                       # we track client life-time by its process object, not by clientDisappearFunc
+                         self._clientNoitfyFunc)
 
-    def _clientInitFunc(self, sock):
+    def _clientAppearFunc(self, sock):
         pid = McUtil.getUnixDomainSocketPeerInfo(sock)[0]
         for mirrorId, obj in self.updaterDict.items():
             if obj.proc is not None and obj.proc.pid == pid:

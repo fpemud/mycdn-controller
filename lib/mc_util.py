@@ -66,8 +66,8 @@ class McUtil:
     @staticmethod
     def joinLists(lists):
         ret = []
-        for l in lists:
-            ret += l
+        for tl in lists:
+            ret += tl
         return ret
 
     @staticmethod
@@ -464,8 +464,16 @@ class GLibCronScheduler:
 
 class UnixDomainSocketApiServer:
 
-    def __init__(self, serverFile, clientInitFunc, notifyFunc):
-        self.clientInitFunc = clientInitFunc
+    def __init__(self, serverFile, clientAppearFunc, clientDisappearFunc, notifyFunc):
+        # Parameter clientAppearFunc is called after client appears.
+        # Parameter clientDisappearFunc is called after we find client disappears and before we destroy the client object.
+        # Parameter clientDisappearFunc can be None.
+
+        assert serverFile is not None
+        assert clientAppearFunc is not None and notifyFunc is not None
+
+        self.clientAppearFunc = clientAppearFunc
+        self.clientDisappearFunc = clientDisappearFunc
         self.notifyFunc = notifyFunc
 
         self.serverSock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -488,7 +496,7 @@ class UnixDomainSocketApiServer:
         new_sock, addr = source.accept()
 
         try:
-            data = self.clientInitFunc(new_sock)
+            data = self.clientAppearFunc(new_sock)
         except Exception:
             # absorb exception raised by upper layer function
             traceback.print_exc()
@@ -534,8 +542,10 @@ class UnixDomainSocketApiServer:
             print("excp IO_HUP, %d" % (cb_condition & GLib.IO_HUP))
             print("excp IO_NVAL, %d" % (cb_condition & GLib.IO_NVAL))
             traceback.print_exc()
-            source.close()
+            if self.clientDisappearFunc is not None:
+                self.clientDisappearFunc(self.clientInfoDict[source].clientData)
             del self.clientInfoDict[source]
+            source.close()
             return False
 
 
