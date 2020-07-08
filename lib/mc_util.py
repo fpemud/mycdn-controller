@@ -59,9 +59,7 @@ class McUtil:
 
     @staticmethod
     def splitToTuple(s, delimiter):
-        t = s.split(delimiter)
-        assert len(t) == 2
-        return (t[0], t[1])
+        return tuple(s.split(delimiter))
 
     @staticmethod
     def joinLists(lists):

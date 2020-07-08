@@ -58,7 +58,7 @@ class _Util:
     @staticmethod
     def shellCall(cmd):
         # call command with shell to execute backstage job
-        # scenarios are the same as FmUtil.cmdCall
+        # scenarios are the same as McUtil.cmdCall
 
         ret = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                              shell=True, universal_newlines=True)

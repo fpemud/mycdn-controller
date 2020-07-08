@@ -35,13 +35,6 @@ class McMirrorSiteUpdater:
 
         self.updaterDict = dict()                                       # dict<mirror-id,updater-object>
         for ms in self.param.mirrorSiteDict.values():
-            # initialize data directory
-            fullDir = os.path.join(McConst.cacheDir, ms.dataDir)
-            if not os.path.exists(fullDir):
-                os.makedirs(fullDir)
-                McUtil.touchFile(_initFlagFile(ms))
-
-            # create updater object
             self.updaterDict[ms.id] = _OneMirrorSiteUpdater(self, ms)
 
         self.apiServer = _ApiServer(self)
@@ -75,7 +68,24 @@ class _OneMirrorSiteUpdater:
         self.scheduler = parent.scheduler
         self.mirrorSite = mirrorSite
 
-        bInit = os.path.exists(_initFlagFile(self.mirrorSite))
+        self.ctrlDir = os.path.join(self.cacheDir, self.mirrorSite.id)
+        self.initFlagFile = os.path.join(self.cacheDir, self.mirrorSite.id + ".uninitialized")
+
+        # initialize control directory
+        if not os.path.exists(self.ctrlDir):
+            os.makedirs(self.ctrlDir)
+            if self.mirrorSite.initializerExe is not None:
+                McUtil.touchFile(self.initFlagFile)
+
+        # storage object initialize
+        for sobj in self.mirrorSite.storageDict.values():
+            sobj.initialize()
+
+        bInit = True
+        if not os.path.exists(self.initFlagFile):
+            bInit = False
+        if self.mirrorSite.initializerExe is None:
+            bInit = False
 
         if bInit:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
@@ -93,7 +103,8 @@ class _OneMirrorSiteUpdater:
             self.invoker.add(self.initStart)
         else:
             self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
-            self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
+            if self.mirrorSite.schedExpr is not None:
+                self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
 
     def initStart(self):
         assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL]
@@ -153,7 +164,7 @@ class _OneMirrorSiteUpdater:
             bSuccess = False
 
         if bSuccess:
-            McUtil.forceDelete(_initFlagFile(self.mirrorSite))
+            McUtil.forceDelete(self.initFlagFile)
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
@@ -283,7 +294,7 @@ class _OneMirrorSiteUpdater:
         # argument
         if True:
             args = {
-                "data-directory": self.mirrorSite.dataDir,
+                "data-directory": self.ctrlDir,
                 "log-directory": logDir,
                 "config": self.mirrorSite.cfgDict,
                 "debug-flag": "",
@@ -376,7 +387,3 @@ class _ApiServer(UnixDomainSocketApiServer):
             return
 
         raise Exception("message type \"%s\" is not supported" % (data["message"]))
-
-
-def _initFlagFile(mirrorSite):
-    return os.path.join(McConst.cacheDir, mirrorSite.dataDir + ".uninitialized")
