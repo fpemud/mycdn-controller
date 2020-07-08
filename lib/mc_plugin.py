@@ -135,6 +135,7 @@ class McMirrorSite:
 class McMirrorSiteStorageFile:
 
     def __init__(self, parent):
+        self.parent = parent
         self._varDir = os.path.join(McConst.varDir, self.parent.id, "file")
         self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "file")
         self._aproto = []

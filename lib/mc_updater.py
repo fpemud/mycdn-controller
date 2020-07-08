@@ -68,8 +68,8 @@ class _OneMirrorSiteUpdater:
         self.scheduler = parent.scheduler
         self.mirrorSite = mirrorSite
 
-        self.ctrlDir = os.path.join(self.cacheDir, self.mirrorSite.id)
-        self.initFlagFile = os.path.join(self.cacheDir, self.mirrorSite.id + ".uninitialized")
+        self.ctrlDir = os.path.join(McConst.cacheDir, self.mirrorSite.id)
+        self.initFlagFile = os.path.join(McConst.cacheDir, self.mirrorSite.id + ".uninitialized")
 
         # initialize control directory
         if not os.path.exists(self.ctrlDir):
