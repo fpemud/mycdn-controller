@@ -24,19 +24,14 @@ def loadInitializerAndUpdater(path, mirrorSiteId):
 
     # find mirror site
     if msRoot is None:
-        for child in root.xpathEval(".//file-mirror"):
-            if child.prop("id") == mirrorSiteId:
-                msRoot = child
-                break
-    if msRoot is None:
-        for child in root.xpathEval(".//git-mirror"):
+        for child in root.xpathEval(".//mirror-site"):
             if child.prop("id") == mirrorSiteId:
                 msRoot = child
                 break
     assert msRoot is not None
 
     # load elements
-    dataDir = os.path.join(McConst.cacheDir, child.xpathEval(".//data-directory")[0].getContent())
+    dataDir = os.path.join(McConst.cacheDir, mirrorSiteId)
     initExec = os.path.join(path, msRoot.xpathEval(".//initializer")[0].xpathEval(".//executable")[0].getContent())
     updateExec = os.path.join(path, msRoot.xpathEval(".//updater")[0].xpathEval(".//executable")[0].getContent())
 
@@ -53,6 +48,7 @@ class InitOrUpdateProc:
         McUtil.ensureDir(logDir)
 
         args = {
+            "id": mirrorSiteId,
             "data-directory": dataDir,
             "log-directory": logDir,
             "debug-flag": debugFlag,
