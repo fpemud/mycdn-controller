@@ -3,7 +3,7 @@
   <public-mirror-database id="pypi">
     <json-file type="extended">db-extended.json</json-file>
   </public-mirror-database>
-  <file-mirror id="pypi">
+  <mirror-site id="pypi">
     <name>PyPI</name>
     <data-directory>pypi</data-directory>
     <updater>
@@ -14,5 +14,5 @@
       <protocol>http</protocol>
       <protocol>ftp</protocol>
     </advertiser>
-  </file-mirror>
+  </mirror-site>
 </plugin>

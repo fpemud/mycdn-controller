@@ -61,18 +61,6 @@ class McPluginManager:
             assert obj.id not in self.param.mirrorSiteDict
             self.param.mirrorSiteDict[obj.id] = obj
 
-        # deprecated: create McMirrorSite objects
-        for child in root.xpathEval(".//file-mirror"):
-            obj = McMirrorSite(self.param, path, child, cfgDict)
-            assert obj.id not in self.param.mirrorSiteDict
-            self.param.mirrorSiteDict[obj.id] = obj
-
-        # deprecated: create McMirrorSite objects, use file-mirror and git-mirror as the same yet
-        for child in root.xpathEval(".//git-mirror"):
-            obj = McMirrorSite(self.param, path, child, cfgDict)
-            assert obj.id not in self.param.mirrorSiteDict
-            self.param.mirrorSiteDict[obj.id] = obj
-
         # record plugin id
         self.param.pluginList.append(root.prop("id"))
 
