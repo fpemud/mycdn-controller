@@ -43,12 +43,19 @@ class InitOrUpdateProc:
     def __init__(self, mirrorSiteId, execFile, dataDir, debugFlag, bInitOrUpdate):
         cmd = [execFile]
 
+        # read config
+        cgfFile = os.path.join(McConst.etcDir, mirrorSiteId + ".conf")
+        cfg = dict()
+        if os.path.exists(cfgFile):
+            json.loads(cfgFile)
+
         # create log directory
         logDir = os.path.join(McConst.logDir, mirrorSiteId)
         McUtil.ensureDir(logDir)
 
         args = {
             "id": mirrorSiteId,
+            "config": cfg,
             "data-directory": dataDir,
             "log-directory": logDir,
             "debug-flag": debugFlag,
