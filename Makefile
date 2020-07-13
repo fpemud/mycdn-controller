@@ -26,7 +26,6 @@ install:
 
 uninstall:
 	rm -f "$(DESTDIR)/lib/systemd/system/mirrors.service"
-	rm -rf "$(DESTDIR)/etc/mirrors"
 	rm -rf "$(DESTDIR)/$(prefix)/lib64/mirrors"
 	rm -f "$(DESTDIR)/$(prefix)/sbin/mirrors"
 
