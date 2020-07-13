@@ -44,7 +44,7 @@ class InitOrUpdateProc:
         cmd = [execFile]
 
         # read config
-        cgfFile = os.path.join(McConst.etcDir, mirrorSiteId + ".conf")
+        cfgFile = os.path.join(McConst.etcDir, mirrorSiteId + ".conf")
         cfg = dict()
         if os.path.exists(cfgFile):
             json.loads(cfgFile)
@@ -84,7 +84,7 @@ class ApiServer(UnixDomainSocketApiServer):
 
     def __init__(self, mirrorSiteId):
         self.mirrorSiteId = mirrorSiteId
-        super().__init__(McConst.apiServerFile, self._clientInitFunc, self._clientNoitfyFunc)
+        super().__init__(McConst.apiServerFile, self._clientInitFunc, None, self._clientNoitfyFunc)
 
     def _clientInitFunc(self, sock):
         return self.mirrorSiteId
