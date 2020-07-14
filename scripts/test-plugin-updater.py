@@ -40,11 +40,11 @@ def loadInitializerAndUpdater(path, mirrorSiteId):
 
 class InitOrUpdateProc:
 
-    def __init__(self, mirrorSiteId, execFile, dataDir, debugFlag, bInitOrUpdate):
+    def __init__(self, pluginId, mirrorSiteId, execFile, dataDir, debugFlag, bInitOrUpdate):
         cmd = [execFile]
 
-        # read config
-        cfgFile = os.path.join(McConst.etcDir, mirrorSiteId + ".conf")
+        # read config for current directory
+        cfgFile = pluginId + ".conf"
         cfg = dict()
         if os.path.exists(cfgFile):
             json.loads(cfgFile)
@@ -109,11 +109,9 @@ if len(sys.argv) < 3:
     print("syntax: test-plugin-updater.py <plugin-directory> <mirror-site-id> [debug-flag]")
     sys.exit(1)
 
-# trick to modify system directories
-McConst.etcDir = "."
-
 # parameters
 pluginDir = sys.argv[1]
+pluginId = os.path.basename(pluginDir)
 mirrorSiteId = sys.argv[2]
 if len(sys.argv) >= 4:
     debugFlag = sys.argv[3]
@@ -137,12 +135,12 @@ if not os.path.exists(dataDir):
 apiServer = ApiServer(mirrorSiteId)
 if os.path.exists(initFlagFile):
     print("init start begin")
-    proc = InitOrUpdateProc(mirrorSiteId, initExec, dataDir, debugFlag, True)
+    proc = InitOrUpdateProc(pluginId, mirrorSiteId, initExec, dataDir, debugFlag, True)
     mainloop.run()
     print("init start end, we don't delete the init-flag-file")
 else:
     print("update start begin")
-    proc = InitOrUpdateProc(mirrorSiteId, updateExec, dataDir, debugFlag, False)
+    proc = InitOrUpdateProc(pluginId, mirrorSiteId, updateExec, dataDir, debugFlag, False)
     mainloop.run()
     print("update start end")
 
