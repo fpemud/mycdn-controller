@@ -47,7 +47,8 @@ class InitOrUpdateProc:
         cfgFile = pluginId + ".conf"
         cfg = dict()
         if os.path.exists(cfgFile):
-            json.loads(cfgFile)
+            with open(cfgFile) as f:
+                cfg = json.load(f)
 
         # create log directory
         logDir = os.path.join(McConst.logDir, mirrorSiteId)
