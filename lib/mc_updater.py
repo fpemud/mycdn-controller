@@ -149,27 +149,25 @@ class _OneMirrorSiteUpdater:
         self.excInfo = exc_info
         self.holdFor = seconds
 
-    def initExitCallback(self, status, data):
+    def initExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
-        self.proc = None
 
+        self.proc = None
         try:
             GLib.spawn_check_exit_status(status)
-            bSuccess = True
-        except GLib.Error as e:
-            print(status)
-            print(e.domain)
-            print(e.message)
-            print(e.code)
-            bSuccess = False
-
-        if bSuccess:
+            # child process returns ok
             McUtil.forceDelete(self.initFlagFile)
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
-        else:
+        except GLib.Error as e:
+            print(status)
+            print(e.domain)
+            print(e.message)
+            print(e.code)
+
+            # child process returns failure
             holdFor = self.holdFor
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL)
             if holdFor is None:
@@ -226,25 +224,23 @@ class _OneMirrorSiteUpdater:
         self.excInfo = exc_info
         self.holdFor = seconds
 
-    def updateExitCallback(self, status, data):
+    def updateExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
-        self.proc = None
 
+        self.proc = None
         try:
             GLib.spawn_check_exit_status(status)
-            bSuccess = True
+            # child process returns ok
+            self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
+            logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
+            self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         except GLib.Error as e:
             print(status)
             print(e.domain)
             print(e.message)
             print(e.code)
-            bSuccess = False
 
-        if bSuccess:
-            self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
-            logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
-            self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
-        else:
+            # child process returns failure
             holdFor = self.holdFor
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL)
             if holdFor is None:
