@@ -109,6 +109,10 @@ if len(sys.argv) < 3:
     print("syntax: test-plugin-updater.py <plugin-directory> <mirror-site-id> [debug-flag]")
     sys.exit(1)
 
+# trick to modify system directories
+McConst.etcDir = "."
+
+# parameters
 pluginDir = sys.argv[1]
 mirrorSiteId = sys.argv[2]
 if len(sys.argv) >= 4:
@@ -116,18 +120,20 @@ if len(sys.argv) >= 4:
 else:
     debugFlag = ""
 
+# global objects
 apiServer = None
 proc = None
 mainloop = GLib.MainLoop()
 dataDir, initExec, updateExec = loadInitializerAndUpdater(pluginDir, mirrorSiteId)
 initFlagFile = dataDir + ".uninitialized"
 
+# directories
 McUtil.mkDirAndClear(McConst.runDir)
-
 if not os.path.exists(dataDir):
     os.makedirs(dataDir)
     McUtil.touchFile(initFlagFile)
 
+# do test
 apiServer = ApiServer(mirrorSiteId)
 if os.path.exists(initFlagFile):
     print("init start begin")
@@ -140,6 +146,7 @@ else:
     mainloop.run()
     print("update start end")
 
+# dispose
 proc.dispose()
 apiServer.dispose()
 shutil.rmtree(McConst.runDir)
