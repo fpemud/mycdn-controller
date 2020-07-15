@@ -233,7 +233,6 @@ class _OneMirrorSiteUpdater:
             # child process returns ok
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
-            self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         except GLib.Error as e:
             print(status)
             print(e.domain)
@@ -246,6 +245,7 @@ class _OneMirrorSiteUpdater:
             if holdFor is None:
                 logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id))
             else:
+                # is there really any effect since the period is always hours?
                 self.scheduler.pauseJob(self.mirrorSite.id, datetime.now() + datetime.timedelta(seconds=holdFor))
                 logging.error("Mirror site \"%s\" updates failed, hold for %d seconds." % (self.mirrorSite.id, holdFor))
 
