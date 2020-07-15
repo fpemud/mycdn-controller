@@ -91,7 +91,7 @@ class McMirrorSite:
         # advertiser
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//interface"):
             storageName, protocol = McUtil.splitToTuple(child.getContent(), ":")
-            self.storageDict[storageName].addAdvertiser(protocol)
+            self.advertiseProtocolList.append(protocol)
 
         # initializer
         self.initializerExe = None
@@ -126,7 +126,6 @@ class McMirrorSiteStorageFile:
         self.parent = parent
         self._varDir = os.path.join(McConst.varDir, self.parent.id, "file")
         self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "file")
-        self._aproto = []
 
     @property
     def varDir(self):
@@ -135,10 +134,6 @@ class McMirrorSiteStorageFile:
     @property
     def cacheDir(self):
         return self._cacheDir
-
-    def addAdvertiser(self, atype):
-        assert atype in ["http", "ftp", "rsync"]
-        self._aproto.append(atype)
 
     def initialize(self):
         McUtil.ensureDir(self._varDir)
