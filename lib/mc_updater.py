@@ -162,19 +162,14 @@ class _OneMirrorSiteUpdater:
             self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
             self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         except GLib.Error as e:
-            print(status)
-            print(e.domain)
-            print(e.message)
-            print(e.code)
-
             # child process returns failure
             holdFor = self.holdFor
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL)
             if holdFor is None:
-                logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL))
+                logging.error("Mirror site \"%s\" initialization failed (code: %d), re-initialize in %d seconds." % (self.mirrorSite.id, e.code, McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL))
                 self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RE_INIT_INTERVAL, self._reInitCallback)
             else:
-                logging.error("Mirror site \"%s\" initialization failed, hold for %d seconds before re-initialization." % (self.mirrorSite.id, holdFor))
+                logging.error("Mirror site \"%s\" initialization failed (code: %d), hold for %d seconds before re-initialization." % (self.mirrorSite.id, e.code, holdFor))
                 self.reInitHandler = GLib.timeout_add_seconds(holdFor, self._reInitCallback)
 
     def updateStart(self, schedDatetime):
@@ -234,20 +229,15 @@ class _OneMirrorSiteUpdater:
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
         except GLib.Error as e:
-            print(status)
-            print(e.domain)
-            print(e.message)
-            print(e.code)
-
             # child process returns failure
             holdFor = self.holdFor
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL)
             if holdFor is None:
-                logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id))
+                logging.error("Mirror site \"%s\" update failed (code: %d)." % (self.mirrorSite.id, e.code))
             else:
                 # is there really any effect since the period is always hours?
                 self.scheduler.pauseJob(self.mirrorSite.id, datetime.now() + datetime.timedelta(seconds=holdFor))
-                logging.error("Mirror site \"%s\" updates failed, hold for %d seconds." % (self.mirrorSite.id, holdFor))
+                logging.error("Mirror site \"%s\" updates failed (code: %d), hold for %d seconds." % (self.mirrorSite.id, e.code, holdFor))
 
     def stdoutCallback(self, source, cb_condition):
         try:
