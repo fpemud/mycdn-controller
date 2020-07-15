@@ -89,6 +89,7 @@ class McMirrorSite:
                 self.availablityMode = "always"
 
         # advertiser
+        self.advertiseProtocolList = []
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//interface"):
             storageName, protocol = McUtil.splitToTuple(child.getContent(), ":")
             self.advertiseProtocolList.append(protocol)
@@ -115,7 +116,6 @@ class McMirrorSite:
         self.dataDir = os.path.join(McConst.cacheDir, self.id)
 
         # deprecated
-        self.advertiseProtocolList = []
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//protocol"):
             self.advertiseProtocolList.append(child.getContent())
 
