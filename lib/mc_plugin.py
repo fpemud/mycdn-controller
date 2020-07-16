@@ -138,3 +138,8 @@ class McMirrorSiteStorageFile:
     def initialize(self):
         McUtil.ensureDir(self._varDir)
         McUtil.ensureDir(self._cacheDir)
+
+    def getParamForPlugin(self):
+        return {
+            "data-directory": self._cacheDir
+        }

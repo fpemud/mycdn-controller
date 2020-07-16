@@ -282,14 +282,19 @@ class _OneMirrorSiteUpdater:
             args = {
                 "id": self.mirrorSite.id,
                 "config": self.mirrorSite.cfgDict,
-                "data-directory": self.ctrlDir,
+                "data-directory": self.ctrlDir,         # deprecated
                 "log-directory": logDir,
                 "debug-flag": "",
                 "country": "CN",
                 "location": "",
             }
+            for storageName, storageObj in self.mirrorSite.storageDict.items():
+                args["storage-" + storageName] = storageObj.getParamForPlugin()
             if schedDatetime is not None:
+                args["run-mode"] = "update"
                 args["sched-datetime"] = datetime.strftime(schedDatetime, "%Y-%m-%d %H:%M")
+            else:
+                args["run-mode"] = "initialize"
         cmd.append(json.dumps(args))
 
         # create process
