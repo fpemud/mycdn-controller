@@ -15,11 +15,11 @@ class McAdvertiser:
     def advertiseMirrorSite(self, mirrorSiteId):
         msObj = self.param.mirrorSiteDict[mirrorSiteId]
         if "http" in msObj.advertiseProtocolList:
-            self.httpServer.addFileDir(msObj.id, msObj.dataDir)
+            self.param.httpServer.addFileDir(msObj.id, msObj.dataDir)
         if "ftp" in msObj.advertiseProtocolList:
-            self.ftpServer.addFileDir(msObj.id, msObj.dataDir)
+            self.param.ftpServer.addFileDir(msObj.id, msObj.dataDir)
         if "rsync" in msObj.advertiseProtocolList:
-            self.rsyncServer.addFileDir(msObj.id, msObj.dataDir)
+            self.param.rsyncServer.addFileDir(msObj.id, msObj.dataDir)
         if "git-http" in msObj.advertiseProtocolList:
             # http server checks mirror status on the fly
             pass
