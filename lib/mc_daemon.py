@@ -55,21 +55,23 @@ class McDaemon:
             self.param.httpServer = McHttpServer(self.param, self.param.mainloop, self.param.listenIp, self.param.httpPort, McConst.logDir)
             self.param.ftpServer = McFtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
             self.param.rsyncServer = McRsyncServer(self.param.mainloop, self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
-            for ms in self.param.mirrorSiteDict.values():
-                for proto in ms.advertiseProtocolList:
-                    if proto == "http":
-                        self.param.httpServer.use(ms.id)
-                    elif proto == "ftp":
-                        self.param.ftpServer.use(ms.id)
-                    elif proto == "rsync":
-                        self.param.rsyncServer.use(ms.id)
-                    elif proto == "git-http":
-                        self.param.httpServer.use(ms.id)
-                    else:
-                        assert False
-            # self.param.httpServer.start()
-            # self.param.ftpServer.start()
-            # self.param.rsyncServer.start()
+            if True:
+                self.param.httpServer.use("advertiser")
+                for ms in self.param.mirrorSiteDict.values():
+                    for proto in ms.advertiseProtocolList:
+                        if proto == "http":
+                            self.param.httpServer.use(ms.id)
+                        elif proto == "ftp":
+                            self.param.ftpServer.use(ms.id)
+                        elif proto == "rsync":
+                            self.param.rsyncServer.use(ms.id)
+                        elif proto == "git-http":
+                            self.param.httpServer.use(ms.id)
+                        else:
+                            assert False
+            self.param.httpServer.start()
+            self.param.ftpServer.start()
+            self.param.rsyncServer.start()
 
             # advertiser
             self.param.advertiser = McAdvertiser(self.param)
@@ -98,6 +100,15 @@ class McDaemon:
                 self.param.updater.dispose()
             if self.param.advertiser is not None:
                 self.param.advertiser.dispose()
+            if self.param.httpServer is not None:
+                self.param.httpServer.stop()
+                self.param.httpServer = None
+            if self.param.ftpServer is not None:
+                self.param.ftpServer.stop()
+                self.param.ftpServer = None
+            if self.param.rsyncServer is not None:
+                self.param.rsyncServer.stop()
+                self.param.rsyncServer = None
             logging.shutdown()
             shutil.rmtree(McConst.tmpDir)
             shutil.rmtree(McConst.runDir)
