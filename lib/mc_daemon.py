@@ -56,17 +56,17 @@ class McDaemon:
             self.param.ftpServer = McFtpServer("Advertising Server (ftp)", self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
             self.param.rsyncServer = McRsyncServer("Advertising Server (rsync)", self.param.mainloop, self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
             if True:
-                self.param.httpServer.use("advertiser")
+                self.param.httpServer.useBy("advertiser")
                 for ms in self.param.mirrorSiteDict.values():
                     for proto in ms.advertiseProtocolList:
                         if proto == "http":
-                            self.param.httpServer.use(ms.id)
+                            self.param.httpServer.useBy(ms.id)
                         elif proto == "ftp":
-                            self.param.ftpServer.use(ms.id)
+                            self.param.ftpServer.useBy(ms.id)
                         elif proto == "rsync":
-                            self.param.rsyncServer.use(ms.id)
+                            self.param.rsyncServer.useBy(ms.id)
                         elif proto == "git-http":
-                            self.param.httpServer.use(ms.id)
+                            self.param.httpServer.useBy(ms.id)
                         else:
                             assert False
             self.param.httpServer.start()
