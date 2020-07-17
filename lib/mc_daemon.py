@@ -52,9 +52,9 @@ class McDaemon:
             logging.info("Plugins loaded: %s" % (",".join(self.param.pluginList)))
 
             # start servers
-            self.param.httpServer = McHttpServer(self.param, self.param.mainloop, self.param.listenIp, self.param.httpPort, McConst.logDir)
-            self.param.ftpServer = McFtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
-            self.param.rsyncServer = McRsyncServer(self.param.mainloop, self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
+            self.param.httpServer = McHttpServer(self.param, "Advertising Server (http)", self.param.mainloop, self.param.listenIp, self.param.httpPort, McConst.logDir)
+            self.param.ftpServer = McFtpServer("Advertising Server (ftp)", self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
+            self.param.rsyncServer = McRsyncServer("Advertising Server (rsync)", self.param.mainloop, self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
             if True:
                 self.param.httpServer.use("advertiser")
                 for ms in self.param.mirrorSiteDict.values():

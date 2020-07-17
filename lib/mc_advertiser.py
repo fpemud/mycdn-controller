@@ -1,17 +1,16 @@
 #!/usr/bin/python3
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
-from mc_util import McUtil
-from mc_param import McConst
-from mc_server_http import McHttpServer
-from mc_server_ftp import McFtpServer
-from mc_server_rsync import McRsyncServer
+import aiohttp
+import aiohttp_jinja2
 
 
 class McAdvertiser:
 
     def __init__(self, param):
         self.param = param
+        self.param.httpServer.addRoute("GET", "/api/mirrors", self._apiMirrorsHandler)
+        self.param.httpServer.addRoute("GET", "/", self._indexHandler)
 
     def advertiseMirrorSite(self, mirrorSiteId):
         msObj = self.param.mirrorSiteDict[mirrorSiteId]
@@ -27,3 +26,72 @@ class McAdvertiser:
 
     def dispose(self):
         pass
+
+    async def _indexHandler(self, request):
+        data = {
+            "static": {
+                "title": "mirror site",
+                "name": "镜像名",
+                "update_time": "上次更新时间",
+                "help": "使用帮助",
+            },
+            "mirror_site_dict": self.__getMirrorSiteDict(),
+        }
+        return aiohttp_jinja2.render_template('index.jinja2', request, data)
+
+    async def _apiMirrorsHandler(self, request):
+        return aiohttp.web.json_response(self.__getMirrorSiteDict())
+
+    def __getMirrorSiteDict(self):
+        ret = dict()
+        for msId, msObj in self.param.mirrorSiteDict.items():
+            if msObj.availablityMode == "always":
+                bAvail = True
+            elif msObj.availablityMode == "initialized":
+                bAvail = self.param.updater.isMirrorSiteInitialized(msId)
+            else:
+                assert False
+
+            ret[msId] = {
+                "available": bAvail,
+                "update_status": self.param.updater.getMirrorSiteUpdateStatus(msId),
+                "update_progress": -1,
+                "last_update_time": "",
+                "help": {
+                    "title": "",
+                    "filename": "",
+                },
+                "protocol": {},
+            }
+
+            for proto in msObj.advertiseProtocolList:
+                if proto == "http":
+                    port = self.param.advertiser.httpServer.port
+                    portStandard = self.param.advertiser.httpServer.portStandard
+                    ret[msId]["protocol"]["http"] = {
+                        "url": "http://{IP}%s/m/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                    }
+                    # port = self.param.advertiser.httpServer.portHttps
+                    # portStandard = self.param.advertiser.httpServer.portHttpsStandard
+                    # ret[msId]["protocol"]["https"] = {
+                    #     "url": "https://{IP}%s/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                    # }
+                    continue
+                if proto == "ftp":
+                    port = self.param.advertiser.ftpServer.port
+                    portStandard = self.param.advertiser.ftpServer.portStandard
+                    ret[msId]["protocol"]["ftp"] = {
+                        "url": "ftp://{IP}%s/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                    }
+                    continue
+                if proto == "rsync":
+                    port = self.param.advertiser.rsyncServer.port
+                    portStandard = self.param.advertiser.rsyncServer.portStandard
+                    ret[msId]["protocol"]["rsync"] = {
+                        "url": "rsync://{IP}%s/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                    }
+                    continue
+                if proto == "git-http":
+                    assert False
+
+        return ret
