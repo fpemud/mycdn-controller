@@ -40,16 +40,6 @@ class McHttpServer:
         assert not self._bStart
         self._userSet.add(user)
 
-    def addRoute(self, method, path, handler):
-        assert self._runner is not None
-        with _UnfrozenApp(self._app):
-            self._app.router.add_route(method, path, handler)
-
-    def addFileDir(self, name, realPath):
-        assert self._runner is not None
-        with _UnfrozenApp(self._app):
-            self._app.router.add_static("/m/" + name + "/", realPath, name=name, show_index=True, follow_symlinks=True)
-
     def start(self):
         assert not self._bStart
         self._bStart = True
@@ -73,6 +63,16 @@ class McHttpServer:
     def isRunning(self):
         assert self._bStart
         return self._runner is not None
+
+    def addRoute(self, method, path, handler):
+        assert self._runner is not None
+        with _UnfrozenApp(self._app):
+            self._app.router.add_route(method, path, handler)
+
+    def addFileDir(self, name, realPath):
+        assert self._runner is not None
+        with _UnfrozenApp(self._app):
+            self._app.router.add_static("/m/" + name + "/", realPath, name=name, show_index=True, follow_symlinks=True)
 
     async def _start(self):
         if self._port == "random":
@@ -98,4 +98,4 @@ class _UnfrozenApp:
         self._app.router._frozen = False
 
     def __exit__(self, type, value, traceback):
-        self._app.router._frozen = self.tmp
+        self._app.router._frozen = self._tmp
