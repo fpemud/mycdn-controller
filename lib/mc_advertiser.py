@@ -67,9 +67,8 @@ class McAdvertiser:
             for proto in msObj.advertiseProtocolList:
                 if proto == "http":
                     port = self.param.advertiser.httpServer.port
-                    portStandard = self.param.advertiser.httpServer.portStandard
                     ret[msId]["protocol"]["http"] = {
-                        "url": "http://{IP}%s/m/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                        "url": "http://{IP}%s/m/%s" % (":%d" % (port) if port != 80 else "", msId)
                     }
                     # port = self.param.advertiser.httpServer.portHttps
                     # portStandard = self.param.advertiser.httpServer.portHttpsStandard
@@ -79,16 +78,14 @@ class McAdvertiser:
                     continue
                 if proto == "ftp":
                     port = self.param.advertiser.ftpServer.port
-                    portStandard = self.param.advertiser.ftpServer.portStandard
                     ret[msId]["protocol"]["ftp"] = {
-                        "url": "ftp://{IP}%s/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                        "url": "ftp://{IP}%s/%s" % (":%d" % (port) if port != 21 else "", msId)
                     }
                     continue
                 if proto == "rsync":
                     port = self.param.advertiser.rsyncServer.port
-                    portStandard = self.param.advertiser.rsyncServer.portStandard
                     ret[msId]["protocol"]["rsync"] = {
-                        "url": "rsync://{IP}%s/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                        "url": "rsync://{IP}%s/%s" % (":%d" % (port) if port != 873 else "", msId)
                     }
                     continue
                 if proto == "git-http":
