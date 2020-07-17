@@ -12,6 +12,9 @@ import asyncio_glib
 from mc_util import McUtil
 from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
+from mc_server_http import McHttpServer
+from mc_server_ftp import McFtpServer
+from mc_server_rsync import McRsyncServer
 from mc_param import McConst
 from mc_plugin import McPluginManager
 from mc_updater import McMirrorSiteUpdater
@@ -47,6 +50,26 @@ class McDaemon:
             self.pluginManager = McPluginManager(self.param)
             self.pluginManager.loadPlugins()
             logging.info("Plugins loaded: %s" % (",".join(self.param.pluginList)))
+
+            # start servers
+            self.param.httpServer = McHttpServer(self.param, self.param.mainloop, self.param.listenIp, self.param.httpPort, McConst.logDir)
+            self.param.ftpServer = McFtpServer(self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
+            self.param.rsyncServer = McRsyncServer(self.param.mainloop, self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
+            for ms in self.param.mirrorSiteDict.values():
+                for proto in ms.advertiseProtocolList:
+                    if proto == "http":
+                        self.param.httpServer.use(ms.id)
+                    elif proto == "ftp":
+                        self.param.ftpServer.use(ms.id)
+                    elif proto == "rsync":
+                        self.param.rsyncServer.use(ms.id)
+                    elif proto == "git-http":
+                        self.param.httpServer.use(ms.id)
+                    else:
+                        assert False
+            # self.param.httpServer.start()
+            # self.param.ftpServer.start()
+            # self.param.rsyncServer.start()
 
             # advertiser
             self.param.advertiser = McAdvertiser(self.param)

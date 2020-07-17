@@ -43,4 +43,7 @@ class McParam:
         self.pluginManager = None
         self.avahiObj = None
         self.updater = None
+        self.serverHttp = None
+        self.serverFtp = None
+        self.serverRsync = None
         self.advertiser = None
