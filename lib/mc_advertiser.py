@@ -3,9 +3,9 @@
 
 from mc_util import McUtil
 from mc_param import McConst
-from mc_advertiser_http import McHttpServer
-from mc_advertiser_ftp import McFtpServer
-from mc_advertiser_rsync import McRsyncServer
+from mc_server_http import McHttpServer
+from mc_server_ftp import McFtpServer
+from mc_server_rsync import McRsyncServer
 
 
 class McAdvertiser:
