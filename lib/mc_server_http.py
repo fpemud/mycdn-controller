@@ -9,12 +9,6 @@ from mc_util import McUtil
 
 
 class McHttpServer:
-    """
-    http server has 3 roles:
-    1. api server
-    2. web site
-    3. accessing mirror content by http/https protocol
-    """
 
     def __init__(self, serverName, mainloop, ip, port, logDir):
         assert port == "random" or 0 < port < 65536
