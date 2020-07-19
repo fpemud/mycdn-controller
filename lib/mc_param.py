@@ -33,7 +33,6 @@ class McParam:
 
         self.listenIp = "0.0.0.0"
 
-        self.apiPort = 2300
         self.httpPort = 80      # can be "random"
         self.ftpPort = 21       # can be "random"
         self.rsyncPort = 873    # can be "random"
