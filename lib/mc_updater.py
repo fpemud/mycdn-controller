@@ -282,7 +282,6 @@ class _OneMirrorSiteUpdater:
             args = {
                 "id": self.mirrorSite.id,
                 "config": self.mirrorSite.cfgDict,
-                "data-directory": self.ctrlDir,         # deprecated
                 "log-directory": logDir,
                 "debug-flag": "",
                 "country": "CN",

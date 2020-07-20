@@ -112,9 +112,6 @@ class McMirrorSite:
                 self.updaterExe = os.path.join(pluginDir, self.updaterExe)
                 self.schedExpr = slist[0].xpathEval(".//cron-expression")[0].getContent()   # FIXME: add check
 
-        # deprecated: data directory
-        self.dataDir = os.path.join(McConst.cacheDir, self.id)
-
         # deprecated
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//protocol"):
             self.advertiseProtocolList.append(child.getContent())

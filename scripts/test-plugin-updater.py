@@ -57,7 +57,6 @@ class InitOrUpdateProc:
         args = {
             "id": mirrorSiteId,
             "config": cfg,
-            "data-directory": dataDir,
             "log-directory": logDir,
             "debug-flag": debugFlag,
             "country": "CN",
