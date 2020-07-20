@@ -66,7 +66,7 @@ class McAdvertiser:
 
             for proto in msObj.advertiseProtocolList:
                 if proto == "http":
-                    port = self.param.advertiser.httpServer.port
+                    port = self.param.httpServer.port
                     ret[msId]["protocol"]["http"] = {
                         "url": "http://{IP}%s/m/%s" % (":%d" % (port) if port != 80 else "", msId)
                     }
@@ -77,13 +77,13 @@ class McAdvertiser:
                     # }
                     continue
                 if proto == "ftp":
-                    port = self.param.advertiser.ftpServer.port
+                    port = self.param.ftpServer.port
                     ret[msId]["protocol"]["ftp"] = {
                         "url": "ftp://{IP}%s/%s" % (":%d" % (port) if port != 21 else "", msId)
                     }
                     continue
                 if proto == "rsync":
-                    port = self.param.advertiser.rsyncServer.port
+                    port = self.param.rsyncServer.port
                     ret[msId]["protocol"]["rsync"] = {
                         "url": "rsync://{IP}%s/%s" % (":%d" % (port) if port != 873 else "", msId)
                     }
