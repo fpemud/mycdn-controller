@@ -77,7 +77,7 @@ class McMirrorSite:
             tstr = rootElem.xpathEval(".//storage")[0].getContent()
             for item in tstr.split("|"):
                 if item == "file":
-                    self.storageDict["file"] = McMirrorSiteStorageFile(self)
+                    self.storageDict[item] = McMirrorSiteStorageFile(self)
                 else:
                     assert False
 
@@ -121,8 +121,8 @@ class McMirrorSiteStorageFile:
 
     def __init__(self, parent):
         self.parent = parent
-        self._varDir = os.path.join(McConst.varDir, self.parent.id, "file")
-        self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "file")
+        self._varDir = os.path.join(McConst.varDir, self.parent.id, "storage-file")
+        self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-file")
 
     @property
     def varDir(self):
