@@ -70,7 +70,8 @@ class McFtpServer:
         if self._port == "random":
             self._port = McUtil.getFreeSocketPort("tcp")
         self._server = aioftp.Server(path_io_factory=functools.partial(_FtpServerPathIO, parent=self))
-        await self._server.start(self._ip, self._port)
+        tip = None if self._ip == "0.0.0.0" else self._ip
+        await self._server.start(tip, self._port)
 
     async def _stop(self):
         # it seems aioftp.Server.close() has syntax error
