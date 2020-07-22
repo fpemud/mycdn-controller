@@ -75,6 +75,7 @@ class McFtpServer:
                 self._port = McUtil.getFreeSocketPort("tcp")
             if True:
                 self._log = logging.getLogger("aioftp")
+                self._log.propagate = False
                 self._log.addHandler(logging.handlers.RotatingFileHandler(os.path.join(self._logDir, 'ftpd.log'),
                                                                           maxBytes=McConst.updaterLogFileSize,
                                                                           backupCount=McConst.updaterLogFileCount))
