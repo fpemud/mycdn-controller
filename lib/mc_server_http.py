@@ -1,11 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
+import os
 import logging
+import logging.handlers
 import jinja2
 import aiohttp.web
 import aiohttp_jinja2
 from mc_util import McUtil
+from mc_param import McConst
 
 
 class McHttpServer:
@@ -23,6 +26,7 @@ class McHttpServer:
         self._app = aiohttp.web.Application(loop=self._mainloop)
 
         self._bStart = False
+        self._log = None
         self._runner = None
 
     @property
@@ -69,17 +73,32 @@ class McHttpServer:
             self._app.router.add_static("/m/" + name + "/", realPath, name=name, show_index=True, follow_symlinks=True)
 
     async def _start(self):
-        if self._port == "random":
-            self._port = McUtil.getFreeSocketPort("tcp")
-        aiohttp_jinja2.setup(self._app, loader=jinja2.FileSystemLoader('/usr/share/mirrors'))       # FIXME, we should use VUE alike, not jinja
-        self._runner = aiohttp.web.AppRunner(self._app)
-        await self._runner.setup()
-        site = aiohttp.web.TCPSite(self._runner, self._ip, self._port)
-        await site.start()
+        try:
+            if self._port == "random":
+                self._port = McUtil.getFreeSocketPort("tcp")
+            if True:
+                self._log = logging.getLogger("aiohttp")
+                self._log.addHandler(logging.handlers.RotatingFileHandler(os.path.join(self._logDir, 'httpd.log'),
+                                                                          maxBytes=McConst.updaterLogFileSize,
+                                                                          backupCount=McConst.updaterLogFileCount))
+            if True:
+                aiohttp_jinja2.setup(self._app, loader=jinja2.FileSystemLoader('/usr/share/mirrors'))       # FIXME, we should use VUE alike, not jinja
+                self._runner = aiohttp.web.AppRunner(self._app)
+                await self._runner.setup()
+                site = aiohttp.web.TCPSite(self._runner, self._ip, self._port)
+                await site.start()
+        except Exception:
+            await self._stop()
+            raise
 
     async def _stop(self):
-        await self._runner.cleanup()
-        self._runner = None
+        if self._runner is not None:
+            await self._runner.cleanup()
+            self._runner = None
+        if self._log is not None:
+            for h in self._log.handlers:
+                self._log.removeHandler(h)
+            self._log = None
 
 
 class _UnfrozenApp:

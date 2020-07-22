@@ -6,10 +6,12 @@ import sys
 import aioftp
 import pathlib
 import logging
+import logging.handlers
 import asyncio
 import functools
 from mc_util import McUtil
 from mc_util import AsyncIteratorExecuter
+from mc_param import McConst
 
 
 class McFtpServer:
@@ -27,6 +29,7 @@ class McFtpServer:
         self._dirDict = dict()
 
         self._bStart = False
+        self._log = None
         self._server = None
 
     @property
@@ -67,16 +70,29 @@ class McFtpServer:
         self._dirDict[name] = realPath
 
     async def _start(self):
-        if self._port == "random":
-            self._port = McUtil.getFreeSocketPort("tcp")
-        self._server = aioftp.Server(path_io_factory=functools.partial(_FtpServerPathIO, parent=self))
-        tip = None if self._ip == "0.0.0.0" else self._ip
-        await self._server.start(tip, self._port)
+        try:
+            if self._port == "random":
+                self._port = McUtil.getFreeSocketPort("tcp")
+            if True:
+                self._log = logging.getLogger("aioftp")
+                self._log.addHandler(logging.handlers.RotatingFileHandler(os.path.join(self._logDir, 'ftpd.log'),
+                                                                          maxBytes=McConst.updaterLogFileSize,
+                                                                          backupCount=McConst.updaterLogFileCount))
+            if True:
+                self._server = aioftp.Server(path_io_factory=functools.partial(_FtpServerPathIO, parent=self))
+                await self._server.start(self._ip, self._port)
+        except Exception:
+            await self._stop()
+            raise
 
     async def _stop(self):
-        # it seems aioftp.Server.close() has syntax error
-        # await self._server.close()
-        self._server = None
+        if self._server is not None:
+            await self._server.close()
+            self._server = None
+        if self._log is not None:
+            for h in self._log.handlers:
+                self._log.removeHandler(h)
+            self._log = None
 
 
 def _ftp_server_universal_exception(func):

@@ -15,8 +15,6 @@ import socket
 import logging
 import traceback
 import ipaddress
-import subprocess
-import multiprocessing
 from datetime import datetime
 from collections import OrderedDict
 from croniter import croniter
@@ -560,84 +558,6 @@ class AsyncIteratorExecuter:
             return next(self.iter)
         except StopIteration:
             raise StopAsyncIteration
-
-
-class HttpFileServer:
-
-    def __init__(self, ip, port, dirList, logDir):
-        assert 0 < port < 65536
-        self._ip = ip
-        self._port = port
-        self._dirlist = dirList
-        self._logfile = os.path.join(logDir, "bozohttpd.log")
-        self._proc = None
-
-    @property
-    def port(self):
-        assert self._proc is not None
-        return self._port
-
-    @property
-    def running(self):
-        return self._proc is not None
-
-    def start(self):
-        assert self._proc is None
-        homedir = os.path.dirname(self._dirlist[0])
-        cmd = "/usr/bin/bozohttpd -b -f -H -I %d -s -X %s 2>%s" % (self._port, homedir, self._logfile)
-        self._proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
-
-    def stop(self):
-        assert self._proc is not None
-        self._proc.terminate()
-        self._proc.wait()
-        self._proc = None
-
-
-class FtpServer:
-
-    def __init__(self, ip, port, dirList, logDir):
-        assert 0 < port < 65536
-        self._ip = ip
-        self._port = port
-        self._dirlist = dirList
-        self._logfile = os.path.join(logDir, "pyftpd.log")
-        self._proc = None
-
-    @property
-    def port(self):
-        assert self._proc is not None
-        return self._port
-
-    @property
-    def running(self):
-        return self._proc is not None
-
-    def start(self):
-        assert self._proc is None
-        homedir = os.path.dirname(self._dirlist[0])
-        self._proc = multiprocessing.Process(target=FtpServer._runFtpDaemon, args=(self._ip, self._port, homedir, self._logfile, ))
-        self._proc.start()
-
-    def stop(self):
-        assert self._proc is not None
-        self._proc.terminate()
-        self._proc.join()
-        self._proc = None
-
-    @staticmethod
-    def _runFtpDaemon(ip, port, homedir, logfile):
-        with open(logfile, "a") as f:
-            sys.stdout = f              # redirect stdout into logfile
-            sys.stderr = f              # redirect stderr into logfile
-            from pyftpdlib.authorizers import DummyAuthorizer
-            from pyftpdlib.handlers import FTPHandler
-            from pyftpdlib.servers import FTPServer
-            handler = FTPHandler
-            handler.authorizer = DummyAuthorizer()
-            handler.authorizer.add_anonymous(homedir)
-            server = FTPServer((ip, port), handler)
-            server.serve_forever()
 
 
 class AvahiServiceRegister:
