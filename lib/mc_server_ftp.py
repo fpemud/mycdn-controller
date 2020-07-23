@@ -113,7 +113,7 @@ def _ftp_server_universal_exception(func):
 
 def _async_ftp_server_universal_exception(coro):
     """
-    Decorator. Reraising any exception (with exceptions) with universal exception :py:class:`aioftp.PathIOError`
+    Decorator. Reraising any exception (with exceptions) with universal exception :py:class:`aioftp.errors.PathIOError`
     """
     @functools.wraps(coro)
     async def wrapper(*args, **kwargs):
@@ -129,11 +129,11 @@ def _async_ftp_server_universal_exception(coro):
 
 def _async_ftp_server_defend_file_methods(coro):
     """
-    Decorator. Raises exception when file methods called with wrapped by :py:class:`aioftp.AsyncPathIOContext` file object.
+    Decorator. Raises exception when file methods called with wrapped by :py:class:`aioftp.pathio.AsyncPathIOContext` file object.
     """
     @functools.wraps(coro)
     async def wrapper(self, file, *args, **kwargs):
-        if isinstance(file, aioftp.AsyncPathIOContext):
+        if isinstance(file, aioftp.pathio.AsyncPathIOContext):
             raise ValueError("Native path io file methods can not be used with wrapped file object")
         return await coro(self, file, *args, **kwargs)
     return wrapper
@@ -142,7 +142,7 @@ def _async_ftp_server_defend_file_methods(coro):
 class _FtpServerPathIO(aioftp.AbstractPathIO):
 
     def __init__(self, *kargs, parent=None, **kwargs):
-        super().__init__(kargs, kwargs)
+        super().__init__(*kargs, **kwargs)
         self._dirDict = parent._dirDict
 
     @_async_ftp_server_universal_exception
