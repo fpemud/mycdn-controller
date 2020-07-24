@@ -78,6 +78,8 @@ class McMirrorSite:
             for item in tstr.split("|"):
                 if item == "file":
                     self.storageDict[item] = McMirrorSiteStorageFile(self)
+                elif item == "git":
+                    self.storageDict[item] = McMirrorSiteStorageGit(self)
                 else:
                     assert False
 
@@ -89,10 +91,12 @@ class McMirrorSite:
                 self.availablityMode = "always"
 
         # advertiser
-        self.advertiseProtocolList = []
+        self.advertiseDict = dict()
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//interface"):
             storageName, protocol = McUtil.splitToTuple(child.getContent(), ":")
-            self.advertiseProtocolList.append(protocol)
+            if storageName not in self.advertiseDict:
+                self.advertiseDict[storageName] = []
+            self.advertiseDict[storageName].append(protocol)
 
         # initializer
         self.initializerExe = None
@@ -112,10 +116,6 @@ class McMirrorSite:
                 self.updaterExe = os.path.join(pluginDir, self.updaterExe)
                 self.schedExpr = slist[0].xpathEval(".//cron-expression")[0].getContent()   # FIXME: add check
 
-        # deprecated
-        for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//protocol"):
-            self.advertiseProtocolList.append(child.getContent())
-
 
 class McMirrorSiteStorageFile:
 
@@ -123,6 +123,30 @@ class McMirrorSiteStorageFile:
         self.parent = parent
         self._varDir = os.path.join(McConst.varDir, self.parent.id, "storage-file")
         self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-file")
+
+    @property
+    def varDir(self):
+        return self._varDir
+
+    @property
+    def cacheDir(self):
+        return self._cacheDir
+
+    def initialize(self):
+        McUtil.ensureDir(self._varDir)
+        McUtil.ensureDir(self._cacheDir)
+
+    def getParamForPlugin(self):
+        return {
+            "data-directory": self._cacheDir
+        }
+
+class McMirrorSiteStorageGit:
+
+    def __init__(self, parent):
+        self.parent = parent
+        self._varDir = os.path.join(McConst.varDir, self.parent.id, "storage-git")
+        self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-git")
 
     @property
     def varDir(self):

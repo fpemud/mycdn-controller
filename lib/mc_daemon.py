@@ -58,17 +58,18 @@ class McDaemon:
             if True:
                 self.param.httpServer.useBy("advertiser")
                 for ms in self.param.mirrorSiteDict.values():
-                    for proto in ms.advertiseProtocolList:
-                        if proto == "http":
-                            self.param.httpServer.useBy(ms.id)
-                        elif proto == "ftp":
-                            self.param.ftpServer.useBy(ms.id)
-                        elif proto == "rsync":
-                            self.param.rsyncServer.useBy(ms.id)
-                        elif proto == "git-http":
-                            self.param.httpServer.useBy(ms.id)
-                        else:
-                            assert False
+                    for storageName, protocolList in ms.advertiseDict.items():
+                        for proto in protocolList:
+                            if proto == "http":
+                                self.param.httpServer.useBy(ms.id)
+                            elif proto == "ftp":
+                                self.param.ftpServer.useBy(ms.id)
+                            elif proto == "rsync":
+                                self.param.rsyncServer.useBy(ms.id)
+                            elif proto == "git-http":
+                                self.param.httpServer.useBy(ms.id)
+                            else:
+                                assert False
             self.param.httpServer.start()
             self.param.ftpServer.start()
             self.param.rsyncServer.start()

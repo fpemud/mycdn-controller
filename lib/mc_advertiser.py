@@ -14,15 +14,20 @@ class McAdvertiser:
 
     def advertiseMirrorSite(self, mirrorSiteId):
         msObj = self.param.mirrorSiteDict[mirrorSiteId]
-        if "http" in msObj.advertiseProtocolList:
-            self.param.httpServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
-        if "ftp" in msObj.advertiseProtocolList:
-            self.param.ftpServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
-        if "rsync" in msObj.advertiseProtocolList:
-            self.param.rsyncServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
-        if "git-http" in msObj.advertiseProtocolList:
-            # http server checks mirror status on the fly
-            pass
+        if "file" in msObj.advertiseDict:
+            if "http" in msObj.advertiseDict["file"]:
+                self.param.httpServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
+            if "ftp" in msObj.advertiseDict["file"]:
+                self.param.ftpServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
+            if "rsync" in msObj.advertiseDict["file"]:
+                self.param.rsyncServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
+        if "git" in msObj.advertiseDict:
+            if "git" in msObj.advertiseDict["git"]:
+                assert False        # FIXME
+            if "ssh" in msObj.advertiseDict["git"]:
+                assert False        # FIXME
+            if "http" in msObj.advertiseDict["git"]:
+                pass                # FIXME
 
     def dispose(self):
         pass
@@ -61,34 +66,46 @@ class McAdvertiser:
                     "title": "",
                     "filename": "",
                 },
-                "protocol": {},
             }
 
-            for proto in msObj.advertiseProtocolList:
-                if proto == "http":
-                    port = self.param.httpServer.port
-                    ret[msId]["protocol"]["http"] = {
-                        "url": "http://{IP}%s/m/%s" % (":%d" % (port) if port != 80 else "", msId)
-                    }
-                    # port = self.param.advertiser.httpServer.portHttps
-                    # portStandard = self.param.advertiser.httpServer.portHttpsStandard
-                    # ret[msId]["protocol"]["https"] = {
-                    #     "url": "https://{IP}%s/%s" % (":%d" % (port) if port != portStandard else "", msId)
-                    # }
-                    continue
-                if proto == "ftp":
-                    port = self.param.ftpServer.port
-                    ret[msId]["protocol"]["ftp"] = {
-                        "url": "ftp://{IP}%s/%s" % (":%d" % (port) if port != 21 else "", msId)
-                    }
-                    continue
-                if proto == "rsync":
-                    port = self.param.rsyncServer.port
-                    ret[msId]["protocol"]["rsync"] = {
-                        "url": "rsync://{IP}%s/%s" % (":%d" % (port) if port != 873 else "", msId)
-                    }
-                    continue
-                if proto == "git-http":
-                    assert False
+            if "file" in msObj.advertiseDict:
+                ret[msId]["interface-file"] = dict()
+                for proto in msObj.advertiseDict["file"]:
+                    if proto == "http":
+                        port = self.param.httpServer.port
+                        ret[msId]["interface-file"]["http"] = {
+                            "url": "http://{IP}%s/m/%s" % (":%d" % (port) if port != 80 else "", msId)
+                        }
+                        # port = self.param.advertiser.httpServer.portHttps
+                        # portStandard = self.param.advertiser.httpServer.portHttpsStandard
+                        # ret[msId]["interface-file"]["https"] = {
+                        #     "url": "https://{IP}%s/%s" % (":%d" % (port) if port != portStandard else "", msId)
+                        # }
+                        continue
+                    if proto == "ftp":
+                        port = self.param.ftpServer.port
+                        ret[msId]["interface-file"]["ftp"] = {
+                            "url": "ftp://{IP}%s/%s" % (":%d" % (port) if port != 21 else "", msId)
+                        }
+                        continue
+                    if proto == "rsync":
+                        port = self.param.rsyncServer.port
+                        ret[msId]["interface-file"]["rsync"] = {
+                            "url": "rsync://{IP}%s/%s" % (":%d" % (port) if port != 873 else "", msId)
+                        }
+                        continue
+
+                # deprecated
+                ret[msId]["protocol"] = ret[msId]["interface-file"]
+
+            if "git" in msObj.advertiseDict:
+                ret[msId]["interface-git"] = dict()
+                for proto in msObj.advertiseDict["git"]:
+                    if proto == "git":
+                        pass
+                    if proto == "ssh":
+                        pass
+                    if proto == "http":
+                        pass
 
         return ret
