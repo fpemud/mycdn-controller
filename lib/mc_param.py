@@ -35,6 +35,7 @@ class McConst:
     apiServerFile = os.path.join(runDir, "api.socket")
 
     avahiSupport = True
+    avahiServiceName = "_mirrors._tcp"
 
 
 class McParam:

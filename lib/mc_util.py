@@ -610,6 +610,12 @@ class AvahiServiceRegister:
         self.retryInterval = 30
         self.serviceList = []
 
+        self._server = None
+        self._retryCreateServerTimer = None
+        self._entryGroup = None
+        self._retryRegisterServiceTimer = None
+        self._ownerChangeHandler = None
+
     def add_service(self, service_name, service_type, port):
         assert isinstance(service_name, str)
         assert service_type.endswith("._tcp") or service_type.endswith("._udp")
@@ -618,12 +624,6 @@ class AvahiServiceRegister:
 
     def start(self):
         DBusGMainLoop(set_as_default=True)
-
-        self._server = None
-        self._retryCreateServerTimer = None
-        self._entryGroup = None
-        self._retryRegisterServiceTimer = None
-        self._ownerChangeHandler = None
 
         if dbus.SystemBus().name_has_owner("org.freedesktop.Avahi"):
             self._createServer()

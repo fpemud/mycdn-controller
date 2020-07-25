@@ -92,7 +92,7 @@ class McDaemon:
             # register serivce
             if McConst.avahiSupport:
                 self.param.avahiObj = AvahiServiceRegister()
-                self.param.avahiObj.add_service(socket.gethostname(), "_mirrors._tcp", self.param.httpPort)
+                self.param.avahiObj.add_service(socket.gethostname(), McConst.avahiServiceName, self.param.httpServer.port)
                 self.param.avahiObj.start()
 
             # start main loop
