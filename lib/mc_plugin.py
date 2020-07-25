@@ -141,6 +141,7 @@ class McMirrorSiteStorageFile:
             "data-directory": self._cacheDir
         }
 
+
 class McMirrorSiteStorageGit:
 
     def __init__(self, parent):

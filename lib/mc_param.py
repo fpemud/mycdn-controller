@@ -11,10 +11,11 @@ class McConst:
     etcDir = "/etc/mirrors"
     libDir = "/usr/lib64/mirrors"
     pluginsDir = os.path.join(libDir, "plugins")
-    varDir = "/var/lib/mirrors"
+
+    stateDir = "/var/lib/mirrors"
     cacheDir = "/var/cache/mirrors"
-    runDir = "/run/mirrors"
     logDir = "/var/log/mirrors"
+    runDir = "/run/mirrors"
     tmpDir = "/tmp/mirrors"             # FIXME
 
     user = "mirrors"
@@ -22,7 +23,8 @@ class McConst:
     uid = pwd.getpwnam(user).pw_uid
     gid = grp.getgrnam(group).gr_gid
 
-    dataDirMode = 0o700
+    stateDirMode = 0o700
+    cacheDirMode = 0o755
     logDirMode = 0o750
     runDirMode = 0o755
     tmpDirMode = 0o755
