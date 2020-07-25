@@ -11,7 +11,6 @@ class McConst:
     etcDir = "/etc/mirrors"
     libDir = "/usr/lib64/mirrors"
     pluginsDir = os.path.join(libDir, "plugins")
-
     stateDir = "/var/lib/mirrors"
     cacheDir = "/var/cache/mirrors"
     logDir = "/var/log/mirrors"
@@ -48,9 +47,9 @@ class McParam:
 
         self.listenIp = "0.0.0.0"
 
-        self.httpPort = 80      # can be "random"
-        self.ftpPort = 21       # can be "random"
-        self.rsyncPort = 873    # can be "random"
+        self.httpPort = "random"
+        self.ftpPort = "random"
+        self.rsyncPort = "random"
 
         # objects
         self.mainloop = None
