@@ -29,7 +29,7 @@ class McDaemon:
     def run(self):
         try:
             # create directories
-            McUtil.preparePersistDir(McConst.dataDir, McConst.uid, McConst.gid, McConst.dataDirMode)
+            McUtil.preparePersistDir(McConst.stateDir, McConst.uid, McConst.gid, McConst.dataDirMode)
             McUtil.preparePersistDir(McConst.logDir, McConst.uid, McConst.gid, McConst.logDirMode)
             McUtil.prepareTransientDir(McConst.runDir, McConst.uid, McConst.gid, McConst.runDirMode)
             McUtil.prepareTransientDir(McConst.tmpDir, McConst.uid, McConst.gid, McConst.tmpDirMode)
