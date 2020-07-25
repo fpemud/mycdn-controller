@@ -7,6 +7,7 @@ import imp
 import dbus
 import math
 import json
+import stat
 import fcntl
 import struct
 import shutil
@@ -24,6 +25,41 @@ from dbus.mainloop.glib import DBusGMainLoop
 
 
 class McUtil:
+
+    @staticmethod
+    def dropPriviledge(uid, gid):
+        os.setgid(gid)      # must change gid first
+        os.setuid(uid)
+
+    @staticmethod
+    def writePidFile(filename):
+        with open(filename, "w") as f:
+            f.write(str(os.getpid()))
+
+    @staticmethod
+    def preparePersistDir(dirname, uid, gid, mode):
+        if not os.path.exists(dirname):
+            os.makedirs(dirname, mode)
+            if os.getuid() != uid or os.getpid() != gid:
+                os.chown(dirname, uid, gid)
+        else:
+            st = os.stat(dirname)
+            if stat.S_IMODE(st.st_mode) != mode:
+                os.chmod(dirname, mode)
+            if st.st_uid != uid or st.st_gid != gid:
+                os.chown(dirname, uid, gid)
+                for root, dirs, files in os.walk(dirname):
+                    for d in dirs:
+                        os.chown(os.path.join(root, d), uid, gid)
+                    for f in files:
+                        os.chown(os.path.join(root, f), uid, gid)
+
+    @staticmethod
+    def prepareTransientDir(dirname, uid, gid, mode):
+        McUtil.forceDelete(dirname)
+        os.makedirs(dirname, mode)
+        if os.getuid() != uid or os.getpid() != gid:
+            os.chown(dirname, uid, gid)
 
     @staticmethod
     def getUnixDomainSocketPeerInfo(sock):

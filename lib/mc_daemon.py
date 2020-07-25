@@ -27,11 +27,18 @@ class McDaemon:
         self.param = param
 
     def run(self):
-        McUtil.ensureDir(McConst.logDir)
-        McUtil.mkDirAndClear(McConst.runDir)
-        McUtil.mkDirAndClear(McConst.tmpDir)
         try:
-            sys.stdout = StdoutRedirector(os.path.join(McConst.tmpDir, "mirrors.out"))
+            # create directories
+            McUtil.preparePersistDir(McConst.dataDir, McConst.uid, McConst.gid, McConst.dataDirMode)
+            McUtil.preparePersistDir(McConst.logDir, McConst.uid, McConst.gid, McConst.logDirMode)
+            McUtil.prepareTransientDir(McConst.runDir, McConst.uid, McConst.gid, McConst.runDirMode)
+            McUtil.prepareTransientDir(McConst.tmpDir, McConst.uid, McConst.gid, McConst.tmpDirMode)
+
+            # drop priviledge
+            McUtil.dropPriviledge(McConst.uid, McConst.gid)
+
+            # initialize logging
+            sys.stdout = StdoutRedirector(os.path.join(McConst.logDir, "mirrors.out"))
             sys.stderr = sys.stdout
 
             logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
@@ -43,7 +50,8 @@ class McDaemon:
             self.param.mainloop = asyncio.get_event_loop()
 
             # write pid file
-            with open(os.path.join(McConst.runDir, "mirrors.pid"), "w") as f:
+            McUtil.writePidFile()
+            with open(McConst.pidFile, "w") as f:
                 f.write(str(os.getpid()))
 
             # load plugins

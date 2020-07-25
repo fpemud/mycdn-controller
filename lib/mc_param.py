@@ -2,6 +2,8 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import pwd
+import grp
 
 
 class McConst:
@@ -15,9 +17,20 @@ class McConst:
     logDir = "/var/log/mirrors"
     tmpDir = "/tmp/mirrors"             # FIXME
 
+    user = "mirrors"
+    group = "mirrors"
+    uid = pwd.getpwnam(user).pw_uid
+    gid = grp.getgrnam(group).gr_gid
+
+    dataDirMode = 0o700
+    logDirMode = 0o750
+    runDirMode = 0o755
+    tmpDirMode = 0o755
+
     updaterLogFileSize = 10 * 1024 * 1024
     updaterLogFileCount = 2
 
+    pidFile = os.path.join(runDir, "mirrors.pid")
     apiServerFile = os.path.join(runDir, "api.socket")
 
     avahiSupport = True
