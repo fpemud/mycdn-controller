@@ -51,9 +51,7 @@ class McDaemon:
             self.param.mainloop = asyncio.get_event_loop()
 
             # write pid file
-            McUtil.writePidFile()
-            with open(McConst.pidFile, "w") as f:
-                f.write(str(os.getpid()))
+            McUtil.writePidFile(McConst.pidFile)
 
             # load plugins
             self.pluginManager = McPluginManager(self.param)
