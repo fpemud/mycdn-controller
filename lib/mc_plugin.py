@@ -20,7 +20,7 @@ class McPluginManager:
             pluginName = fn.replace(".conf", "")
             pluginPath = os.path.join(McConst.pluginsDir, pluginName)
             if not os.path.isdir(pluginPath):
-                raise Exception("Invalid configuration file %s" % (fn))
+                continue
             pluginCfg = dict()
             with open(os.path.join(McConst.etcDir, fn), "r") as f:
                 buf = f.read()
