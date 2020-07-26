@@ -11,7 +11,7 @@ class McConst:
     etcDir = "/etc/mirrors"
     libDir = "/usr/lib64/mirrors"
     pluginsDir = os.path.join(libDir, "plugins")
-    stateDir = "/var/lib/mirrors"
+    varDir = "/var/lib/mirrors"
     cacheDir = "/var/cache/mirrors"
     logDir = "/var/log/mirrors"
     runDir = "/run/mirrors"
@@ -21,12 +21,6 @@ class McConst:
     group = "mirrors"
     uid = pwd.getpwnam(user).pw_uid
     gid = grp.getgrnam(group).gr_gid
-
-    stateDirMode = 0o700
-    cacheDirMode = 0o755
-    logDirMode = 0o750
-    runDirMode = 0o755
-    tmpDirMode = 0o755
 
     updaterLogFileSize = 10 * 1024 * 1024
     updaterLogFileCount = 2

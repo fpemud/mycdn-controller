@@ -27,11 +27,6 @@ from dbus.mainloop.glib import DBusGMainLoop
 class McUtil:
 
     @staticmethod
-    def dropPriviledge(uid, gid):
-        os.setgid(gid)      # must change gid first
-        os.setuid(uid)
-
-    @staticmethod
     def writePidFile(filename):
         with open(filename, "w") as f:
             f.write(str(os.getpid()))
@@ -50,9 +45,9 @@ class McUtil:
                 os.chown(dirname, uid, gid)
                 for root, dirs, files in os.walk(dirname):
                     for d in dirs:
-                        os.chown(os.path.join(root, d), uid, gid)
+                        os.lchown(os.path.join(root, d), uid, gid)
                     for f in files:
-                        os.chown(os.path.join(root, f), uid, gid)
+                        os.lchown(os.path.join(root, f), uid, gid)
 
     @staticmethod
     def prepareTransientDir(dirname, uid, gid, mode):

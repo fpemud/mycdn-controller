@@ -121,7 +121,7 @@ class McMirrorSiteStorageFile:
 
     def __init__(self, parent):
         self.parent = parent
-        self._varDir = os.path.join(McConst.stateDir, self.parent.id, "storage-file")
+        self._varDir = os.path.join(McConst.varDir, self.parent.id, "storage-file")
         self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-file")
 
     @property
@@ -146,7 +146,7 @@ class McMirrorSiteStorageGit:
 
     def __init__(self, parent):
         self.parent = parent
-        self._varDir = os.path.join(McConst.stateDir, self.parent.id, "storage-git")
+        self._varDir = os.path.join(McConst.varDir, self.parent.id, "storage-git")
         self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-git")
 
     @property
