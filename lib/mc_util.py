@@ -581,6 +581,22 @@ class UnixDomainSocketApiServer:
             return False
 
 
+class DropPriviledge:
+
+    def __init__(self, uid, gid):
+        assert os.getuid() == 0
+        assert os.getgid() == 0
+        os.setresgid(gid, gid, 0)       # must change gid first
+        os.setresuid(uid, uid, 0)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        os.setuid(0)
+        os.setgid(0)
+
+
 class AsyncIteratorExecuter:
 
     def __init__(self, iter):
