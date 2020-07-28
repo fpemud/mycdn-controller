@@ -78,9 +78,7 @@ class McRsyncServer:
         buf += "port = %s\n" % (self._port)
         buf += "timeout = 600\n"
         buf += "\n"
-        buf += "use chroot = yes\n"
-        buf += "uid = root\n"           # FIXME
-        buf += "gid = root\n"           # FIXME
+        buf += "use chroot = no\n"      # we are not running rsyncd using the root user
         buf += "\n"
         for name, d in self._dirDict.items():
             buf += "[%s]\n" % (name)
