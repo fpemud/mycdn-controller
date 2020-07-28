@@ -72,14 +72,20 @@ class _OneMirrorSiteUpdater:
         self.scheduler = parent.scheduler
         self.mirrorSite = mirrorSite
 
-        self.ctrlDir = os.path.join(McConst.cacheDir, self.mirrorSite.id)
-        self.initFlagFile = os.path.join(McConst.cacheDir, self.mirrorSite.id + ".uninitialized")
+        self.masterDir = os.path.join(McConst.cacheDir, self.mirrorSite.id)
+        self.initFlagFile = os.path.join(self.masterDir, self.mirrorSite.id + ".uninitialized")
 
-        # initialize control directory
-        if not os.path.exists(self.ctrlDir):
-            os.makedirs(self.ctrlDir)
+        self.pluginStateDir = os.path.join(self.masterDir, "state")
+
+        # initialize master directory
+        if not os.path.exists(self.masterDir):
+            os.makedirs(self.masterDir)
             if self.mirrorSite.initializerExe is not None:
                 McUtil.touchFile(self.initFlagFile)
+
+        # initialize plugin state directory
+        if not os.path.exists(self.pluginStateDir):
+            os.makedirs(self.pluginStateDir)
 
         # storage object initialize
         for sobj in self.mirrorSite.storageDict.values():
@@ -286,6 +292,7 @@ class _OneMirrorSiteUpdater:
             args = {
                 "id": self.mirrorSite.id,
                 "config": self.mirrorSite.cfgDict,
+                "state-directory": self.pluginStateDir,
                 "log-directory": logDir,
                 "debug-flag": "",
                 "country": "CN",
