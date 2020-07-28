@@ -95,9 +95,6 @@ class McAdvertiser:
                         }
                         continue
 
-                # deprecated
-                ret[msId]["protocol"] = ret[msId]["interface-file"]
-
             if "git" in msObj.advertiseDict:
                 ret[msId]["interface-git"] = dict()
                 for proto in msObj.advertiseDict["git"]:
