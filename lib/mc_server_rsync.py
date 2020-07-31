@@ -19,10 +19,10 @@ class McRsyncServer:
         self._userSet = set()
         self._dirDict = dict()
 
+        self._cfgFile = os.path.join(tmpDir, "rsyncd.conf")
+        self._lockFile = os.path.join(tmpDir, "rsyncd.lock")
+        self._logFile = os.path.join(logDir, "rsyncd.log")
         self._bStart = False
-        self.rsyncdCfgFile = os.path.join(tmpDir, "rsyncd.conf")
-        self.rsyncdLockFile = os.path.join(tmpDir, "rsyncd.lock")
-        self.rsyncdLogFile = os.path.join(logDir, "rsyncd.log")
         self._proc = None
 
     @property
@@ -42,7 +42,7 @@ class McRsyncServer:
                 if self._port == "random":
                     self._port = McUtil.getFreeSocketPort("tcp")
                 self._generateCfgFile()
-                cmd = "/usr/bin/rsync --daemon --no-detach --config=\"%s\"" % (self.rsyncdCfgFile)
+                cmd = "/usr/bin/rsync --daemon --no-detach --config=\"%s\"" % (self._cfgFile)
                 self._proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
                 logging.info("%s started, listening on port %d." % (self._serverName, self._port))
         except Exception:
@@ -71,8 +71,8 @@ class McRsyncServer:
 
     def _generateCfgFile(self):
         buf = ""
-        buf += "lock file = %s\n" % (self.rsyncdLockFile)
-        buf += "log file = %s\n" % (self.rsyncdLogFile)
+        buf += "lock file = %s\n" % (self._lockFile)
+        buf += "log file = %s\n" % (self._logFile)
         buf += "\n"
         buf += "port = %s\n" % (self._port)
         buf += "timeout = 600\n"
@@ -84,5 +84,5 @@ class McRsyncServer:
             buf += "path = %s\n" % (d)
             buf += "read only = yes\n"
             buf += "\n"
-        with open(self.rsyncdCfgFile, "w") as f:
+        with open(self._cfgFile, "w") as f:
             f.write(buf)

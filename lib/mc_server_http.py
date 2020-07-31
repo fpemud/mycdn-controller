@@ -113,3 +113,5 @@ class _UnfrozenApp:
 
     def __exit__(self, type, value, traceback):
         self._app.router._frozen = self._tmp
+
+
