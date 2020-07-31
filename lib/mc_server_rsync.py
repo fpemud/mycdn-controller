@@ -9,11 +9,10 @@ from mc_util import McUtil
 
 class McRsyncServer:
 
-    def __init__(self, serverName, mainloop, ip, port, tmpDir, logDir):
+    def __init__(self, serverName, ip, port, tmpDir, logDir):
         assert port == "random" or 0 < port < 65536
 
         self._serverName = serverName
-        self._mainloop = mainloop
         self._ip = ip
         self._port = port
 

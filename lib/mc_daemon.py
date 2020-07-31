@@ -60,8 +60,8 @@ class McDaemon:
 
                     # start servers
                     self.param.httpServer = McHttpServer("Advertising Server (http)", self.param.mainloop, self.param.listenIp, self.param.httpPort, McConst.logDir)
-                    self.param.ftpServer = McFtpServer("Advertising Server (ftp)", self.param.mainloop, self.param.listenIp, self.param.ftpPort, McConst.logDir)
-                    self.param.rsyncServer = McRsyncServer("Advertising Server (rsync)", self.param.mainloop, self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
+                    self.param.ftpServer = McFtpServer("Advertising Server (ftp)", self.param.listenIp, self.param.ftpPort, McConst.logDir)
+                    self.param.rsyncServer = McRsyncServer("Advertising Server (rsync)", self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
                     if True:
                         self.param.httpServer.useBy("advertiser")
                         for ms in self.param.mirrorSiteDict.values():

@@ -10,7 +10,9 @@ class McConst:
 
     etcDir = "/etc/mirrors"
     libDir = "/usr/lib64/mirrors"
+    libexecDir = "/usr/libexec/mirrors"
     pluginsDir = os.path.join(libDir, "plugins")
+
     varDir = "/var/lib/mirrors"
     cacheDir = "/var/cache/mirrors"
     logDir = "/var/log/mirrors"
