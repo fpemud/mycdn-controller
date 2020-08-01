@@ -295,8 +295,8 @@ class _OneMirrorSiteUpdater:
                 "state-directory": self.pluginStateDir,
                 "log-directory": logDir,
                 "debug-flag": "",
-                "country": "CN",
-                "location": "",
+                "country": self.param.mainCfg["country"],
+                "location": self.param.mainCfg["location"],
             }
             for storageName, storageObj in self.mirrorSite.storageDict.items():
                 args["storage-" + storageName] = storageObj.getParamForPlugin()

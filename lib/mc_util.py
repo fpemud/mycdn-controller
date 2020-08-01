@@ -28,6 +28,15 @@ from dbus.mainloop.glib import DBusGMainLoop
 class McUtil:
 
     @staticmethod
+    def readFile(filename):
+        with open(filename) as f:
+            return f.read()
+
+    @staticmethod
+    def rreplace(s, sub, dst, count):
+        return dst.join(s.rsplit(sub, count))
+
+    @staticmethod
     def isPathOverlap(path, pathList):
         for p in pathList:
             if path == p or p.startswith(path + "/") or path.startswith(p + "/"):

@@ -27,6 +27,8 @@ class McConst:
     updaterLogFileSize = 10 * 1024 * 1024
     updaterLogFileCount = 2
 
+    mainCfgFile = os.path.join(etcDir, "main.conf")
+    pluginCfgFileGlobPattern = os.path.join(etcDir, "plugin-*.conf")
     pidFile = os.path.join(runDir, "mirrors.pid")
     apiServerFile = os.path.join(runDir, "api.socket")
 
@@ -44,6 +46,12 @@ class McParam:
 
         self.listenIp = "0.0.0.0"
         self.mainPort = 2300
+
+        self.mainCfg = {
+            "preferedUpdatePeriod": [],
+            "country": "CN",
+            "location": "",
+        }
 
         # objects
         self.mainloop = None

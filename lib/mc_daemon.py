@@ -3,6 +3,7 @@
 
 import os
 import sys
+import json
 import signal
 import shutil
 import socket
@@ -42,6 +43,9 @@ class McDaemon:
                     logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
                     logging.getLogger().setLevel(logging.INFO)
                     logging.info("Program begins.")
+
+                    # load main config
+                    self._loadMainCfg()
 
                     # create mainloop
                     asyncio.set_event_loop_policy(asyncio_glib.GLibEventLoopPolicy())
@@ -86,6 +90,24 @@ class McDaemon:
         finally:
             shutil.rmtree(McConst.tmpDir)
             shutil.rmtree(McConst.runDir)
+
+    def _loadMainCfg(self):
+        if not os.path.exists(McConst.mainCfgFile):
+            return
+
+        buf = McUtil.readFile(McConst.mainCfgFile)
+        if buf == "":
+            return
+
+        dataObj = json.loads(buf)
+        if "preferedUpdatePeriod" in dataObj:
+            self.param.mainCfg["preferedUpdatePeriod"] = dataObj["preferedUpdatePeriod"]
+        if "country" in dataObj:
+            self.param.mainCfg["country"] = dataObj["country"]
+        if "location" in dataObj:
+            if "country" not in dataObj:
+                raise Exception("only \"location\" specified in main config file")
+            self.param.mainCfg["location"] = dataObj["location"]
 
     def _sigHandlerINT(self):
         logging.info("SIGINT received.")

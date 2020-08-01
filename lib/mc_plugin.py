@@ -2,6 +2,7 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import glob
 import json
 import libxml2
 from mc_util import McUtil
@@ -14,10 +15,8 @@ class McPluginManager:
         self.param = param
 
     def loadPlugins(self):
-        for fn in os.listdir(McConst.etcDir):
-            if not fn.endswith(".conf"):
-                continue
-            pluginName = fn.replace(".conf", "")
+        for fn in glob.glob(McConst.pluginCfgFileGlobPattern):
+            pluginName = McUtil.rreplace(fn.replace("plugin-", "", 1), ".conf", "", 1)
             pluginPath = os.path.join(McConst.pluginsDir, pluginName)
             if not os.path.isdir(pluginPath):
                 continue
