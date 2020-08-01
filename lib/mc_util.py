@@ -34,6 +34,7 @@ class McUtil:
 
     @staticmethod
     def rreplace(s, sub, dst, count):
+        # https://stackoverflow.com/questions/9943504/right-to-left-string-replace-in-python
         return dst.join(s.rsplit(sub, count))
 
     @staticmethod
