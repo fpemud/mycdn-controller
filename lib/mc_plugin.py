@@ -16,7 +16,7 @@ class McPluginManager:
 
     def loadPlugins(self):
         for fn in glob.glob(McConst.pluginCfgFileGlobPattern):
-            pluginName = McUtil.rreplace(fn.replace("plugin-", "", 1), ".conf", "", 1)
+            pluginName = McUtil.rreplace(os.path.basename(fn).replace("plugin-", "", 1), ".conf", "", 1)
             pluginPath = os.path.join(McConst.pluginsDir, pluginName)
             if not os.path.isdir(pluginPath):
                 continue
