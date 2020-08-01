@@ -308,7 +308,7 @@ class _FtpServer:
         assert self._proc is None
         self._port = McUtil.getFreeSocketPort("tcp")
         self._generateCfgFile()
-        self._proc = subprocess.Popen([self._execFile, self._cfgFile])
+        self._proc = subprocess.Popen([self._execFile, self._cfgFile], cwd=McConst.cacheDir)
         McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
         logging.info("Advertising server (ftp) started, listening on port %d." % (self._port))
 
