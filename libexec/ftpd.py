@@ -6,6 +6,7 @@ import sys
 import json
 import signal
 import logging
+import logging.handlers
 import pyftpdlib.servers
 import pyftpdlib.handlers
 import pyftpdlib.authorizers
@@ -23,10 +24,20 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
       |---- ...
     """
 
+    # --- Pathname / conversion utilities
+
+    def validpath(self, path):
+        if self._isVirtualRootDir(path):
+            return True
+        else:
+            path = self._path2rpath(path)
+            path = os.path.realpath(path)
+            return self._rpathInRange(path)
+
     # --- Wrapper methods around open() and tempfile.mkstemp
 
     def open(self, filename, mode):
-        return super().open(self._convertPath(filename), mode)
+        return super().open(self._path2rpath(filename), mode)
 
     def mkstemp(self, suffix='', prefix='', dir=None, mode='wb'):
         raise NotImplementedError()
@@ -37,7 +48,7 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
         if self._isVirtualRootDir(path):
             os.chdir("/")                           # FIXME
         else:
-            os.chdir(self._convertPath(path))
+            os.chdir(self._path2rpath(path))
         self.cwd = self.fs2ftp(path)
 
     def mkdir(self, path):
@@ -47,7 +58,7 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
         if self._isVirtualRootDir(path):
             return self._listVirtualRootDir()
         else:
-            return super().listdir(self._convertPath(path))
+            return super().listdir(self._path2rpath(path))
 
     def listdirinfo(self, path):
         raise NotImplementedError()
@@ -68,7 +79,7 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
         if self._isVirtualRootDir(path):
             return os.stat("/")                     # FIXME
         else:
-            return super().stat(self._convertPath(path))
+            return super().stat(self._path2rpath(path))
 
     def utime(self, path, timeval):
         raise NotImplementedError()
@@ -77,7 +88,7 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
         if self._isVirtualRootDir(path):
             return os.lstat("/")                    # FIXME
         else:
-            return super().lstat(self._convertPath(path))
+            return super().lstat(self._path2rpath(path))
 
     def readlink(self, path):
         raise NotImplementedError()
@@ -88,50 +99,50 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
         if self._isVirtualRootDir(path) or self._isVirtualSiteDir(path):
             return False
         else:
-            return super().isfile(self._convertPath(path))
+            return super().isfile(self._path2rpath(path))
 
     def islink(self, path):
         if self._isVirtualRootDir(path) or self._isVirtualSiteDir(path):
             return False
         else:
-            return super().islink(self._convertPath(path))
+            return super().islink(self._path2rpath(path))
 
     def isdir(self, path):
         if self._isVirtualRootDir(path) or self._isVirtualSiteDir(path):
             return True
         else:
-            return super().isdir(self._convertPath(path))
+            return super().isdir(self._path2rpath(path))
 
     def getsize(self, path):
         if self._isVirtualRootDir(path):
             return os.path.getsize("/")                         # FIXME
         elif self._isVirtualSiteDir(path):
-            return super().getsize(self._convertPath(path))     # FIXME
+            return super().getsize(self._path2rpath(path))     # FIXME
         else:
-            return super().getsize(self._convertPath(path))
+            return super().getsize(self._path2rpath(path))
 
     def getmtime(self, path):
         if self._isVirtualRootDir(path):
             return os.path.getmtime("/")                        # FIXME
         elif self._isVirtualSiteDir(path):
-            return super().getmtime(self._convertPath(path))    # FIXME
+            return super().getmtime(self._path2rpath(path))    # FIXME
         else:
-            return super().getmtime(self._convertPath(path))
+            return super().getmtime(self._path2rpath(path))
 
     def realpath(self, path):
         if self._isVirtualRootDir(path) or self._isVirtualSiteDir(path):
             return path
         else:
-            path = self._convertPath(path)
+            path = self._path2rpath(path)
             path = os.path.realpath(path)
-            path = self._convertPathBack(path)
+            path = self._rpath2path(path)
             return path
 
     def lexists(self, path):
         if self._isVirtualRootDir(path) or self._isVirtualSiteDir(path):
             return True
         else:
-            return super().lexists(self._convertPath(path))
+            return super().lexists(self._path2rpath(path))
 
     def get_user_by_uid(self, uid):
         return "owner"
@@ -152,21 +163,33 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
         global cfg
         return sorted(cfg["dirmap"].keys())
 
-    def _convertPath(self, path):
+    def _path2rpath(self, path):
         global cfg
         assert os.path.isabs(path) and not self._isVirtualRootDir(path)
-        dirParts = path[1:].split("/")
-        prefix, dirParts = dirParts[0], dirParts[1:]
-        if prefix not in cfg["dirmap"]:
-            raise FileNotFoundError("No such file or directory: '%s'" % (path))
-        return os.path.join(cfg["dirmap"][prefix], *dirParts)
+        for prefix, realPath in cfg["dirmap"].items():
+            if path == "/" + prefix:
+                return realPath
+            if path.startswith("/" + prefix + "/"):
+                return path.replace("/" + prefix, realPath, 1)
+        raise FileNotFoundError("No such file or directory: '%s'" % (path))
 
-    def _convertPathBack(self, path):
+    def _rpath2path(self, rpath):
         global cfg
         for prefix, realPath in cfg["dirmap"].items():
-            if path.startswith(realPath + "/"):
-                return path.replace(realPath + "/", prefix + "/", 1)
+            if rpath == realPath:
+                return "/" + prefix
+            if rpath.startswith(realPath + "/"):
+                return rpath.replace(realPath, "/" + prefix, 1)
         assert False
+
+    def _rpathInRange(self, rpath):
+        global cfg
+        for prefix, realPath in cfg["dirmap"].items():
+            if rpath == realPath:
+                return True
+            if rpath.startswith(realPath + "/"):
+                return True
+        return False
 
 
 def refreshCfgFromCfgFile():
@@ -179,8 +202,12 @@ def refreshCfgFromCfgFile():
             raise Exception("no content in config file")
         dataObj = json.loads(buf)
 
-        if "logfile" not in dataObj:
-            raise Exception("no \"logfile\" in config file")
+        if "logFile" not in dataObj:
+            raise Exception("no \"logFile\" in config file")
+        if "logMaxBytes" not in dataObj:
+            raise Exception("no \"logMaxBytes\" in config file")
+        if "logBackupCount" not in dataObj:
+            raise Exception("no \"logBackupCount\" in config file")
         if "ip" not in dataObj:
             raise Exception("no \"ip\" in config file")
         if "port" not in dataObj:
@@ -197,19 +224,26 @@ def refreshCfgFromCfgFile():
                     if i != j and (tl[i] == tl[j] or tl[i].startswith(tl[j] + "/") or tl[j].startswith(tl[i] + "/")):
                         raise Exception("values in \"dirmap\" are overlay")
 
-        if "logfile" not in cfg:
-            cfg["logfile"] = dataObj["logfile"]       # cfg["logfile"] is not changable
+        if "logFile" not in cfg:
+            cfg["logFile"] = dataObj["logFile"]                     # cfg["logFile"] is not changable
+        if "logMaxBytes" not in cfg:
+            cfg["logMaxBytes"] = dataObj["logMaxBytes"]             # cfg["logMaxBytes"] is not changable
+        if "logBackupCount" not in cfg:
+            cfg["logBackupCount"] = dataObj["logBackupCount"]       # cfg["logBackupCount"] is not changable
         if "ip" not in cfg:
-            cfg["ip"] = dataObj["ip"]                 # cfg["ip"] is not changable
+            cfg["ip"] = dataObj["ip"]                               # cfg["ip"] is not changable
         if "port" not in cfg:
-            cfg["port"] = dataObj["port"]             # cfg["port"] is not changable
+            cfg["port"] = dataObj["port"]                           # cfg["port"] is not changable
         cfg["dirmap"] = dataObj["dirmap"]
 
 
 def runServer():
     global cfg
 
-    logging.basicConfig(filename=cfg["logfile"])
+    log = logging.getLogger("pyftpdlib")
+    log.propagate = False
+    log.setLevel(logging.INFO)
+    log.addHandler(logging.handlers.RotatingFileHandler(cfg["logFile"], cfg["logMaxBytes"], cfg["logBackupCount"]))
 
     authorizer = pyftpdlib.authorizers.DummyAuthorizer()
     authorizer.add_anonymous("/")

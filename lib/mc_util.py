@@ -28,7 +28,7 @@ from dbus.mainloop.glib import DBusGMainLoop
 class McUtil:
 
     @staticmethod
-    def isPathOverlap(self, path, pathList):
+    def isPathOverlap(path, pathList):
         for p in pathList:
             if path == p or p.startswith(path + "/") or path.startswith(p + "/"):
                 return True

@@ -214,7 +214,7 @@ class _HttpServer:
         return self._port
 
     def start(self):
-        assert self._proc is not None
+        assert self._proc is None
         self._port = McUtil.getFreeSocketPort("tcp")
         self._generateCfgFile()
         self._proc = subprocess.Popen(["/usr/sbin/apache2", "-d", os.path.dirname(self._cfgFile), "-f", self._cfgFile, "-DFOREGROUND"])
@@ -229,13 +229,13 @@ class _HttpServer:
 
     def addFileDir(self, name, realPath):
         assert self._proc is not None
-        assert self._checkNameAndRealPath(self._dirDict, name, realPath)
+        assert _checkNameAndRealPath(self._dirDict, name, realPath)
         self._dirDict[name] = realPath
         self._generateCfgFile()
 
     def addGitDir(self, name, realPath):
         assert self._proc is not None
-        assert self._checkNameAndRealPath(self._gitDirDict, name, realPath)
+        assert _checkNameAndRealPath(self._gitDirDict, name, realPath)
         self._gitDirDict[name] = realPath
         self._generateCfgFile()
         os.kill(self._proc.pid, signal.SIGUSR1)
@@ -320,14 +320,16 @@ class _FtpServer:
 
     def addFileDir(self, name, realPath):
         assert self._proc is not None
-        assert self._checkNameAndRealPath(self._dirDict, name, realPath)
+        assert _checkNameAndRealPath(self._dirDict, name, realPath)
         self._dirDict[name] = realPath
         self._generateCfgFile()
         os.kill(self._proc.pid, signal.SIGUSR1)
 
     def _generateCfgFile(self):
         dataObj = dict()
-        dataObj["logfile"] = self._logFile
+        dataObj["logFile"] = self._logFile
+        dataObj["logMaxBytes"] = McConst.updaterLogFileSize
+        dataObj["logBackupCount"] = McConst.updaterLogFileCount
         dataObj["ip"] = self.param.listenIp
         dataObj["port"] = self._port
         dataObj["dirmap"] = self._dirDict
@@ -369,7 +371,7 @@ class _RsyncServer:
 
     def addFileDir(self, name, realPath):
         assert self._proc is not None
-        assert self._checkNameAndRealPath(self._dirDict, name, realPath)
+        assert _checkNameAndRealPath(self._dirDict, name, realPath)
         self._dirDict[name] = realPath
         self._generateCfgFile()             # rsync picks the new cfg-file when new connection comes in
 
@@ -395,7 +397,7 @@ class _RsyncServer:
 def _checkNameAndRealPath(dictObj, name, realPath):
     if name in dictObj:
         return False
-    if os.path.isabs(realPath) or realPath.endswith("/"):
+    if not os.path.isabs(realPath) or realPath.endswith("/"):
         return False
     if McUtil.isPathOverlap(realPath, dictObj.values()):
         return False
