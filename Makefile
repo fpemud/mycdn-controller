@@ -16,7 +16,7 @@ install:
 
 	install -d -m 0755 "$(DESTDIR)/$(prefix)/libexec/mirrors"
 	cp -r libexec/* "$(DESTDIR)/$(prefix)/libexec/mirrors"
-	find "$(DESTDIR)/$(prefix)/libexec/mirrors" -type f -maxdepth 1 | xargs chmod 644
+	find "$(DESTDIR)/$(prefix)/libexec/mirrors" -type f -maxdepth 1 | xargs chmod 755
 	find "$(DESTDIR)/$(prefix)/libexec/mirrors" -type d -maxdepth 1 | xargs chmod 755
 
 	# install -d -m 0755 "$(DESTDIR)/$(prefix)/share/mirrors"

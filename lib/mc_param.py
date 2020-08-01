@@ -50,7 +50,4 @@ class McParam:
         self.pluginManager = None
         self.avahiObj = None
         self.updater = None
-        self.httpServer = None
-        self.ftpServer = None
-        self.rsyncServer = None
         self.advertiser = None

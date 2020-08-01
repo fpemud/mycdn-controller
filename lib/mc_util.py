@@ -2,8 +2,10 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import re
 import sys
 import imp
+import time
 import dbus
 import math
 import json
@@ -16,6 +18,7 @@ import socket
 import logging
 import traceback
 import ipaddress
+import subprocess
 from datetime import datetime
 from collections import OrderedDict
 from croniter import croniter
@@ -25,6 +28,30 @@ from dbus.mainloop.glib import DBusGMainLoop
 
 
 class McUtil:
+
+    @staticmethod
+    def cmdCall(cmd, *kargs):
+        # call command to execute backstage job
+        #
+        # scenario 1, process group receives SIGTERM, SIGINT and SIGHUP:
+        #   * callee must auto-terminate, and cause no side-effect
+        #   * caller must be terminated by signal, not by detecting child-process failure
+        # scenario 2, caller receives SIGTERM, SIGINT, SIGHUP:
+        #   * caller is terminated by signal, and NOT notify callee
+        #   * callee must auto-terminate, and cause no side-effect, after caller is terminated
+        # scenario 3, callee receives SIGTERM, SIGINT, SIGHUP:
+        #   * caller detects child-process failure and do appopriate treatment
+
+        ret = subprocess.run([cmd] + list(kargs),
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+        if ret.returncode > 128:
+            # for scenario 1, caller's signal handler has the oppotunity to get executed during sleep
+            time.sleep(1.0)
+        if ret.returncode != 0:
+            print(ret.stdout)
+            ret.check_returncode()
+        return ret.stdout.rstrip()
 
     @staticmethod
     def writePidFile(filename):
@@ -312,6 +339,18 @@ class McUtil:
                 return port
 
         raise Exception("no valid port")
+
+    @staticmethod
+    def waitTcpServiceForProc(ip, port, proc):
+        ip = ip.replace(".", "\\.")
+        while proc.poll() is None:
+            out = McUtil.cmdCall("/bin/netstat", "-lant")
+            m = re.search("tcp +[0-9]+ +[0-9]+ +(%s:%d) +.*" % (ip, port), out)
+            if m is not None:
+                return
+            time.sleep(1.0)
+        time.sleep(1000)
+        raise Exception("process terminated")
 
     @staticmethod
     def testSocketPort(portType, port):

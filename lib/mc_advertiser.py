@@ -4,8 +4,9 @@
 import os
 import json
 import jinja2
-import logging
 import signal
+import logging
+import logging.handlers
 import aiohttp
 import aiohttp_jinja2
 import subprocess
@@ -19,9 +20,9 @@ class McAdvertiser:
         self.param = param
 
         # create advertise servers
-        self.httpServer = _HttpServer("Advertising Server (http)", self.param.mainloop, self.param.listenIp, self.param.httpPort, McConst.logDir)
-        self.ftpServer = _FtpServer("Advertising Server (ftp)", self.param.listenIp, self.param.ftpPort, McConst.logDir)
-        self.rsyncServer = _RsyncServer("Advertising Server (rsync)", self.param.listenIp, self.param.rsyncPort, McConst.tmpDir, McConst.logDir)   # FIXME
+        self.httpServer = _HttpServer(self.param, "Advertising Server (http)")
+        self.ftpServer = _FtpServer(self.param, "Advertising Server (ftp)")
+        self.rsyncServer = _RsyncServer(self.param, "Advertising Server (rsync)")
 
         # register
         for ms in self.param.mirrorSiteDict.values():
@@ -41,7 +42,7 @@ class McAdvertiser:
     def start(self):
         # start main server
         self.param.mainloop.run_until_complete(self._start())
-        logging.info("Main server started." % (self.param.mainPort))
+        logging.info("Main server started.")
 
         # start advertise servers
         self.httpServer.start()
@@ -90,14 +91,14 @@ class McAdvertiser:
             if True:
                 self._log = logging.getLogger("aiohttp")
                 self._log.propagate = False
-                self._log.addHandler(logging.handlers.RotatingFileHandler(os.path.join(self._logDir, 'main-httpd.log'),
+                self._log.addHandler(logging.handlers.RotatingFileHandler(os.path.join(McConst.logDir, 'main-httpd.log'),
                                                                           maxBytes=McConst.updaterLogFileSize,
                                                                           backupCount=McConst.updaterLogFileCount))
             if True:
                 aiohttp_jinja2.setup(self._app, loader=jinja2.FileSystemLoader('/usr/share/mirrors'))       # FIXME, we should use VUE alike, not jinja
                 self._runner = aiohttp.web.AppRunner(self._app)
                 await self._runner.setup()
-                site = aiohttp.web.TCPSite(self._runner, self.listenIp, self.param.mainPort)
+                site = aiohttp.web.TCPSite(self._runner, self.param.listenIp, self.param.mainPort)
                 await site.start()
         except Exception:
             await self._stop()
@@ -188,18 +189,19 @@ class McAdvertiser:
 
 class _HttpServer:
 
-    def __init__(self, serverName, ip, tmpDir, logDir):
+    def __init__(self, param, serverName):
+        self.param = param
         self._serverName = serverName
-        self._ip = ip
         self._port = None
 
         self._userSet = set()
         self._dirDict = dict()          # files
         self._gitDirDict = dict()       # git repositories
 
-        self._cfgFile = os.path.join(tmpDir, "httpd.conf")
-        self._errorLogFile = os.path.join(logDir, "httpd-error.log")
-        self._accessLogFile = os.path.join(logDir, "httpd-access.log")
+        self._cfgFile = os.path.join(McConst.tmpDir, "httpd.conf")
+        self._pidFile = os.path.join(McConst.tmpDir, "httpd.pid")
+        self._errorLogFile = os.path.join(McConst.logDir, "httpd-error.log")
+        self._accessLogFile = os.path.join(McConst.logDir, "httpd-access.log")
         self._bStart = False
         self._proc = None
 
@@ -220,6 +222,7 @@ class _HttpServer:
                 self._port = McUtil.getFreeSocketPort("tcp")
                 self._generateCfgFile()
                 self._proc = subprocess.Popen(["/usr/sbin/apache2", "-d", os.path.dirname(self._cfgFile), "-f", self._cfgFile, "-DFOREGROUND"])
+                McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
                 logging.info("%s started, listening on port %d." % (self._serverName, self._port))
         except Exception:
             self._bStart = False
@@ -252,7 +255,7 @@ class _HttpServer:
         os.kill(self._proc.pid, signal.SIGUSR1)
 
     def _generateCfgFile(self):
-        modulesDir = "/usr/lib/apache2/modules"
+        modulesDir = "/usr/lib64/apache2/modules"
 
         buf = ""
         buf += "LoadModule log_config_module      %s/mod_log_config.so\n" % (modulesDir)
@@ -264,9 +267,10 @@ class _HttpServer:
         buf += "ServerName mirrors\n"                                                                       # FIXME
         buf += "DocumentRoot /var/cache/mirrors\n"                                                          # FIXME
         buf += "\n"
-        buf += 'ErrorLog "%s/error.log"\n' % (self._errorLogFile)
-        buf += r'LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" common\n'
-        buf += 'CustomLog "%s/access.log" common\n' % (self._accessLogFile)
+        buf += 'PidFile "%s"\n' % (self._pidFile)
+        buf += 'ErrorLog "%s"\n' % (self._errorLogFile)
+        buf += r'LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" common' + "\n"
+        buf += 'CustomLog "%s" common\n' % (self._accessLogFile)
         buf += "\n"
         buf += "Listen %d http\n" % (self._port)
         buf += "\n"
@@ -298,17 +302,16 @@ class _HttpServer:
 
 class _FtpServer:
 
-    def __init__(self, serverName, ip, logDir):
+    def __init__(self, param, serverName):
+        self.param = param
         self._serverName = serverName
-        self._ip = ip
         self._port = None
-        self._logDir = logDir
 
         self._userSet = set()
         self._dirDict = dict()
 
-        self._ftpdExecFile = os.path.join(self.libexecDir, "ftpd.py")
-        self._ftpdCfgFile = os.path.join(self.tmpDir, "mirrors-ftpd.cfg")
+        self._ftpdExecFile = os.path.join(McConst.libexecDir, "ftpd.py")
+        self._ftpdCfgFile = os.path.join(McConst.tmpDir, "mirrors-ftpd.cfg")
         self._bStart = False
         self._proc = None
 
@@ -329,6 +332,7 @@ class _FtpServer:
                 self._port = McUtil.getFreeSocketPort("tcp")
                 self._generateCfgFile()
                 self._proc = subprocess.Popen([self._ftpdExecFile, self._ftpdCfgFile])
+                McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
                 logging.info("%s started, listening on port %d." % (self._serverName, self._port))
         except Exception:
             self._bStart = False
@@ -357,7 +361,7 @@ class _FtpServer:
 
     def _generateCfgFile(self):
         dataObj = dict()
-        dataObj["ip"] = self._ip
+        dataObj["ip"] = self.param.listenIp
         dataObj["port"] = self._port
         dataObj["dirmap"] = self._dirDict
         with open(self._ftpdCfgFile, "w") as f:
@@ -366,17 +370,17 @@ class _FtpServer:
 
 class _RsyncServer:
 
-    def __init__(self, serverName, ip, tmpDir, logDir):
+    def __init__(self, param, serverName):
+        self.param = param
         self._serverName = serverName
-        self._ip = ip
         self._port = None
 
         self._userSet = set()
         self._dirDict = dict()
 
-        self._cfgFile = os.path.join(tmpDir, "rsyncd.conf")
-        self._lockFile = os.path.join(tmpDir, "rsyncd.lock")
-        self._logFile = os.path.join(logDir, "rsyncd.log")
+        self._cfgFile = os.path.join(McConst.tmpDir, "rsyncd.conf")
+        self._lockFile = os.path.join(McConst.tmpDir, "rsyncd.lock")
+        self._logFile = os.path.join(McConst.logDir, "rsyncd.log")
         self._bStart = False
         self._proc = None
 
@@ -396,8 +400,8 @@ class _RsyncServer:
             if len(self._userSet) > 0:
                 self._port = McUtil.getFreeSocketPort("tcp")
                 self._generateCfgFile()
-                cmd = "/usr/bin/rsync --daemon --no-detach --config=\"%s\"" % (self._cfgFile)
-                self._proc = subprocess.Popen(cmd, shell=True, universal_newlines=True)
+                self._proc = subprocess.Popen(["/usr/bin/rsync", "-v", "--daemon", "--no-detach", "--config=%s" % (self._cfgFile)])
+                McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
                 logging.info("%s started, listening on port %d." % (self._serverName, self._port))
         except Exception:
             self._bStart = False
