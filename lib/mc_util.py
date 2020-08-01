@@ -10,14 +10,12 @@ import dbus
 import math
 import json
 import stat
-import fcntl
 import struct
 import shutil
 import random
 import socket
 import logging
 import traceback
-import ipaddress
 import subprocess
 from datetime import datetime
 from collections import OrderedDict
@@ -28,6 +26,13 @@ from dbus.mainloop.glib import DBusGMainLoop
 
 
 class McUtil:
+
+    @staticmethod
+    def isPathOverlap(self, path, pathList):
+        for p in pathList:
+            if path == p or p.startswith(path + "/") or path.startswith(p + "/"):
+                return True
+        return False
 
     @staticmethod
     def cmdCall(cmd, *kargs):
@@ -218,28 +223,6 @@ class McUtil:
         return ret
 
     @staticmethod
-    def getInterfaceIfIndex(ifname):
-        SIOCGIFINDEX = 0x8933           # check your /usr/include/linux/sockios.h file for the appropriate value here
-        IFNAMSIZ = 16                   # from /usr/include/net/if.h
-        ifname = ifname[:IFNAMSIZ - 1]  # truncate supplied ifname
-        ioctlbuf = ifname + ('\x00' * (IFNAMSIZ - len(ifname))) + ('\x00' * IFNAMSIZ)
-        skt = socket.socket()
-        try:
-            ret = fcntl.ioctl(skt.fileno(), SIOCGIFINDEX, ioctlbuf)
-            ifname, ifindex = struct.unpack_from('16sL', ret)
-            return ifindex
-        finally:
-            skt.close()
-
-    @staticmethod
-    def ip2ipar(ip):
-        AF_INET = 2
-        # AF_INET6 = 10
-        el = ip.split(".")
-        assert len(el) == 4
-        return (AF_INET, [bytes([int(x)]) for x in el])
-
-    @staticmethod
     def getLineWithoutBlankAndComment(line):
         if line.find("#") >= 0:
             line = line[:line.find("#")]
@@ -278,43 +261,6 @@ class McUtil:
                 assert False
 
     @staticmethod
-    def getReservedIpv4NetworkList():
-        return [
-            ipaddress.IPv4Network("0.0.0.0/8"),
-            ipaddress.IPv4Network("10.0.0.0/8"),
-            ipaddress.IPv4Network("100.64.0.0/10"),
-            ipaddress.IPv4Network("127.0.0.0/8"),
-            ipaddress.IPv4Network("169.254.0.0/16"),
-            ipaddress.IPv4Network("172.16.0.0/12"),
-            ipaddress.IPv4Network("192.0.0.0/24"),
-            ipaddress.IPv4Network("192.0.2.0/24"),
-            ipaddress.IPv4Network("192.88.99.0/24"),
-            ipaddress.IPv4Network("192.168.0.0/16"),
-            ipaddress.IPv4Network("198.18.0.0/15"),
-            ipaddress.IPv4Network("198.51.100.0/24"),
-            ipaddress.IPv4Network("203.0.113.0/24"),
-            ipaddress.IPv4Network("224.0.0.0/4"),
-            ipaddress.IPv4Network("240.0.0.0/4"),
-            ipaddress.IPv4Network("255.255.255.255/32"),
-        ]
-
-    @staticmethod
-    def substractIpv4Network(ipv4Network, ipv4NetworkList):
-        netlist = [ipv4Network]
-        for n in ipv4NetworkList:
-            tlist = []
-            for n2 in netlist:
-                if not n2.overlaps(n):
-                    tlist.append(n2)                                # no need to substract
-                    continue
-                try:
-                    tlist += list(n2.address_exclude(n))            # successful to substract
-                except Exception:
-                    pass                                            # substract to none
-            netlist = tlist
-        return netlist
-
-    @staticmethod
     def getFreeSocketPort(portType):
         if portType == "tcp":
             stlist = [socket.SOCK_STREAM]
@@ -349,7 +295,6 @@ class McUtil:
             if m is not None:
                 return
             time.sleep(1.0)
-        time.sleep(1000)
         raise Exception("process terminated")
 
     @staticmethod

@@ -5,6 +5,7 @@ import os
 import sys
 import json
 import signal
+import logging
 import pyftpdlib.servers
 import pyftpdlib.handlers
 import pyftpdlib.authorizers
@@ -28,7 +29,7 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
         return super().open(self._convertPath(filename), mode)
 
     def mkstemp(self, suffix='', prefix='', dir=None, mode='wb'):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     # --- Wrapper methods around os.* calls
 
@@ -40,7 +41,7 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
         self.cwd = self.fs2ftp(path)
 
     def mkdir(self, path):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def listdir(self, path):
         if self._isVirtualRootDir(path):
@@ -49,19 +50,19 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
             return super().listdir(self._convertPath(path))
 
     def listdirinfo(self, path):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def rmdir(self, path):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def remove(self, path):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def rename(self, src, dst):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def chmod(self, path, mode):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def stat(self, path):
         if self._isVirtualRootDir(path):
@@ -70,7 +71,7 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
             return super().stat(self._convertPath(path))
 
     def utime(self, path, timeval):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def lstat(self, path):
         if self._isVirtualRootDir(path):
@@ -79,7 +80,7 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
             return super().lstat(self._convertPath(path))
 
     def readlink(self, path):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     # --- Wrapper methods around os.path.* calls
 
@@ -118,12 +119,13 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
             return super().getmtime(self._convertPath(path))
 
     def realpath(self, path):
-        if self._isVirtualRootDir(path):
-            return os.path.realpath("/")                        # FIXME
-        elif self._isVirtualSiteDir(path):
-            return super().realpath(self._convertPath(path))    # FIXME
+        if self._isVirtualRootDir(path) or self._isVirtualSiteDir(path):
+            return path
         else:
-            return super().realpath(self._convertPath(path))
+            path = self._convertPath(path)
+            path = os.path.realpath(path)
+            path = self._convertPathBack(path)
+            return path
 
     def lexists(self, path):
         if self._isVirtualRootDir(path) or self._isVirtualSiteDir(path):
@@ -159,6 +161,13 @@ class VirtualFS(pyftpdlib.filesystems.AbstractedFS):
             raise FileNotFoundError("No such file or directory: '%s'" % (path))
         return os.path.join(cfg["dirmap"][prefix], *dirParts)
 
+    def _convertPathBack(self, path):
+        global cfg
+        for prefix, realPath in cfg["dirmap"].items():
+            if path.startswith(realPath + "/"):
+                return path.replace(realPath + "/", prefix + "/", 1)
+        assert False
+
 
 def refreshCfgFromCfgFile():
     global cfgFile
@@ -166,28 +175,41 @@ def refreshCfgFromCfgFile():
 
     with open(cfgFile, "r") as f:
         buf = f.read()
-        if buf != "":
-            dataObj = json.loads(buf)
-            if "ip" not in dataObj:
-                raise Exception("no \"ip\" in config file")
-            if "port" not in dataObj:
-                raise Exception("no \"port\" in config file")
-            if "dirmap" not in dataObj:
-                raise Exception("no \"dirmap\" in config file")
-            for key, value in dataObj["dirmap"].items():
-                if not os.path.isabs(value):
-                    raise Exception("value of \"%s\" in \"dirmap\" is not absolute path")
-            if "ip" not in cfg:
-                cfg["ip"] = dataObj["ip"]       # cfg["ip"] is not changable
-            if "port" not in cfg:
-                cfg["port"] = dataObj["port"]   # cfg["port"] is not changable
-            cfg["dirmap"] = dataObj["dirmap"]
-        else:
-            cfg["dirmap"] = dict()
+        if buf == "":
+            raise Exception("no content in config file")
+        dataObj = json.loads(buf)
+
+        if "logfile" not in dataObj:
+            raise Exception("no \"logfile\" in config file")
+        if "ip" not in dataObj:
+            raise Exception("no \"ip\" in config file")
+        if "port" not in dataObj:
+            raise Exception("no \"port\" in config file")
+        if "dirmap" not in dataObj:
+            raise Exception("no \"dirmap\" in config file")
+        for key, value in dataObj["dirmap"].items():
+            if not os.path.isabs(value) or value.endswith("/"):
+                raise Exception("value of \"%s\" in \"dirmap\" is invalid" % (key))
+        if True:
+            tl = dataObj["dirmap"].values()
+            for i in range(0, len(tl)):
+                for j in range(0, len(tl)):
+                    if i != j and (tl[i] == tl[j] or tl[i].startswith(tl[j] + "/") or tl[j].startswith(tl[i] + "/")):
+                        raise Exception("values in \"dirmap\" are overlay")
+
+        if "logfile" not in cfg:
+            cfg["logfile"] = dataObj["logfile"]       # cfg["logfile"] is not changable
+        if "ip" not in cfg:
+            cfg["ip"] = dataObj["ip"]                 # cfg["ip"] is not changable
+        if "port" not in cfg:
+            cfg["port"] = dataObj["port"]             # cfg["port"] is not changable
+        cfg["dirmap"] = dataObj["dirmap"]
 
 
 def runServer():
     global cfg
+
+    logging.basicConfig(filename=cfg["logfile"])
 
     authorizer = pyftpdlib.authorizers.DummyAuthorizer()
     authorizer.add_anonymous("/")

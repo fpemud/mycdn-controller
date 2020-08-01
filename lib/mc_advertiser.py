@@ -19,25 +19,31 @@ class McAdvertiser:
     def __init__(self, param):
         self.param = param
 
-        # create advertise servers
-        self.httpServer = _HttpServer(self.param, "Advertising Server (http)")
-        self.ftpServer = _FtpServer(self.param, "Advertising Server (ftp)")
-        self.rsyncServer = _RsyncServer(self.param, "Advertising Server (rsync)")
-
-        # register
+        # register advertise servers
+        self.httpServer = None
+        self.ftpServer = None
+        self.rsyncServer = None
         for ms in self.param.mirrorSiteDict.values():
             for storageName, protocolList in ms.advertiseDict.items():
                 for proto in protocolList:
                     if proto == "http":
-                        self.httpServer.useBy(ms.id)
+                        self.httpServer = True
                     elif proto == "ftp":
-                        self.ftpServer.useBy(ms.id)
+                        self.ftpServer = True
                     elif proto == "rsync":
-                        self.rsyncServer.useBy(ms.id)
+                        self.rsyncServer = True
                     elif proto == "git-http":
-                        self.httpServer.useBy(ms.id)
+                        self.httpServer = True
                     else:
                         assert False
+
+        # create advertise servers
+        if self.httpServer is not None:
+            self.httpServer = _HttpServer(self.param)
+        if self.ftpServer is not None:
+            self.ftpServer = _FtpServer(self.param)
+        if self.rsyncServer is not None:
+            self.rsyncServer = _RsyncServer(self.param)
 
     def start(self):
         # start main server
@@ -45,21 +51,21 @@ class McAdvertiser:
         logging.info("Main server started.")
 
         # start advertise servers
-        self.httpServer.start()
-        self.ftpServer.start()
-        self.rsyncServer.start()
+        if self.httpServer is not None:
+            self.httpServer.start()
+        if self.ftpServer is not None:
+            self.ftpServer.start()
+        if self.rsyncServer is not None:
+            self.rsyncServer.start()
 
     def stop(self):
         # stop advertise servers
         if self.rsyncServer is not None:
             self.rsyncServer.stop()
-            self.rsyncServer = None
         if self.ftpServer is not None:
             self.ftpServer.stop()
-            self.ftpServer = None
         if self.httpServer is not None:
             self.httpServer.stop()
-            self.httpServer = None
 
         # stop main server
         if self._runner is not None:
@@ -189,12 +195,10 @@ class McAdvertiser:
 
 class _HttpServer:
 
-    def __init__(self, param, serverName):
+    def __init__(self, param):
         self.param = param
-        self._serverName = serverName
         self._port = None
 
-        self._userSet = set()
         self._dirDict = dict()          # files
         self._gitDirDict = dict()       # git repositories
 
@@ -202,7 +206,6 @@ class _HttpServer:
         self._pidFile = os.path.join(McConst.tmpDir, "httpd.pid")
         self._errorLogFile = os.path.join(McConst.logDir, "httpd-error.log")
         self._accessLogFile = os.path.join(McConst.logDir, "httpd-access.log")
-        self._bStart = False
         self._proc = None
 
     @property
@@ -210,46 +213,29 @@ class _HttpServer:
         assert self._proc is not None
         return self._port
 
-    def useBy(self, user):
-        assert not self._bStart
-        self._userSet.add(user)
-
     def start(self):
-        assert not self._bStart
-        self._bStart = True
-        try:
-            if len(self._userSet) > 0:
-                self._port = McUtil.getFreeSocketPort("tcp")
-                self._generateCfgFile()
-                self._proc = subprocess.Popen(["/usr/sbin/apache2", "-d", os.path.dirname(self._cfgFile), "-f", self._cfgFile, "-DFOREGROUND"])
-                McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
-                logging.info("%s started, listening on port %d." % (self._serverName, self._port))
-        except Exception:
-            self._bStart = False
-            raise
+        assert self._proc is not None
+        self._port = McUtil.getFreeSocketPort("tcp")
+        self._generateCfgFile()
+        self._proc = subprocess.Popen(["/usr/sbin/apache2", "-d", os.path.dirname(self._cfgFile), "-f", self._cfgFile, "-DFOREGROUND"])
+        McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
+        logging.info("Advertising server (http) started, listening on port %d." % (self._port))
 
     def stop(self):
-        assert self._bStart
         if self._proc is not None:
             self._proc.terminate()
             self._proc.wait()
             self._proc = None
-        self._bStart = False
-
-    def isStarted(self):
-        return self._bStart
-
-    def isRunning(self):
-        assert self._bStart
-        return self._proc is not None
 
     def addFileDir(self, name, realPath):
         assert self._proc is not None
+        assert self._checkNameAndRealPath(self._dirDict, name, realPath)
         self._dirDict[name] = realPath
         self._generateCfgFile()
 
     def addGitDir(self, name, realPath):
         assert self._proc is not None
+        assert self._checkNameAndRealPath(self._gitDirDict, name, realPath)
         self._gitDirDict[name] = realPath
         self._generateCfgFile()
         os.kill(self._proc.pid, signal.SIGUSR1)
@@ -302,17 +288,15 @@ class _HttpServer:
 
 class _FtpServer:
 
-    def __init__(self, param, serverName):
+    def __init__(self, param):
         self.param = param
-        self._serverName = serverName
         self._port = None
 
-        self._userSet = set()
         self._dirDict = dict()
 
-        self._ftpdExecFile = os.path.join(McConst.libexecDir, "ftpd.py")
-        self._ftpdCfgFile = os.path.join(McConst.tmpDir, "mirrors-ftpd.cfg")
-        self._bStart = False
+        self._execFile = os.path.join(McConst.libexecDir, "ftpd.py")
+        self._cfgFile = os.path.join(McConst.tmpDir, "ftpd.cfg")
+        self._logFile = os.path.join(McConst.logDir, "ftpd.log")
         self._proc = None
 
     @property
@@ -320,68 +304,48 @@ class _FtpServer:
         assert self._proc is not None
         return self._port
 
-    def useBy(self, user):
-        assert not self._bStart
-        self._userSet.add(user)
-
     def start(self):
-        assert not self._bStart
-        self._bStart = True
-        try:
-            if len(self._userSet) > 0:
-                self._port = McUtil.getFreeSocketPort("tcp")
-                self._generateCfgFile()
-                self._proc = subprocess.Popen([self._ftpdExecFile, self._ftpdCfgFile])
-                McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
-                logging.info("%s started, listening on port %d." % (self._serverName, self._port))
-        except Exception:
-            self._bStart = False
-            raise
+        assert self._proc is None
+        self._port = McUtil.getFreeSocketPort("tcp")
+        self._generateCfgFile()
+        self._proc = subprocess.Popen([self._execFile, self._cfgFile])
+        McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
+        logging.info("Advertising server (ftp) started, listening on port %d." % (self._port))
 
     def stop(self):
-        assert self._bStart
         if self._proc is not None:
             self._proc.terminate()
             self._proc.wait()
             self._proc = None
-        self._bStart = False
-
-    def isStarted(self):
-        return self._bStart
-
-    def isRunning(self):
-        assert self._bStart
-        return self._proc is not None
 
     def addFileDir(self, name, realPath):
         assert self._proc is not None
+        assert self._checkNameAndRealPath(self._dirDict, name, realPath)
         self._dirDict[name] = realPath
         self._generateCfgFile()
         os.kill(self._proc.pid, signal.SIGUSR1)
 
     def _generateCfgFile(self):
         dataObj = dict()
+        dataObj["logfile"] = self._logFile
         dataObj["ip"] = self.param.listenIp
         dataObj["port"] = self._port
         dataObj["dirmap"] = self._dirDict
-        with open(self._ftpdCfgFile, "w") as f:
+        with open(self._cfgFile, "w") as f:
             json.dump(dataObj, f)
 
 
 class _RsyncServer:
 
-    def __init__(self, param, serverName):
+    def __init__(self, param):
         self.param = param
-        self._serverName = serverName
         self._port = None
 
-        self._userSet = set()
         self._dirDict = dict()
 
         self._cfgFile = os.path.join(McConst.tmpDir, "rsyncd.conf")
         self._lockFile = os.path.join(McConst.tmpDir, "rsyncd.lock")
         self._logFile = os.path.join(McConst.logDir, "rsyncd.log")
-        self._bStart = False
         self._proc = None
 
     @property
@@ -389,41 +353,23 @@ class _RsyncServer:
         assert self._proc is not None
         return self._port
 
-    def useBy(self, user):
-        assert not self._bStart
-        self._userSet.add(user)
-
     def start(self):
-        assert not self._bStart
-        self._bStart = True
-        try:
-            if len(self._userSet) > 0:
-                self._port = McUtil.getFreeSocketPort("tcp")
-                self._generateCfgFile()
-                self._proc = subprocess.Popen(["/usr/bin/rsync", "-v", "--daemon", "--no-detach", "--config=%s" % (self._cfgFile)])
-                McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
-                logging.info("%s started, listening on port %d." % (self._serverName, self._port))
-        except Exception:
-            self._bStart = False
-            raise
+        assert self._proc is None
+        self._port = McUtil.getFreeSocketPort("tcp")
+        self._generateCfgFile()
+        self._proc = subprocess.Popen(["/usr/bin/rsync", "-v", "--daemon", "--no-detach", "--config=%s" % (self._cfgFile)])
+        McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
+        logging.info("Advertising server (rsync) started, listening on port %d." % (self._port))
 
     def stop(self):
-        assert self._bStart
         if self._proc is not None:
             self._proc.terminate()
             self._proc.wait()
             self._proc = None
-        self._bStart = False
-
-    def isStarted(self):
-        return self._bStart
-
-    def isRunning(self):
-        assert self._bStart
-        return self._proc is not None
 
     def addFileDir(self, name, realPath):
         assert self._proc is not None
+        assert self._checkNameAndRealPath(self._dirDict, name, realPath)
         self._dirDict[name] = realPath
         self._generateCfgFile()             # rsync picks the new cfg-file when new connection comes in
 
@@ -444,3 +390,13 @@ class _RsyncServer:
             buf += "\n"
         with open(self._cfgFile, "w") as f:
             f.write(buf)
+
+
+def _checkNameAndRealPath(dictObj, name, realPath):
+    if name in dictObj:
+        return False
+    if os.path.isabs(realPath) or realPath.endswith("/"):
+        return False
+    if McUtil.isPathOverlap(realPath, dictObj.values()):
+        return False
+    return True
