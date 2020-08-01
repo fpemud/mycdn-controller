@@ -43,10 +43,7 @@ class McParam:
         self.mirrorSiteDict = dict()
 
         self.listenIp = "0.0.0.0"
-
-        self.httpPort = "random"
-        self.ftpPort = "random"
-        self.rsyncPort = "random"
+        self.mainPort = 2300
 
         # objects
         self.mainloop = None

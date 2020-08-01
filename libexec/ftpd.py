@@ -177,9 +177,13 @@ def refreshCfgFromCfgFile():
             for key, value in dataObj["dirmap"].items():
                 if not os.path.isabs(value):
                     raise Exception("value of \"%s\" in \"dirmap\" is not absolute path")
-            cfg = dataObj
+            if "ip" not in cfg:
+                cfg["ip"] = dataObj["ip"]       # cfg["ip"] is not changable
+            if "port" not in cfg:
+                cfg["port"] = dataObj["port"]   # cfg["port"] is not changable
+            cfg["dirmap"] = dataObj["dirmap"]
         else:
-            cfg = dict()
+            cfg["dirmap"] = dict()
 
 
 def runServer():
@@ -196,7 +200,7 @@ def runServer():
     server.serve_forever()
 
 
-def sigHandlerHUP(signum, frame):
+def sigHandler(signum, frame):
     refreshCfgFromCfgFile()
 
 
@@ -204,5 +208,5 @@ if __name__ == "__main__":
     cfgFile = sys.argv[1]
     cfg = dict()
     refreshCfgFromCfgFile()
-    signal.signal(signal.SIGHUP, sigHandlerHUP)
+    signal.signal(signal.SIGUSR1, sigHandler)
     runServer()
