@@ -260,15 +260,15 @@ class _HttpServer:
         McUtil.ensureDir(virtRootDirFile)
 
         # create new directories
-        for name in self._dirDict:
+        for name, realPath in self._dirDict.items():
             dn = os.path.join(virtRootDirFile, name)
             if not os.path.exists(dn):
-                os.mkdir(dn)
+                os.symlink(realPath, dn)
 
         # remove old directories
         for dn in os.listdir(virtRootDirFile):
             if dn not in self._dirDict:
-                os.rmdir(dn)
+                os.unlink(dn)
 
     def _generateVirtualRootDirGit(self):
         if len(self._gitDirDict) == 0:
@@ -278,15 +278,15 @@ class _HttpServer:
         McUtil.ensureDir(virtRootDirGit)
 
         # create new directories
-        for name in self._gitDirDict:
+        for name, realPath in self._gitDirDict.items():
             dn = os.path.join(virtRootDirGit, name)
             if not os.path.exists(dn):
-                os.mkdir(dn)
+                os.symlink(realPath, dn)
 
         # remove old directories
         for dn in os.listdir(virtRootDirGit):
             if dn not in self._gitDirDict:
-                os.rmdir(dn)
+                os.unlink(dn)
 
     def _generateCfgFn(self):
         modulesDir = "/usr/lib64/apache2/modules"
@@ -312,23 +312,15 @@ class _HttpServer:
         buf += "ServerName none\n"                              # dummy value
         buf += "\n"
         buf += 'DocumentRoot "%s"\n' % (self._virtRootDir)
-        for fn in os.listdir(self._virtRootDir):
-            buf += '<Directory "%s">\n' % (os.path.join(self._virtRootDir, fn))
-            buf += '  Options Indexes\n'
-            buf += '</Directory>\n'
-            buf += "\n"
-
-        # file settings
+        buf += '<Directory "%s">\n' % (self._virtRootDir)
+        buf += '  Options Indexes FollowSymLinks\n'
+        buf += '  Require all denied\n'
+        buf += '</Directory>\n'
         if len(self._dirDict) > 0:
-            # site directories
-            for name, realPath in self._dirDict.items():
-                buf += '<Location "/file/%s">\n' % (name)
-                buf += '  Alias "%s"\n' % (realPath)
-                buf += '</Location>\n'
-                buf += '<Directory "%s">\n' % (realPath)
-                buf += '  Options Indexes FollowSymLinks\n'
-                buf += '</Directory>\n'
-            buf += "\n"
+            buf += '<Directory "%s">\n' % (os.path.join(self._virtRootDir, "file"))
+            buf += '  Require all granted\n'
+            buf += '</Directory>\n'
+        buf += "\n"
 
         # git settings
         if len(self._gitDirDict) > 0:
