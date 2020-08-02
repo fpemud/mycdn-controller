@@ -218,7 +218,7 @@ def refreshCfgFromCfgFile():
             if not os.path.isabs(value) or value.endswith("/"):
                 raise Exception("value of \"%s\" in \"dirmap\" is invalid" % (key))
         if True:
-            tl = dataObj["dirmap"].values()
+            tl = list(dataObj["dirmap"].values())
             for i in range(0, len(tl)):
                 for j in range(0, len(tl)):
                     if i != j and (tl[i] == tl[j] or tl[i].startswith(tl[j] + "/") or tl[j].startswith(tl[i] + "/")):
