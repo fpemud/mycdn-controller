@@ -355,8 +355,10 @@ class _HttpServer:
 
             buf += "\n"
 
-        with open(self._cfgFn, "w") as f:
+        # write file atomically
+        with open(self._cfgFn + ".tmp", "w") as f:
             f.write(buf)
+        os.rename(self._cfgFn + ".tmp", self._cfgFn)
 
 
 class _FtpServer:
@@ -399,6 +401,7 @@ class _FtpServer:
         os.kill(self._proc.pid, signal.SIGUSR1)
 
     def _generateCfgFile(self):
+        # generate file content
         dataObj = dict()
         dataObj["logFile"] = self._logFile
         dataObj["logMaxBytes"] = McConst.updaterLogFileSize
@@ -406,8 +409,11 @@ class _FtpServer:
         dataObj["ip"] = self.param.listenIp
         dataObj["port"] = self._port
         dataObj["dirmap"] = self._dirDict
-        with open(self._cfgFile, "w") as f:
+
+        # write file atomically
+        with open(self._cfgFile + ".tmp", "w") as f:
             json.dump(dataObj, f)
+        os.rename(self._cfgFile + ".tmp", self._cfgFile)
 
 
 class _RsyncServer:
@@ -449,6 +455,7 @@ class _RsyncServer:
         self._generateCfgFile()             # rsync picks the new cfg-file when new connection comes in
 
     def _generateCfgFile(self):
+        # generate file content
         buf = ""
         buf += "lock file = %s\n" % (self._lockFile)
         buf += "log file = %s\n" % (self._logFile)
@@ -463,8 +470,11 @@ class _RsyncServer:
             buf += "path = %s\n" % (d)
             buf += "read only = yes\n"
             buf += "\n"
-        with open(self._cfgFile, "w") as f:
+
+        # write file atomically
+        with open(self._cfgFile + ".tmp", "w") as f:
             f.write(buf)
+        os.rename(self._cfgFile + ".tmp", self._cfgFile)
 
 
 def _checkNameAndRealPath(dictObj, name, realPath):
