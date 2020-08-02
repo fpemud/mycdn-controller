@@ -202,10 +202,15 @@ class _HttpServer:
         self._dirDict = dict()          # files
         self._gitDirDict = dict()       # git repositories
 
-        self._cfgFile = os.path.join(McConst.tmpDir, "httpd.conf")
+        self._virtRootDir = os.path.join(McConst.tmpDir, "vroot-httpd")
+        self._virtRootDirFile = os.path.join(McConst.tmpDir, "vroot-httpd-file")
+        self._virtRootDirGit = os.path.join(McConst.tmpDir, "vroot-httpd-git")
+
+        self._cfgFn = os.path.join(McConst.tmpDir, "httpd.conf")
         self._pidFile = os.path.join(McConst.tmpDir, "httpd.pid")
         self._errorLogFile = os.path.join(McConst.logDir, "httpd-error.log")
         self._accessLogFile = os.path.join(McConst.logDir, "httpd-access.log")
+
         self._proc = None
 
     @property
@@ -216,8 +221,11 @@ class _HttpServer:
     def start(self):
         assert self._proc is None
         self._port = McUtil.getFreeSocketPort("tcp")
-        self._generateCfgFile()
-        self._proc = subprocess.Popen(["/usr/sbin/apache2", "-d", os.path.dirname(self._cfgFile), "-f", self._cfgFile, "-DFOREGROUND"])
+        self._generateVirtualRootDir()
+        self._generateVirtualRootDirFile()
+        self._generateVirtualRootDirGit()
+        self._generateCfgFn()
+        self._proc = subprocess.Popen(["/usr/sbin/apache2", "-f", self._cfgFn, "-DFOREGROUND"])
         McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
         logging.info("Advertising server (http) started, listening on port %d." % (self._port))
 
@@ -231,45 +239,103 @@ class _HttpServer:
         assert self._proc is not None
         assert _checkNameAndRealPath(self._dirDict, name, realPath)
         self._dirDict[name] = realPath
-        self._generateCfgFile()
+        self._generateVirtualRootDirFile()
+        self._generateCfgFn()
+        os.kill(self._proc.pid, signal.SIGUSR1)
 
     def addGitDir(self, name, realPath):
         assert self._proc is not None
         assert _checkNameAndRealPath(self._gitDirDict, name, realPath)
         self._gitDirDict[name] = realPath
-        self._generateCfgFile()
+        self._generateVirtualRootDirGit()
+        self._generateCfgFn()
         os.kill(self._proc.pid, signal.SIGUSR1)
 
-    def _generateCfgFile(self):
-        modulesDir = "/usr/lib64/apache2/modules"
+    def _generateVirtualRootDir(self):
+        McUtil.ensureDir(self._virtRootDir)
 
+    def _generateVirtualRootDirFile(self):
+        if len(self._dirDict) == 0:
+            return
+
+        McUtil.ensureDir(self._virtRootDirFile)
+
+        # create new directories
+        for name in self._dirDict:
+            dn = os.path.join(self._virtRootDirFile, name)
+            if not os.path.exists(dn):
+                os.mkdir(dn)
+
+        # remove old directories
+        for dn in os.listdir(self._virtRootDirFile):
+            if dn not in self._dirDict:
+                os.rmdir(dn)
+
+    def _generateVirtualRootDirGit(self):
+        if len(self._gitDirDict) == 0:
+            return
+
+        McUtil.ensureDir(self._virtRootDirGit)
+
+        # create new directories
+        for name in self._gitDirDict:
+            dn = os.path.join(self._virtRootDirGit, name)
+            if not os.path.exists(dn):
+                os.mkdir(dn)
+
+        # remove old directories
+        for dn in os.listdir(self._virtRootDirGit):
+            if dn not in self._gitDirDict:
+                os.rmdir(dn)
+
+    def _generateCfgFn(self):
+        modulesDir = "/usr/lib64/apache2/modules"
         buf = ""
+
+        # modules
         buf += "LoadModule log_config_module      %s/mod_log_config.so\n" % (modulesDir)
-        buf += "LoadModule env_module             %s/mod_env.so\n" % (modulesDir)
         buf += "LoadModule unixd_module           %s/mod_unixd.so\n" % (modulesDir)
         buf += "LoadModule alias_module           %s/mod_alias.so\n" % (modulesDir)
-        buf += "LoadModule cgi_module             %s/mod_cgi.so\n" % (modulesDir)
+        buf += "LoadModule authz_core_module      %s/mod_authz_core.so\n" % (modulesDir)            # it's strange why we need this module and Require directive since we have no auth at all
+        buf += "LoadModule autoindex_module       %s/mod_autoindex.so\n" % (modulesDir)
+        # buf += "LoadModule env_module             %s/mod_env.so\n" % (modulesDir)
+        # buf += "LoadModule cgi_module             %s/mod_cgi.so\n" % (modulesDir)
         buf += "\n"
-        buf += "ServerName mirrors\n"                                                                       # FIXME
-        buf += "DocumentRoot /var/cache/mirrors\n"                                                          # FIXME
-        buf += "\n"
+
+        # global settings
         buf += 'PidFile "%s"\n' % (self._pidFile)
         buf += 'ErrorLog "%s"\n' % (self._errorLogFile)
         buf += r'LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" common' + "\n"
         buf += 'CustomLog "%s" common\n' % (self._accessLogFile)
         buf += "\n"
         buf += "Listen %d http\n" % (self._port)
+        buf += "ServerName none\n"                              # dummy value
+        buf += 'DocumentRoot "%s"\n' % (self._virtRootDir)
         buf += "\n"
 
-        # for file
-        for name, realDir in self._dirDict.items():
-            buf += '  <Directory "%s">\n' % (realDir)
-            buf += '    AllowOverride None\n'
-            buf += '  </Directory>\n'
+        # file settings
+        if len(self._dirDict) > 0:
+            # virtual root directory
+            buf += '<Location "/file">\n'
+            buf += '  Alias "%s"\n' % (self._virtRootDirFile)
+            buf += '</Location>\n'
+            buf += '<Directory "%s">\n' % (self._virtRootDirFile)
+            buf += '  Options Indexes\n'
+            buf += '</Directory>\n'
 
-        # for git
-        if True:
-            pass
+            # site directories
+            for name, realPath in self._dirDict.items():
+                buf += '<Location "/file/%s">\n' % (name)
+                buf += '  Alias "%s"\n' % (realPath)
+                buf += '</Location>\n'
+                buf += '<Directory "%s">\n' % (realPath)
+                buf += '  Options Indexes FollowSymLinks\n'
+                buf += '</Directory>\n'
+
+            buf += "\n"
+
+        # git settings
+        if len(self._gitDirDict) > 0:
             # buf += "SetEnv GIT_PROJECT_ROOT \"${REPO_ROOT_DIR}\""
             # buf += "SetEnv GIT_HTTP_EXPORT_ALL"
             # buf += ""
@@ -282,7 +348,14 @@ class _HttpServer:
             # buf += "    AllowOverride None"
             # buf += "  </Directory>"
 
-        with open(self._cfgFile, "w") as f:
+            # virtual root directory
+            buf += '<Location /git>\n'
+            buf += '  Alias "%s"\n' % (self._virtRootDirGit)
+            buf += '</Location>\n'
+
+            buf += "\n"
+
+        with open(self._cfgFn, "w") as f:
             f.write(buf)
 
 

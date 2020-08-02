@@ -300,11 +300,11 @@ class McUtil:
     def waitTcpServiceForProc(ip, port, proc):
         ip = ip.replace(".", "\\.")
         while proc.poll() is None:
+            time.sleep(0.1)
             out = McUtil.cmdCall("/bin/netstat", "-lant")
             m = re.search("tcp +[0-9]+ +[0-9]+ +(%s:%d) +.*" % (ip, port), out)
             if m is not None:
                 return
-            time.sleep(1.0)
         raise Exception("process terminated")
 
     @staticmethod
