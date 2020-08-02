@@ -203,9 +203,6 @@ class _HttpServer:
         self._gitDirDict = dict()       # git repositories
 
         self._virtRootDir = os.path.join(McConst.tmpDir, "vroot-httpd")
-        self._virtRootDirFile = os.path.join(McConst.tmpDir, "vroot-httpd-file")
-        self._virtRootDirGit = os.path.join(McConst.tmpDir, "vroot-httpd-git")
-
         self._cfgFn = os.path.join(McConst.tmpDir, "httpd.conf")
         self._pidFile = os.path.join(McConst.tmpDir, "httpd.pid")
         self._errorLogFile = os.path.join(McConst.logDir, "httpd-error.log")
@@ -258,16 +255,18 @@ class _HttpServer:
         if len(self._dirDict) == 0:
             return
 
-        McUtil.ensureDir(self._virtRootDirFile)
+        virtRootDirFile = os.path.join(self._virtRootDir, "file")
+
+        McUtil.ensureDir(virtRootDirFile)
 
         # create new directories
         for name in self._dirDict:
-            dn = os.path.join(self._virtRootDirFile, name)
+            dn = os.path.join(virtRootDirFile, name)
             if not os.path.exists(dn):
                 os.mkdir(dn)
 
         # remove old directories
-        for dn in os.listdir(self._virtRootDirFile):
+        for dn in os.listdir(virtRootDirFile):
             if dn not in self._dirDict:
                 os.rmdir(dn)
 
@@ -275,16 +274,17 @@ class _HttpServer:
         if len(self._gitDirDict) == 0:
             return
 
-        McUtil.ensureDir(self._virtRootDirGit)
+        virtRootDirGit = os.path.join(self._virtRootDir, "git")
+        McUtil.ensureDir(virtRootDirGit)
 
         # create new directories
         for name in self._gitDirDict:
-            dn = os.path.join(self._virtRootDirGit, name)
+            dn = os.path.join(virtRootDirGit, name)
             if not os.path.exists(dn):
                 os.mkdir(dn)
 
         # remove old directories
-        for dn in os.listdir(self._virtRootDirGit):
+        for dn in os.listdir(virtRootDirGit):
             if dn not in self._gitDirDict:
                 os.rmdir(dn)
 
@@ -310,19 +310,16 @@ class _HttpServer:
         buf += "\n"
         buf += "Listen %d http\n" % (self._port)
         buf += "ServerName none\n"                              # dummy value
-        buf += 'DocumentRoot "%s"\n' % (self._virtRootDir)
         buf += "\n"
+        buf += 'DocumentRoot "%s"\n' % (self._virtRootDir)
+        for fn in os.listdir(self._virtRootDir):
+            buf += '<Directory "%s">\n' % (os.path.join(self._virtRootDir, fn))
+            buf += '  Options Indexes\n'
+            buf += '</Directory>\n'
+            buf += "\n"
 
         # file settings
         if len(self._dirDict) > 0:
-            # virtual root directory
-            buf += '<Location "/file">\n'
-            buf += '  Alias "%s"\n' % (self._virtRootDirFile)
-            buf += '</Location>\n'
-            buf += '<Directory "%s">\n' % (self._virtRootDirFile)
-            buf += '  Options Indexes\n'
-            buf += '</Directory>\n'
-
             # site directories
             for name, realPath in self._dirDict.items():
                 buf += '<Location "/file/%s">\n' % (name)
@@ -331,7 +328,6 @@ class _HttpServer:
                 buf += '<Directory "%s">\n' % (realPath)
                 buf += '  Options Indexes FollowSymLinks\n'
                 buf += '</Directory>\n'
-
             buf += "\n"
 
         # git settings
@@ -347,12 +343,6 @@ class _HttpServer:
             # buf += "  <Directory \"${REPO_ROOT_DIR}\">"
             # buf += "    AllowOverride None"
             # buf += "  </Directory>"
-
-            # virtual root directory
-            buf += '<Location /git>\n'
-            buf += '  Alias "%s"\n' % (self._virtRootDirGit)
-            buf += '</Location>\n'
-
             buf += "\n"
 
         # write file atomically
