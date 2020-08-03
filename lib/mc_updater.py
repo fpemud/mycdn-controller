@@ -71,17 +71,18 @@ class _OneMirrorSiteUpdater:
         self.invoker = parent.invoker
         self.scheduler = parent.scheduler
         self.mirrorSite = mirrorSite
-
         self.masterDir = os.path.join(McConst.cacheDir, self.mirrorSite.id)
-        self.initFlagFile = os.path.join(self.masterDir, self.mirrorSite.id + ".uninitialized")
-
         self.pluginStateDir = os.path.join(self.masterDir, "state")
+
+        # state files
+        self.initFlagFile = os.path.join(self.masterDir, "UNINITIALIZED")
+        self.lastUpdateSchedTimeFile = os.path.join(self.masterDir, "LAST_UPDATE_SCHED_TIME")
 
         # initialize master directory
         if not os.path.exists(self.masterDir):
             os.makedirs(self.masterDir)
             if self.mirrorSite.initializerExe is not None:
-                McUtil.touchFile(self.initFlagFile)
+                self._setUnInitialized()
 
         # initialize plugin state directory
         if not os.path.exists(self.pluginStateDir):
@@ -92,7 +93,7 @@ class _OneMirrorSiteUpdater:
             sobj.initialize()
 
         bInit = True
-        if not os.path.exists(self.initFlagFile):
+        if self._isInitialized():
             bInit = False
         if self.mirrorSite.initializerExe is None:
             bInit = False
@@ -101,6 +102,7 @@ class _OneMirrorSiteUpdater:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+        self.schedDatetime = None
         self.progress = -1
         self.proc = None
         self.pidWatch = None
@@ -121,6 +123,7 @@ class _OneMirrorSiteUpdater:
 
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
+            self.schedDatetime = None       # this variable is for update only
             self.progress = 0
             self.proc = self._createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
@@ -166,7 +169,7 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            McUtil.forceDelete(self.initFlagFile)
+            self._setInitialized()
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
@@ -184,22 +187,22 @@ class _OneMirrorSiteUpdater:
 
     def updateStart(self, schedDatetime):
         assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL]
-        tstr = schedDatetime.strftime("%Y-%m-%d %H:%M")
 
         if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
-            logging.info("Mirror site \"%s\" updating ignored on \"%s\", last update is not finished." % (self.mirrorSite.id, tstr))
+            logging.info("Mirror site \"%s\" updating ignored on \"%s\", last update is not finished." % (self.mirrorSite.id, schedDatetime.strftime("%Y-%m-%d %H:%M")))
             return
 
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
+            self.schedDatetime = schedDatetime
             self.progress = 0
-            self.proc = self._createInitOrUpdateProc(schedDatetime)
+            self.proc = self._createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             self.excInfo = None
             self.holdFor = None
-            logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, tstr))
+            logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, self.schedDatetime.strftime("%Y-%m-%d %H:%M")))
         except Exception:
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL)
             logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info=True)
@@ -236,6 +239,7 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
+            self._setLastUpdateSchedTime(self.schedDatetime)
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
         except GLib.Error as e:
@@ -272,9 +276,10 @@ class _OneMirrorSiteUpdater:
             self.proc.wait()
             self.proc = None
         self.progress = -1
+        self.schedDatetime = None
         self.status = status
 
-    def _createInitOrUpdateProc(self, schedDatetime=None):
+    def _createInitOrUpdateProc(self):
         cmd = []
 
         # create log directory
@@ -282,7 +287,7 @@ class _OneMirrorSiteUpdater:
         McUtil.ensureDir(logDir)
 
         # executable
-        if schedDatetime is None:
+        if self.schedDatetime is None:
             cmd.append(self.mirrorSite.initializerExe)
         else:
             cmd.append(self.mirrorSite.updaterExe)
@@ -300,9 +305,9 @@ class _OneMirrorSiteUpdater:
             }
             for storageName, storageObj in self.mirrorSite.storageDict.items():
                 args["storage-" + storageName] = storageObj.getParamForPlugin()
-            if schedDatetime is not None:
+            if self.schedDatetime is not None:
                 args["run-mode"] = "update"
-                args["sched-datetime"] = datetime.strftime(schedDatetime, "%Y-%m-%d %H:%M")
+                args["sched-datetime"] = datetime.strftime(self.schedDatetime, "%Y-%m-%d %H:%M")
             else:
                 args["run-mode"] = "initialize"
         cmd.append(json.dumps(args))
@@ -316,6 +321,28 @@ class _OneMirrorSiteUpdater:
         del self.reInitHandler
         self.initStart()
         return False
+
+    def _isInitialized(self):
+        _oldInitFlagFile = os.path.join(self.masterDir, self.mirrorSite.id + ".uninitialized")       # deprecated
+        return not os.path.exists(self.initFlagFile) and not os.path.exists(_oldInitFlagFile)
+
+    def _setUnInitialized(self):
+        McUtil.touchFile(self.initFlagFile)
+
+    def _setInitialized(self):
+        _oldInitFlagFile = os.path.join(self.masterDir, self.mirrorSite.id + ".uninitialized")       # deprecated
+        McUtil.forceDelete(self.initFlagFile)
+        McUtil.forceDelete(_oldInitFlagFile)
+
+    def _getLastUpdateSchedTime(self):
+        if not os.path.exists(self.lastUpdateSchedTimeFile):
+            return datetime.min
+        with open(self.lastUpdateSchedTimeFile, "w") as f:
+            return datetime.strptime(f.read(), "%Y-%m-%d %H:%M")
+
+    def _setLastUpdateSchedTime(self, schedDatetime):
+        with open(self.lastUpdateSchedTimeFile, "w") as f:
+            f.write(schedDatetime.strftime("%Y-%m-%d %H:%M"))
 
 
 class _ApiServer(UnixDomainSocketApiServer):
