@@ -59,8 +59,12 @@ class McMirrorSiteUpdater:
             return False
         return True
 
-    def getMirrorSiteUpdateStatus(self, mirrorSiteId):
-        return self.updaterDict[mirrorSiteId].status
+    def getMirrorSiteUpdateState(self, mirrorSiteId):
+        ret = dict()
+        ret["update_status"] = self.updaterDict[mirrorSiteId].status
+        ret["last_update_time"] = self.updaterDict[mirrorSiteId].lastUpdateDatetime
+        ret["update_progress"] = self.updaterDict[mirrorSiteId].progress
+        return ret
 
 
 class _OneMirrorSiteUpdater:
@@ -75,7 +79,7 @@ class _OneMirrorSiteUpdater:
 
         # state files
         self.initFlagFile = os.path.join(self.masterDir, "UNINITIALIZED")
-        self.lastUpdateSchedTimeFile = os.path.join(self.masterDir, "LAST_UPDATE_SCHED_TIME")
+        self.lastUpdateDatetimeFile = os.path.join(self.masterDir, "LAST_UPDATE_DATETIME")
 
         # initialize master directory
         if not os.path.exists(self.masterDir):
@@ -99,8 +103,10 @@ class _OneMirrorSiteUpdater:
 
         if bInit:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
+            self.lastUpdateDatetime = None
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
+            self.lastUpdateDatetime = self._readLastUpdateDatetime()
         self.schedDatetime = None
         self.progress = -1
         self.proc = None
@@ -122,7 +128,7 @@ class _OneMirrorSiteUpdater:
 
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
-            self.schedDatetime = None       # this variable is for update only
+            self.schedDatetime = None
             self.progress = 0
             self.proc = self._createInitOrUpdateProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
@@ -238,7 +244,7 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            self._setLastUpdateSchedTime(self.schedDatetime)
+            self._writeLastUpdateDatetime(self.schedDatetime)
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
         except GLib.Error as e:
@@ -333,14 +339,14 @@ class _OneMirrorSiteUpdater:
         McUtil.forceDelete(self.initFlagFile)
         McUtil.forceDelete(_oldInitFlagFile)
 
-    def _getLastUpdateSchedTime(self):
-        if not os.path.exists(self.lastUpdateSchedTimeFile):
+    def _readLastUpdateDatetime(self):
+        if not os.path.exists(self.lastUpdateDatetimeFile):
             return datetime.min
-        with open(self.lastUpdateSchedTimeFile, "w") as f:
+        with open(self.lastUpdateDatetimeFile, "r") as f:
             return datetime.strptime(f.read(), "%Y-%m-%d %H:%M")
 
-    def _setLastUpdateSchedTime(self, schedDatetime):
-        with open(self.lastUpdateSchedTimeFile, "w") as f:
+    def _writeLastUpdateDatetime(self, schedDatetime):
+        with open(self.lastUpdateDatetimeFile, "w") as f:
             f.write(schedDatetime.strftime("%Y-%m-%d %H:%M"))
 
 

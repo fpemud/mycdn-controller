@@ -147,11 +147,13 @@ class McAdvertiser:
             else:
                 assert False
 
+            updateState = self.param.updater.getMirrorSiteUpdateState(msId)
+
             ret[msId] = {
                 "available": bAvail,
-                "update_status": self.param.updater.getMirrorSiteUpdateStatus(msId),
-                "update_progress": -1,
-                "last_update_time": "",
+                "update_status": updateState["update_status"],
+                "last_update_time": updateState["last_update_time"],
+                "update_progress": updateState["update_progress"],
                 "help": {
                     "title": "",
                     "filename": "",
