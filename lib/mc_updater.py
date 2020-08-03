@@ -15,7 +15,6 @@ from gi.repository import GLib
 from mc_util import McUtil
 from mc_util import RotatingFile
 from mc_util import GLibIdleInvoker
-from mc_util import GLibCronScheduler
 from mc_util import UnixDomainSocketApiServer
 from mc_param import McConst
 
@@ -35,7 +34,7 @@ class McMirrorSiteUpdater:
         self.param = param
 
         self.invoker = GLibIdleInvoker()
-        self.scheduler = GLibCronScheduler()
+        self.scheduler = _Scheduler()
 
         self.updaterDict = dict()                                       # dict<mirror-id,updater-object>
         for ms in self.param.mirrorSiteDict.values():
@@ -116,7 +115,7 @@ class _OneMirrorSiteUpdater:
         else:
             self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
             if self.mirrorSite.schedExpr is not None:
-                self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
+                self.scheduler.addCronJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
 
     def initStart(self):
         assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL]
@@ -173,7 +172,7 @@ class _OneMirrorSiteUpdater:
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
-            self.scheduler.addJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
+            self.scheduler.addCronJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
         except GLib.Error as e:
             # child process returns failure
             holdFor = self.holdFor
