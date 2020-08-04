@@ -148,11 +148,15 @@ class McAdvertiser:
                 assert False
 
             updateState = self.param.updater.getMirrorSiteUpdateState(msId)
+            if updateState["last_update_time"] is None:
+                updateState["last_update_time"] = ""
+            else:
+                updateState["last_update_time"] = updateState["last_update_time"].strftime("%Y-%m-%d %H:%M")
 
             ret[msId] = {
                 "available": bAvail,
                 "update_status": updateState["update_status"],
-                "last_update_time": updateState["last_update_time"].strftime("%Y-%m-%d %H:%M"),
+                "last_update_time": updateState["last_update_time"],
                 "update_progress": updateState["update_progress"],
                 "help": {
                     "title": "",
