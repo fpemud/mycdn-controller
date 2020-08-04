@@ -101,11 +101,11 @@ class McDaemon:
 
         dataObj = json.loads(buf)
         if "listenIp" in dataObj:
-            self.listenIp = dataObj["listenIp"]
+            self.param.listenIp = dataObj["listenIp"]
         if "mainPort" in dataObj:
-            self.mainPort = dataObj["mainPort"]
+            self.param.mainPort = dataObj["mainPort"]
         if "webAcceptForeign" in dataObj:
-            self.webAcceptForeign = dataObj["webAcceptForeign"]
+            self.param.webAcceptForeign = dataObj["webAcceptForeign"]
         if "preferedUpdatePeriod" in dataObj:
             self.param.mainCfg["preferedUpdatePeriod"] = dataObj["preferedUpdatePeriod"]
         if "country" in dataObj:

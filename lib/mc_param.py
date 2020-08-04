@@ -39,8 +39,6 @@ class McConst:
 class McParam:
 
     def __init__(self):
-        self.cfg = None
-
         self.pluginList = []
         self.mirrorSiteDict = dict()
 
