@@ -123,6 +123,11 @@ class McAdvertiser:
             self._app = None
 
     async def _indexHandler(self, request):
+        if not self.param.webAcceptForeign:
+            if request.remote != "127.0.0.1":
+                # FIXME: should reset TCP connection
+                raise Exception("foreign denied")
+
         data = {
             "static": {
                 "title": "mirror site",

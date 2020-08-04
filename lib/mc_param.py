@@ -46,6 +46,7 @@ class McParam:
 
         self.listenIp = "0.0.0.0"
         self.mainPort = 2300
+        self.webAcceptForeign = True
 
         self.mainCfg = {
             "preferedUpdatePeriod": [],
