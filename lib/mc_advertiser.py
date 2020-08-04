@@ -152,7 +152,7 @@ class McAdvertiser:
             ret[msId] = {
                 "available": bAvail,
                 "update_status": updateState["update_status"],
-                "last_update_time": updateState["last_update_time"],
+                "last_update_time": updateState["last_update_time"].strftime("%Y-%m-%d %H:%M"),
                 "update_progress": updateState["update_progress"],
                 "help": {
                     "title": "",
