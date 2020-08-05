@@ -132,7 +132,7 @@ class McMirrorSiteStorageFile:
         self._dataDir = os.path.join(self.parent.masterDir, "storage-file")
 
     @property
-    def cacheDir(self):
+    def dataDir(self):
         return self._dataDir
 
     def initialize(self):
@@ -151,7 +151,7 @@ class McMirrorSiteStorageGit:
         self._dataDir = os.path.join(self.parent.masterDir, "storage-git")
 
     @property
-    def cacheDir(self):
+    def dataDir(self):
         return self._dataDir
 
     def initialize(self):
