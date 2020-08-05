@@ -89,6 +89,9 @@ class McMirrorSite:
             if len(slist) > 0 and slist[0].getContent() == "always":
                 self.availablityMode = "always"
 
+        # persist mode
+        self.bPersist = self.bPersist(len(rootElem.xpathEval(".//persist")) > 0)
+
         # advertiser
         self.advertiseDict = dict()
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//interface"):
@@ -120,24 +123,21 @@ class McMirrorSiteStorageFile:
 
     def __init__(self, parent):
         self.parent = parent
-        self._varDir = os.path.join(McConst.varDir, self.parent.id, "storage-file")
-        self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-file")
-
-    @property
-    def varDir(self):
-        return self._varDir
+        if self.parent.bPersist:
+            self._dataDir = os.path.join(McConst.varDir, self.parent.id, "storage-file")
+        else:
+            self._dataDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-file")
 
     @property
     def cacheDir(self):
-        return self._cacheDir
+        return self._dataDir
 
     def initialize(self):
-        McUtil.ensureDir(self._varDir)
-        McUtil.ensureDir(self._cacheDir)
+        McUtil.ensureDir(self._dataDir)
 
     def getParamForPlugin(self):
         return {
-            "data-directory": self._cacheDir
+            "data-directory": self._dataDir
         }
 
 
@@ -145,22 +145,19 @@ class McMirrorSiteStorageGit:
 
     def __init__(self, parent):
         self.parent = parent
-        self._varDir = os.path.join(McConst.varDir, self.parent.id, "storage-git")
-        self._cacheDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-git")
-
-    @property
-    def varDir(self):
-        return self._varDir
+        if self.parent.bPersist:
+            self._dataDir = os.path.join(McConst.varDir, self.parent.id, "storage-git")
+        else:
+            self._dataDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-git")
 
     @property
     def cacheDir(self):
-        return self._cacheDir
+        return self._dataDir
 
     def initialize(self):
-        McUtil.ensureDir(self._varDir)
-        McUtil.ensureDir(self._cacheDir)
+        McUtil.ensureDir(self._dataDir)
 
     def getParamForPlugin(self):
         return {
-            "data-directory": self._cacheDir
+            "data-directory": self._dataDir
         }

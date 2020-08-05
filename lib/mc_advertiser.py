@@ -75,11 +75,11 @@ class McAdvertiser:
         msObj = self.param.mirrorSiteDict[mirrorSiteId]
         if "file" in msObj.advertiseDict:
             if "http" in msObj.advertiseDict["file"]:
-                self.httpServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
+                self.httpServer.addFileDir(msObj.id, msObj.storageDict["file"].dataDir)
             if "ftp" in msObj.advertiseDict["file"]:
-                self.ftpServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
+                self.ftpServer.addFileDir(msObj.id, msObj.storageDict["file"].dataDir)
             if "rsync" in msObj.advertiseDict["file"]:
-                self.rsyncServer.addFileDir(msObj.id, msObj.storageDict["file"].cacheDir)
+                self.rsyncServer.addFileDir(msObj.id, msObj.storageDict["file"].dataDir)
         if "git" in msObj.advertiseDict:
             if "git" in msObj.advertiseDict["git"]:
                 assert False        # FIXME
