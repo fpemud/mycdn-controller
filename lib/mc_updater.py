@@ -74,16 +74,15 @@ class _OneMirrorSiteUpdater:
         self.invoker = parent.invoker
         self.scheduler = parent.scheduler
         self.mirrorSite = mirrorSite
-        self.masterDir = os.path.join(McConst.cacheDir, self.mirrorSite.id)
-        self.pluginStateDir = os.path.join(self.masterDir, "state")
+        self.pluginStateDir = os.path.join(self.mirrorSite.masterDir, "state")
 
         # state files
-        self.initFlagFile = os.path.join(self.masterDir, "UNINITIALIZED")
-        self.lastUpdateDatetimeFile = os.path.join(self.masterDir, "LAST_UPDATE_DATETIME")
+        self.initFlagFile = os.path.join(self.mirrorSite.masterDir, "UNINITIALIZED")
+        self.lastUpdateDatetimeFile = os.path.join(self.mirrorSite.masterDir, "LAST_UPDATE_DATETIME")
 
         # initialize master directory
-        if not os.path.exists(self.masterDir):
-            os.makedirs(self.masterDir)
+        if not os.path.exists(self.mirrorSite.masterDir):
+            os.makedirs(self.mirrorSite.masterDir)
             if self.mirrorSite.initializerExe is not None:
                 self._setUnInitialized()
 
@@ -328,14 +327,14 @@ class _OneMirrorSiteUpdater:
         return False
 
     def _isInitialized(self):
-        _oldInitFlagFile = os.path.join(self.masterDir, self.mirrorSite.id + ".uninitialized")       # deprecated
+        _oldInitFlagFile = os.path.join(self.mirrorSite.masterDir, self.mirrorSite.id + ".uninitialized")       # deprecated
         return not os.path.exists(self.initFlagFile) and not os.path.exists(_oldInitFlagFile)
 
     def _setUnInitialized(self):
         McUtil.touchFile(self.initFlagFile)
 
     def _setInitialized(self):
-        _oldInitFlagFile = os.path.join(self.masterDir, self.mirrorSite.id + ".uninitialized")       # deprecated
+        _oldInitFlagFile = os.path.join(self.mirrorSite.masterDir, self.mirrorSite.id + ".uninitialized")       # deprecated
         McUtil.forceDelete(self.initFlagFile)
         McUtil.forceDelete(_oldInitFlagFile)
 

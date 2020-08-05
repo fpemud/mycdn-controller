@@ -118,6 +118,12 @@ class McMirrorSite:
                 self.updaterExe = os.path.join(pluginDir, self.updaterExe)
                 self.schedExpr = slist[0].xpathEval(".//cron-expression")[0].getContent()   # FIXME: add check
 
+        # master directory
+        if self.bPersist:
+            self.masterDir = os.path.join(McConst.varDir, self.id)
+        else:
+            self.masterDir = os.path.join(McConst.cacheDir, self.id)
+
 
 class McMirrorSiteStorageFile:
 
