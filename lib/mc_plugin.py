@@ -90,7 +90,7 @@ class McMirrorSite:
                 self.availablityMode = "always"
 
         # persist mode
-        self.bPersist = self.bPersist(len(rootElem.xpathEval(".//persist")) > 0)
+        self.bPersist = (len(rootElem.xpathEval(".//persist")) > 0)
 
         # advertiser
         self.advertiseDict = dict()
