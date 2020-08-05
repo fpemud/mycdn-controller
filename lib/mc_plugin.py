@@ -70,6 +70,16 @@ class McMirrorSite:
         self.id = rootElem.prop("id")
         self.cfgDict = cfgDict
 
+        # availablity mode
+        self.availablityMode = "initialized"
+        if True:
+            slist = rootElem.xpathEval(".//availablity")
+            if len(slist) > 0 and slist[0].getContent() == "always":
+                self.availablityMode = "always"
+
+        # persist mode
+        self.bPersist = (len(rootElem.xpathEval(".//persist")) > 0)
+
         # storage
         self.storageDict = dict()
         if True:
@@ -81,16 +91,6 @@ class McMirrorSite:
                     self.storageDict[item] = McMirrorSiteStorageGit(self)
                 else:
                     assert False
-
-        # availablity mode
-        self.availablityMode = "initialized"
-        if True:
-            slist = rootElem.xpathEval(".//availablity")
-            if len(slist) > 0 and slist[0].getContent() == "always":
-                self.availablityMode = "always"
-
-        # persist mode
-        self.bPersist = (len(rootElem.xpathEval(".//persist")) > 0)
 
         # advertiser
         self.advertiseDict = dict()
@@ -129,10 +129,7 @@ class McMirrorSiteStorageFile:
 
     def __init__(self, parent):
         self.parent = parent
-        if self.parent.bPersist:
-            self._dataDir = os.path.join(McConst.varDir, self.parent.id, "storage-file")
-        else:
-            self._dataDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-file")
+        self._dataDir = os.path.join(self.parent.masterDir, "storage-file")
 
     @property
     def cacheDir(self):
@@ -151,10 +148,7 @@ class McMirrorSiteStorageGit:
 
     def __init__(self, parent):
         self.parent = parent
-        if self.parent.bPersist:
-            self._dataDir = os.path.join(McConst.varDir, self.parent.id, "storage-git")
-        else:
-            self._dataDir = os.path.join(McConst.cacheDir, self.parent.id, "storage-git")
+        self._dataDir = os.path.join(self.parent.masterDir, "storage-git")
 
     @property
     def cacheDir(self):
