@@ -26,6 +26,7 @@ class McDaemon:
         self.param = param
 
     def run(self):
+        self._loadMainCfg()
         try:
             # create directories
             McUtil.preparePersistDir(McConst.varDir, McConst.uid, McConst.gid, 0o755)
@@ -43,9 +44,6 @@ class McDaemon:
                     logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
                     logging.getLogger().setLevel(logging.INFO)
                     logging.info("Program begins.")
-
-                    # load main config
-                    self._loadMainCfg()
 
                     # create mainloop
                     asyncio.set_event_loop_policy(asyncio_glib.GLibEventLoopPolicy())
