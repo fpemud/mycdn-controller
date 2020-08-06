@@ -175,7 +175,7 @@ class McAdvertiser:
                     if proto == "http":
                         port = self.httpServer.port
                         ret[msId]["interface-file"]["http"] = {
-                            "url": "http://{IP}%s/m/%s" % (":%d" % (port) if port != 80 else "", msId)
+                            "url": "http://{IP}%s/file/%s" % (":%d" % (port) if port != 80 else "", msId)
                         }
                         continue
                     if proto == "ftp":
@@ -195,11 +195,15 @@ class McAdvertiser:
                 ret[msId]["interface-git"] = dict()
                 for proto in msObj.advertiseDict["git"]:
                     if proto == "git":
-                        pass
+                        assert False
                     if proto == "ssh":
-                        pass
+                        assert False
                     if proto == "http":
-                        pass
+                        # port = self.httpServer.port
+                        # ret[msId]["interface-git"]["http"] = {
+                        #     "url": "http://{IP}%s/git/%s" % (":%d" % (port) if port != 80 else "", msId)
+                        # }
+                        continue
 
         return ret
 
