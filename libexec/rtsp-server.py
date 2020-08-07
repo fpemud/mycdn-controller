@@ -2,12 +2,12 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
-# import gi
+import gi
 import sys
 import json
 import signal
-# gi.require_version('Gst', '1.0')
-# gi.require_version('GstRtspServer', '1.0')
+gi.require_version('Gst', '1.0')
+gi.require_version('GstRtspServer', '1.0')
 from gi.repository import GLib
 from gi.repository import Gst
 from gi.repository import GstRtspServer
