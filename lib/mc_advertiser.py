@@ -23,6 +23,7 @@ class McAdvertiser:
         self.httpServer = None
         self.ftpServer = None
         self.rsyncServer = None
+        self.gitServer = None
         for ms in self.param.mirrorSiteDict.values():
             for storageName, protocolList in ms.advertiseDict.items():
                 for proto in protocolList:
@@ -32,8 +33,8 @@ class McAdvertiser:
                         self.ftpServer = True
                     elif proto == "rsync":
                         self.rsyncServer = True
-                    elif proto == "git-http":
-                        self.httpServer = True
+                    elif proto == "git":
+                        self.gitServer = True
                     else:
                         assert False
 
@@ -44,6 +45,8 @@ class McAdvertiser:
             self.ftpServer = _FtpServer(self.param)
         if self.rsyncServer is not None:
             self.rsyncServer = _RsyncServer(self.param)
+        if self.gitServer is not None:
+            self.gitServer = _GitServer(self.param)
 
     def start(self):
         # start main server
@@ -57,9 +60,13 @@ class McAdvertiser:
             self.ftpServer.start()
         if self.rsyncServer is not None:
             self.rsyncServer.start()
+        if self.gitServer is not None:
+            self.gitServer.start()
 
     def stop(self):
         # stop advertise servers
+        if self.gitServer is not None:
+            self.gitServer.stop()
         if self.rsyncServer is not None:
             self.rsyncServer.stop()
         if self.ftpServer is not None:
@@ -82,9 +89,7 @@ class McAdvertiser:
                 self.rsyncServer.addFileDir(msObj.id, msObj.storageDict["file"].dataDir)
         if "git" in msObj.advertiseDict:
             if "git" in msObj.advertiseDict["git"]:
-                assert False        # FIXME
-            if "ssh" in msObj.advertiseDict["git"]:
-                assert False        # FIXME
+                self.gitServer.addGitDir(msObj.id, msObj.storageDict["git"].dataDir)
             if "http" in msObj.advertiseDict["git"]:
                 pass                # FIXME
 
@@ -195,7 +200,10 @@ class McAdvertiser:
                 ret[msId]["interface-git"] = dict()
                 for proto in msObj.advertiseDict["git"]:
                     if proto == "git":
-                        assert False
+                        port = self.gitServer.port
+                        ret[msId]["interface-git"]["git"] = {
+                            "url": "git://{IP}%s/%s" % (":%d" % (port) if port != 9418 else "", msId)
+                        }
                     if proto == "ssh":
                         assert False
                     if proto == "http":
@@ -472,6 +480,48 @@ class _RsyncServer:
         with open(self._cfgFile + ".tmp", "w") as f:
             f.write(buf)
         os.rename(self._cfgFile + ".tmp", self._cfgFile)
+
+
+class _GitServer:
+
+    def __init__(self, param):
+        self.param = param
+        self._port = None
+
+        self._virtRootDir = os.path.join(McConst.tmpDir, "vroot-git-daemon")
+        self._proc = None
+
+    @property
+    def port(self):
+        assert self._proc is not None
+        return self._port
+
+    def start(self):
+        assert self._proc is None
+
+        McUtil.ensureDir(self._virtRootDir)
+        self._port = McUtil.getFreeSocketPort("tcp")
+        self._proc = subprocess.Popen([
+            "/usr/libexec/git-core/git-daemon",
+            "--export-all",
+            "--listen=%s" % (self.param.listenIp),
+            "--port=%d" % (self._port),
+            "--base-path=%s" % (self._virtRootDir),
+        ])
+        McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
+        logging.info("Advertising server (git) started, listening on port %d." % (self._port))
+
+    def stop(self):
+        if self._proc is not None:
+            self._proc.terminate()
+            self._proc.wait()
+            self._proc = None
+        McUtil.forceDelete(self._virtRootDir)
+
+    def addGitDir(self, name, realPath):
+        assert self._proc is not None
+        assert _checkNameAndRealPath(self._dirDict, name, realPath)
+        os.symlink(realPath, os.path.join(self._virtRootDirFile, name))
 
 
 def _checkNameAndRealPath(dictObj, name, realPath):
