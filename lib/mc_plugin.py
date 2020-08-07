@@ -81,7 +81,7 @@ class McMirrorSite:
         self.bPersist = False
         if len(rootElem.xpathEval(".//static")) > 0:
             self.bPersist = True
-        if cfgDict["persist"]:
+        if cfgDict.get("persist", False):
             self.bPersist = True
 
         # master directory
