@@ -26,17 +26,18 @@ class McAdvertiser:
         self.gitServer = None
         for ms in self.param.mirrorSiteDict.values():
             for storageName, protocolList in ms.advertiseDict.items():
-                for proto in protocolList:
-                    if proto == "http":
+                if storageName == "file":
+                    if "http" in protocolList:
                         self.httpServer = True
-                    elif proto == "ftp":
+                    if "ftp" in protocolList:
                         self.ftpServer = True
-                    elif proto == "rsync":
+                    if "rsync" in protocolList:
                         self.rsyncServer = True
-                    elif proto == "git":
+                if storageName == "git":
+                    if "git" in protocolList:
                         self.gitServer = True
-                    else:
-                        assert False
+                    if "http" in protocolList:
+                        self.httpServer = True
 
         # create advertise servers
         if self.httpServer is not None:
