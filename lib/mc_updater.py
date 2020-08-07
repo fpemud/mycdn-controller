@@ -327,16 +327,13 @@ class _OneMirrorSiteUpdater:
         return False
 
     def _isInitialized(self):
-        _oldInitFlagFile = os.path.join(self.mirrorSite.masterDir, self.mirrorSite.id + ".uninitialized")       # deprecated
-        return not os.path.exists(self.initFlagFile) and not os.path.exists(_oldInitFlagFile)
+        return not os.path.exists(self.initFlagFile)
 
     def _setUnInitialized(self):
         McUtil.touchFile(self.initFlagFile)
 
     def _setInitialized(self):
-        _oldInitFlagFile = os.path.join(self.mirrorSite.masterDir, self.mirrorSite.id + ".uninitialized")       # deprecated
         McUtil.forceDelete(self.initFlagFile)
-        McUtil.forceDelete(_oldInitFlagFile)
 
     def _readLastUpdateDatetime(self):
         if not os.path.exists(self.lastUpdateDatetimeFile):

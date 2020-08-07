@@ -78,7 +78,11 @@ class McMirrorSite:
                 self.availablityMode = "always"
 
         # persist mode
-        self.bPersist = (len(rootElem.xpathEval(".//persist")) > 0)
+        self.bPersist = False
+        if len(rootElem.xpathEval(".//static")) > 0:
+            self.bPersist = True
+        if cfgDict["persist"]:
+            self.bPersist = True
 
         # master directory
         if self.bPersist:
