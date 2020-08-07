@@ -205,13 +205,11 @@ class McAdvertiser:
                         ret[msId]["interface-git"]["git"] = {
                             "url": "git://{IP}%s/%s" % (":%d" % (port) if port != 9418 else "", msId)
                         }
-                    if proto == "ssh":
-                        assert False
                     if proto == "http":
-                        # port = self.httpServer.port
-                        # ret[msId]["interface-git"]["http"] = {
-                        #     "url": "http://{IP}%s/git/%s" % (":%d" % (port) if port != 80 else "", msId)
-                        # }
+                        port = self.httpServer.port
+                        ret[msId]["interface-git"]["http"] = {
+                            "url": "http://{IP}%s/git/%s" % (":%d" % (port) if port != 80 else "", msId)
+                        }
                         continue
 
         return ret

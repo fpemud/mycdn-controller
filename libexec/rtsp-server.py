@@ -12,6 +12,8 @@ from gi.repository import GLib
 from gi.repository import Gst
 from gi.repository import GstRtspServer
 
+# gstreamer.freedesktop.org/document/gst-rtsp-server
+
 
 class MyRtspMediaFactory(GstRtspServer.RTSPMediaFactory):
 
