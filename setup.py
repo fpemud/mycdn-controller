@@ -41,6 +41,6 @@ setup(
     classifiers=classif,
     url='http://github.com/fpemud/mirrors',
     download_url='',
-    py_modules=['mirrors'],
-    package_dir={'': 'python3'},
+    packages=find_packages("python3"),
+    package_dir={"": "python3"},
 )
