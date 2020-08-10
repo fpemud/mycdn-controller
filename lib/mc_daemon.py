@@ -64,7 +64,7 @@ class McDaemon:
 
                     # slave servers
                     # this function shows log messages
-                    self.slaveServers = McSlaveServers(self.param)
+                    self.param.slaveServers = McSlaveServers(self.param)
 
                     # updater
                     self.param.updater = McMirrorSiteUpdater(self.param)
