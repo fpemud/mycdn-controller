@@ -69,17 +69,16 @@ class _HttpServer:
 
     def __init__(self, param):
         self.param = param
-        self._port = None
-
-        self._dirDict = dict()          # files
-        self._gitDirDict = dict()       # git repositories
-
         self._virtRootDir = os.path.join(McConst.tmpDir, "vroot-httpd")
         self._cfgFn = os.path.join(McConst.tmpDir, "httpd.conf")
         self._pidFile = os.path.join(McConst.tmpDir, "httpd.pid")
         self._errorLogFile = os.path.join(McConst.logDir, "httpd-error.log")
         self._accessLogFile = os.path.join(McConst.logDir, "httpd-access.log")
 
+        self._dirDict = dict()          # files
+        self._gitDirDict = dict()       # git repositories
+
+        self._port = None
         self._proc = None
 
     @property
@@ -103,6 +102,8 @@ class _HttpServer:
             self._proc.terminate()
             self._proc.wait()
             self._proc = None
+        if self._port is not None:
+            self._port = None
 
     def addFileDir(self, name, realPath):
         assert self._proc is not None
@@ -219,13 +220,13 @@ class _FtpServer:
 
     def __init__(self, param):
         self.param = param
-        self._port = None
-
-        self._dirDict = dict()
-
         self._execFile = os.path.join(McConst.libexecDir, "ftpd.py")
         self._cfgFile = os.path.join(McConst.tmpDir, "ftpd.cfg")
         self._logFile = os.path.join(McConst.logDir, "ftpd.log")
+
+        self._dirDict = dict()
+
+        self._port = None
         self._proc = None
 
     @property
@@ -246,6 +247,8 @@ class _FtpServer:
             self._proc.terminate()
             self._proc.wait()
             self._proc = None
+        if self._port is not None:
+            self._port = None
 
     def addFileDir(self, name, realPath):
         assert self._proc is not None
@@ -335,9 +338,9 @@ class _GitServer:
 
     def __init__(self, param):
         self.param = param
-        self._port = None
-
         self._virtRootDir = os.path.join(McConst.tmpDir, "vroot-git-daemon")
+
+        self._port = None
         self._proc = None
 
     @property
@@ -365,6 +368,8 @@ class _GitServer:
             self._proc.terminate()
             self._proc.wait()
             self._proc = None
+        if self._port is not None:
+            self._port = None
         McUtil.forceDelete(self._virtRootDir)
 
     def addGitDir(self, name, realPath):
