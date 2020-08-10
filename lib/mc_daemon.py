@@ -16,6 +16,7 @@ from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
 from mc_param import McConst
 from mc_plugin import McPluginManager
+from mc_slave_servers import McSlaveServers
 from mc_updater import McMirrorSiteUpdater
 from mc_advertiser import McAdvertiser
 
@@ -59,7 +60,11 @@ class McDaemon:
 
                     # advertiser
                     self.param.advertiser = McAdvertiser(self.param)
-                    self.param.advertiser.start()   # this function shows log messages
+                    logging.info("Master server started.")
+
+                    # slave servers
+                    # this function shows log messages
+                    self.slaveServers = McSlaveServers(self.param)
 
                     # updater
                     self.param.updater = McMirrorSiteUpdater(self.param)
@@ -82,8 +87,10 @@ class McDaemon:
                         self.param.avahiObj.stop()
                     if self.param.updater is not None:
                         self.param.updater.dispose()
+                    if self.param.slaveServers is not None:
+                        self.param.slaveServers.dispose()
                     if self.param.advertiser is not None:
-                        self.param.advertiser.stop()
+                        self.param.advertiser.dispose()
                     logging.shutdown()
         finally:
             shutil.rmtree(McConst.tmpDir)

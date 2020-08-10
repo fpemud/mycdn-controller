@@ -55,6 +55,7 @@ class McParam:
         # objects
         self.mainloop = None
         self.pluginManager = None
+        self.slaveServers = None
         self.avahiObj = None
         self.updater = None
         self.advertiser = None
