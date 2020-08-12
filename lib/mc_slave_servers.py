@@ -378,76 +378,80 @@ class _GitServer:
         os.symlink(realPath, os.path.join(self._virtRootDirFile, name))
 
 
-class _MariadbServer:
+class _MultiInstanceMariadbServer:
 
     def __init__(self, param):
         self.param = param
-        self._dataDir = os.path.join(McConst.tmpDir, "mariadb.data")
-        self._cfgFile = os.path.join(McConst.tmpDir, "mariadb.cnf")
-        self._logFile = os.path.join(McConst.logDir, "mariadb.log")
-        self._dbRootPassword = "root"
-
-        self._dirDict = dict()
-
-        self._socketFile = None
-        self._port = None
-        self._proc = None
-
-    @property
-    def socketFile(self):
-        assert self._proc is not None
-        return self._socketFile
-
-    @property
-    def port(self):
-        assert self._proc is not None
-        return self._port
+        self._dirDict = dict()              # <database-name,data-dir>
+        self._tableInfoDict = dict()        # <database-name,table-info>
+        self._procDict = dict()             # <database-name,(proc,port,socket-file,cfg-file,log-ile)>
 
     def start(self):
         assert self._proc is None
-        self._socketFile = os.path.join(McConst.tmpDir, "mariadb.socket")
-        self._initialize()
-        self._port = McUtil.getFreeSocketPort("tcp")
-        self._start()
-        self._initializeAfterStart()
-        logging.info("Slave server (mariadb) started, listening on port %d." % (self._port))
+        logging.info("Slave server (multi-instanced-mariadb) started.")
 
     def stop(self):
-        if self._proc is not None:
-            self._proc.terminate()
-            self._proc.wait()
-            self._proc = None
-        if self._port is not None:
-            self._port = None
-        if self._socketFile is not None:
-            assert not os.path.exists(self._socketFile)
-            self._socketFile = None
+        for value in self._procDict.values():
+            proc = value[0]
+            proc.terminate()
+            proc.wait()
+        self._procDict.clear()
+        self._tableInfoDict.clear()
+        self._dirDict.clear()
 
-    def addDatabaseDir(self, name, realPath):
+    def addDatabaseDir(self, databaseName, dataDir, tableInfo):
+        # tableInfo { "table-name": ( block-size, "table-schema" ) }
         assert self._proc is not None
-        assert _checkNameAndRealPath(self._dirDict, name, realPath)
-        self._dirDict[name] = realPath
+        assert _checkNameAndRealPath(self._dirDict, databaseName, dataDir)
 
-    def _initialize(self):
+        if self._isInitialized(dataDir):
+            self._initialize(databaseName, dataDir, tableInfo)
+        else:
+            self._check(dataDir)
+        ret = self._start()
+
+        self._dirDict[databaseName] = dataDir
+        self._tableInfoDict[databaseName] = tableInfo
+        self._procDict[databaseName] = ret
+
+    def getDatabasePort(self, databaseName):
+        assert self._proc is not None
+        return self._procDict[databaseName][1]
+
+    def getDatabaseSocketFile(self, databaseName):
+        assert self._proc is not None
+        return self._procDict[databaseName][2]
+
+    def _isInitialized(self, dataDir):
+        if not os.path.exists(os.path.join(dataDir, "mysql", "user.frm")):
+            # from /usr/share/mariadb/scripts/mysql_install_db
+            return False
+        elif os.path.exists(os.path.join(dataDir, "initialize.failed")):
+            # from self._initialize()
+            return False
+        else:
+            return True
+
+    def _initialize(self, databaseName, dataDir, tableInfo, logFile):
         # mariadb-install-db
-        with open(self._logFile, "w") as f:
+        with open(logFile, "w") as f:
             f.write("## mariadb-install-db #######################\n")
-        McUtil.mkDirAndClear(self._dataDir)
-        cmd = "/usr/share/mariadb/scripts/mariadb-install-db %s >>%s" % (" ".join(self.__commonOptions()), self._logFile)
+        McUtil.mkDirAndClear(dataDir)
+        cmd = "/usr/share/mariadb/scripts/mariadb-install-db %s >>%s" % (" ".join(self.__commonOptions()), logFile)
         McUtil.shellCall(cmd)
 
         # mysql_secure_installation
-        with open(self._logFile, "a") as f:
+        with open(logFile, "a") as f:
             f.write("\n")
             f.write("## mysql_secure_installation #######################\n")
         proc = None
         child = None
         try:
-            proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
+            proc = sc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
             while not os.path.exists(self._socketFile):
                 time.sleep(1.0)
 
-            with open(self._logFile, "ab") as f:
+            with open(logFile, "ab") as f:
                 child = pexpect.spawn("/usr/bin/mysql_secure_installation --no-defaults --socket=%s" % (self._socketFile), logfile=f)
                 child.expect('Enter current password for root \\(enter for none\\): ')
                 child.sendline("")
@@ -476,25 +480,35 @@ class _MariadbServer:
                 proc.terminate()
                 proc.wait()
 
+    def _check(self, dataDir):
+        pass
+
     def _start(self):
+        port = McUtil.getFreeSocketPort("tcp")
+        socketFile = os.path.join(McConst.tmpDir, "mariadb.socket")
+        cfgFile = os.path.join(McConst.tmpDir, "mariadb.cnf")
+        logFile = os.path.join(McConst.logDir, "mariadb.log")
+
         # generate mariadb config file
-        with open(self._cfgFile, "w") as f:
+        with open(cfgFile, "w") as f:
             buf = ""
             buf += "[mysqld]\n"
             f.write(buf)
 
         # start mariadb
-        self._proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
-        while not os.path.exists(self._socketFile):
+        proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
+        while not os.path.exists(socketFile):
             time.sleep(1.0)
 
-    def __commonOptions(self):
+        return (proc, port, socketFile, cfgFile, logFile)
+
+    def __commonOptions(self, dataDir, socketFile):
         return [
             "--no-defaults",
             "--basedir=/usr",
-            "--datadir=%s" % (self._dataDir),
+            "--datadir=%s" % (dataDir),
             "--skip-networking",
-            "--socket=%s" % (self._socketFile),
+            "--socket=%s" % (socketFile),
         ]
 
 
