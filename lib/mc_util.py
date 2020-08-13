@@ -69,6 +69,18 @@ class McUtil:
         return ret.stdout.rstrip()
 
     @staticmethod
+    def cmdCallWithInput(cmd, inStr, *kargs):
+        ret = subprocess.run([cmd] + list(kargs),
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             inStr=inStr, universal_newlines=True)
+        if ret.returncode > 128:
+            time.sleep(1.0)
+        if ret.returncode != 0:
+            print(ret.stdout)
+            ret.check_returncode()
+        return ret.stdout.rstrip()
+
+    @staticmethod
     def writePidFile(filename):
         with open(filename, "w") as f:
             f.write(str(os.getpid()))

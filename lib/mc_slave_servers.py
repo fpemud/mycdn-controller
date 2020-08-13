@@ -3,10 +3,8 @@
 
 import os
 import json
-import time
 import signal
 import logging
-import pexpect
 import subprocess
 from mc_util import McUtil
 from mc_param import McConst
@@ -380,11 +378,19 @@ class _GitServer:
 
 class _MultiInstanceMariadbServer:
 
+    """
+    The best solution would be using a one-instance-mariadb-server, and dynamically
+    add table files stored in seperate directories as different databases. Although
+    basically mariadb supports this kind of operation, but there're
+    corner cases (for example when the server crashes).
+    """
+
     def __init__(self, param):
         self.param = param
         self._dirDict = dict()              # <database-name,data-dir>
         self._tableInfoDict = dict()        # <database-name,table-info>
-        self._procDict = dict()             # <database-name,(proc,port,socket-file,cfg-file,log-ile)>
+        self._procDict = dict()             # <database-name,(proc,port,cfg-file,log-ile)>
+        self._dbRootPassword = "root"       # FIXME
 
     def start(self):
         assert self._proc is None
@@ -401,26 +407,67 @@ class _MultiInstanceMariadbServer:
 
     def addDatabaseDir(self, databaseName, dataDir, tableInfo):
         # tableInfo { "table-name": ( block-size, "table-schema" ) }
+        import mariadb
         assert self._proc is not None
         assert _checkNameAndRealPath(self._dirDict, databaseName, dataDir)
 
-        if self._isInitialized(dataDir):
-            self._initialize(databaseName, dataDir, tableInfo)
-        else:
-            self._check(dataDir)
-        ret = self._start()
+        cfgFile = os.path.join(McConst.tmpDir, "mariadb-%s.cnf" % (databaseName))
+        logFile = os.path.join(McConst.logDir, "mariadb-%s.log" % (databaseName))
 
-        self._dirDict[databaseName] = dataDir
-        self._tableInfoDict[databaseName] = tableInfo
-        self._procDict[databaseName] = ret
+        # initialize if needed
+        if self._isInitialized(dataDir):
+            self._initialize(databaseName, dataDir, tableInfo, logFile)
+
+        # start process
+        proc = None
+        port = None
+        try:
+            port = McUtil.getFreeSocketPort("tcp")
+
+            # generate mariadb config file
+            with open(cfgFile, "w") as f:
+                buf = ""
+                buf += "[mysqld]\n"
+                f.write(buf)
+
+            # start mariadb
+            with open(logFile, "a") as f:
+                f.write("\n\n")
+                f.write("## mariadb-db #######################\n")
+            proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions(dataDir, port))
+            McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
+
+            # check
+            with mariadb.connect(unix_socket=self._socketFile, user="root", password=self._dbRootPassword) as conn:
+                cur = conn.cursor()
+                cur.execute("USE %s;" % (databaseName))
+                for tableName, value in tableInfo.items():
+                    blockSize, tableSchema = value
+                    out = cur.execute("SHOW CREATE TABLE %s;" % (tableName))
+                    if out != tableSchema:
+                        raise Exception("table schema error")
+
+            # save
+            self._dirDict[databaseName] = dataDir
+            self._tableInfoDict[databaseName] = tableInfo
+            self._procDict[databaseName] = (proc, port, cfgFile, logFile)
+        except Exception:
+            if databaseName in self._procDict:
+                self._procDict[databaseName]
+            if databaseName in self._tableInfoDict:
+                self._tableInfoDict[databaseName]
+            if databaseName in self._dirDict:
+                del self._dirDict[databaseName]
+            if proc is not None:
+                proc.terminate()
+                proc.wait()
+            if os.path.exists(cfgFile):
+                os.unlink(cfgFile)
+            raise
 
     def getDatabasePort(self, databaseName):
         assert self._proc is not None
         return self._procDict[databaseName][1]
-
-    def getDatabaseSocketFile(self, databaseName):
-        assert self._proc is not None
-        return self._procDict[databaseName][2]
 
     def _isInitialized(self, dataDir):
         if not os.path.exists(os.path.join(dataDir, "mysql", "user.frm")):
@@ -433,82 +480,59 @@ class _MultiInstanceMariadbServer:
             return True
 
     def _initialize(self, databaseName, dataDir, tableInfo, logFile):
-        # mariadb-install-db
-        with open(logFile, "w") as f:
-            f.write("## mariadb-install-db #######################\n")
         McUtil.mkDirAndClear(dataDir)
-        cmd = "/usr/share/mariadb/scripts/mariadb-install-db %s >>%s" % (" ".join(self.__commonOptions()), logFile)
-        McUtil.shellCall(cmd)
-
-        # mysql_secure_installation
-        with open(logFile, "a") as f:
-            f.write("\n")
-            f.write("## mysql_secure_installation #######################\n")
-        proc = None
-        child = None
         try:
-            proc = sc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
-            while not os.path.exists(self._socketFile):
-                time.sleep(1.0)
+            commands = []
 
-            with open(logFile, "ab") as f:
-                child = pexpect.spawn("/usr/bin/mysql_secure_installation --no-defaults --socket=%s" % (self._socketFile), logfile=f)
-                child.expect('Enter current password for root \\(enter for none\\): ')
-                child.sendline("")
-                child.expect("Switch to unix_socket authentication \\[Y/n\\] ")
-                child.sendline('n')
-                child.expect('Change the root password\\? \\[Y/n\\] ')
-                child.sendline('Y')
-                child.expect('New password: ')
-                child.sendline(self._dbRootPassword)
-                child.expect('Re-enter new password: ')
-                child.sendline(self._dbRootPassword)
-                child.expect('Remove anonymous users\\? \\[Y/n\\] ')
-                child.sendline('Y')
-                child.expect('Disallow root login remotely\\? \\[Y/n\\] ')
-                child.sendline('Y')
-                child.expect('Remove test database and access to it\\? \\[Y/n\\] ')
-                child.sendline('Y')
-                child.expect('Reload privilege tables now\\? \\[Y/n\\] ')
-                child.sendline('n')
-                child.expect(pexpect.EOF)
-        finally:
-            if child is not None:
-                child.terminate()
-                child.wait()
-            if proc is not None:
-                proc.terminate()
-                proc.wait()
+            # the following commands are from script /usr/share/mariadb/scripts/mariadb-install-db
+            if True:
+                commands += [
+                    "CREATE DATABASE IF NOT EXISTS mysql;",
+                    "USE mysql;",
+                    "SET @auth_root_socket=NULL;",
+                ]
+                tables = [
+                    "/usr/share/mariadb/fill_help_tables.sql",
+                    "/usr/share/mariadb/mysql_system_tables.sql",
+                    "/usr/share/mariadb/mysql_performance_tables.sql",
+                    "/usr/share/mariadb/mysql_system_tables_data.sql",
+                    "/usr/share/mariadb/maria_add_gis_sp_bootstrap.sql",
+                ]
+                for fn in tables:
+                    tlist = McUtil.readFile(fn).split("\n")
+                    for line in tlist:
+                        if "@current_hostname" in line:
+                            continue
+                        commands.append(line)
 
-    def _check(self, dataDir):
-        pass
+            # create our database
+            if True:
+                commands.append("CREATE DATABASE IF NOT EXISTS %s;" % (databaseName)),
+                commands.append("USE %s;" % (databaseName))
+                for dummy, sql in tableInfo.values():
+                    commands += sql.split("\n")
 
-    def _start(self):
-        port = McUtil.getFreeSocketPort("tcp")
-        socketFile = os.path.join(McConst.tmpDir, "mariadb.socket")
-        cfgFile = os.path.join(McConst.tmpDir, "mariadb.cnf")
-        logFile = os.path.join(McConst.logDir, "mariadb.log")
+            # execute
+            if True:
+                out = McUtil.cmdCallWithInput("/usr/sbin/mysqld",                                 # command
+                                              "\n".join(commands),                                # input
+                                              "--no-defaults", "--bootstrap", "--basedir=/usr",   # arguments
+                                              "--datadir=%s" % (dataDir), "--log-warnings=0",     # arguments
+                                              "--enforce-storage-engine=''")                      # arguments
+                with open(logFile, "w") as f:
+                    f.write("## mariadb-install-db #######################\n")
+                    f.write(out)
+        except Exception:
+            McUtil.touchFile(os.path.join(dataDir, "initialize.failed"))
+            raise
 
-        # generate mariadb config file
-        with open(cfgFile, "w") as f:
-            buf = ""
-            buf += "[mysqld]\n"
-            f.write(buf)
-
-        # start mariadb
-        proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
-        while not os.path.exists(socketFile):
-            time.sleep(1.0)
-
-        return (proc, port, socketFile, cfgFile, logFile)
-
-    def __commonOptions(self, dataDir, socketFile):
+    def __commonOptions(self, dataDir, port):
         return [
             "--no-defaults",
             "--basedir=/usr",
             "--datadir=%s" % (dataDir),
-            "--skip-networking",
-            "--socket=%s" % (socketFile),
+            "--bind-address=%s" % (self.param.listenIp),
+            "--port=%d" % (port),
         ]
 
 
@@ -528,3 +552,42 @@ def _checkNameAndRealPath(dictObj, name, realPath):
     if McUtil.isPathOverlap(realPath, dictObj.values()):
         return False
     return True
+
+
+# # mysql_secure_installation
+# with open(logFile, "a") as f:
+#     f.write("\n")
+#     f.write("## mysql_secure_installation #######################\n")
+# proc = None
+# child = None
+# try:
+#     proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
+#     McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, proc)
+#     with open(logFile, "ab") as f:
+#         child = pexpect.spawn("/usr/bin/mysql_secure_installation --no-defaults --socket=%s" % (self._socketFile), logfile=f)
+#         child.expect('Enter current password for root \\(enter for none\\): ')
+#         child.sendline("")
+#         child.expect("Switch to unix_socket authentication \\[Y/n\\] ")
+#         child.sendline('n')
+#         child.expect('Change the root password\\? \\[Y/n\\] ')
+#         child.sendline('Y')
+#         child.expect('New password: ')
+#         child.sendline(self._dbRootPassword)
+#         child.expect('Re-enter new password: ')
+#         child.sendline(self._dbRootPassword)
+#         child.expect('Remove anonymous users\\? \\[Y/n\\] ')
+#         child.sendline('Y')
+#         child.expect('Disallow root login remotely\\? \\[Y/n\\] ')
+#         child.sendline('Y')
+#         child.expect('Remove test database and access to it\\? \\[Y/n\\] ')
+#         child.sendline('Y')
+#         child.expect('Reload privilege tables now\\? \\[Y/n\\] ')
+#         child.sendline('n')
+#         child.expect(pexpect.EOF)
+# finally:
+#     if child is not None:
+#         child.terminate()
+#         child.wait()
+#     if proc is not None:
+#         proc.terminate()
+#         proc.wait()
