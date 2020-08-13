@@ -182,3 +182,46 @@ class _MariadbServer:
             return "error"
 
         return "ok"
+
+
+
+
+
+
+# # mysql_secure_installation
+# with open(logFile, "a") as f:
+#     f.write("\n")
+#     f.write("## mysql_secure_installation #######################\n")
+# proc = None
+# child = None
+# try:
+#     proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
+#     McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, proc)
+#     with open(logFile, "ab") as f:
+#         child = pexpect.spawn("/usr/bin/mysql_secure_installation --no-defaults --socket=%s" % (self._socketFile), logfile=f)
+#         child.expect('Enter current password for root \\(enter for none\\): ')
+#         child.sendline("")
+#         child.expect("Switch to unix_socket authentication \\[Y/n\\] ")
+#         child.sendline('n')
+#         child.expect('Change the root password\\? \\[Y/n\\] ')
+#         child.sendline('Y')
+#         child.expect('New password: ')
+#         child.sendline(self._dbRootPassword)
+#         child.expect('Re-enter new password: ')
+#         child.sendline(self._dbRootPassword)
+#         child.expect('Remove anonymous users\\? \\[Y/n\\] ')
+#         child.sendline('Y')
+#         child.expect('Disallow root login remotely\\? \\[Y/n\\] ')
+#         child.sendline('Y')
+#         child.expect('Remove test database and access to it\\? \\[Y/n\\] ')
+#         child.sendline('Y')
+#         child.expect('Reload privilege tables now\\? \\[Y/n\\] ')
+#         child.sendline('n')
+#         child.expect(pexpect.EOF)
+# finally:
+#     if child is not None:
+#         child.terminate()
+#         child.wait()
+#     if proc is not None:
+#         proc.terminate()
+#         proc.wait()

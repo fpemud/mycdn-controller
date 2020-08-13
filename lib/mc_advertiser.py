@@ -34,6 +34,16 @@ class McAdvertiser:
                 self.param.slaveServers.gitServer.addGitDir(msObj.id, msObj.storageDict["git"].dataDir)
             if "http" in msObj.advertiseDict["git"]:
                 pass                # FIXME
+        if "mediawiki" in msObj.advertiseDict:
+            if "database" in msObj.advertiseDict["mediawiki"]:
+                self.param.slaveServers.mariadbServer.addDatabaseDir(msObj.id, msObj.storageDict["mariadb"].dataDir, msObj.storageDict["mariadb"].tableInfo)
+            if "web" in msObj.advertiseDict["mediawiki"]:
+                pass                # FIXME
+        if "mariadb" in msObj.advertiseDict:
+            if "database" in msObj.advertiseDict["mariadb"]:
+                self.param.slaveServers.mariadbServer.addDatabaseDir(msObj.id, msObj.storageDict["mariadb"].dataDir, msObj.storageDict["mariadb"].tableInfo)
+            if "http" in msObj.advertiseDict["mariadb"]:
+                pass                # FIXME
 
     async def _start(self):
         try:

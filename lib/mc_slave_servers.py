@@ -18,6 +18,7 @@ class McSlaveServers:
         self.ftpServer = None
         self.rsyncServer = None
         self.gitServer = None
+        self.mariadbServer = None
 
         # register servers by storage
         pass
@@ -37,6 +38,16 @@ class McSlaveServers:
                         self.gitServer = True
                     if "http" in protocolList:
                         self.httpServer = True
+                if storageName == "mediawiki":
+                    if "database" in protocolList:
+                        self.mariadbServer = True
+                    if "web" in protocolList:
+                        self.httpServer = True              # export as mediawiki web page
+                if storageName == "mariadb":
+                    if "database" in protocolList:
+                        self.mariadbServer = True
+                    if "http" in protocolList:
+                        self.httpServer = True              # export as database web interface
 
         # create servers
         if self.httpServer is not None:
@@ -51,8 +62,13 @@ class McSlaveServers:
         if self.gitServer is not None:
             self.gitServer = _GitServer(self.param)
             self.gitServer.start()
+        if self.mariadbServer is not None:
+            self.mariadbServer = _MultiInstanceMariadbServer(self.param)
+            self.mariadbServer.start()
 
     def dispose(self):
+        if self.mariadbServer is not None:
+            self.mariadbServer.stop()
         if self.gitServer is not None:
             self.gitServer.stop()
         if self.rsyncServer is not None:
@@ -552,42 +568,3 @@ def _checkNameAndRealPath(dictObj, name, realPath):
     if McUtil.isPathOverlap(realPath, dictObj.values()):
         return False
     return True
-
-
-# # mysql_secure_installation
-# with open(logFile, "a") as f:
-#     f.write("\n")
-#     f.write("## mysql_secure_installation #######################\n")
-# proc = None
-# child = None
-# try:
-#     proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
-#     McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, proc)
-#     with open(logFile, "ab") as f:
-#         child = pexpect.spawn("/usr/bin/mysql_secure_installation --no-defaults --socket=%s" % (self._socketFile), logfile=f)
-#         child.expect('Enter current password for root \\(enter for none\\): ')
-#         child.sendline("")
-#         child.expect("Switch to unix_socket authentication \\[Y/n\\] ")
-#         child.sendline('n')
-#         child.expect('Change the root password\\? \\[Y/n\\] ')
-#         child.sendline('Y')
-#         child.expect('New password: ')
-#         child.sendline(self._dbRootPassword)
-#         child.expect('Re-enter new password: ')
-#         child.sendline(self._dbRootPassword)
-#         child.expect('Remove anonymous users\\? \\[Y/n\\] ')
-#         child.sendline('Y')
-#         child.expect('Disallow root login remotely\\? \\[Y/n\\] ')
-#         child.sendline('Y')
-#         child.expect('Remove test database and access to it\\? \\[Y/n\\] ')
-#         child.sendline('Y')
-#         child.expect('Reload privilege tables now\\? \\[Y/n\\] ')
-#         child.sendline('n')
-#         child.expect(pexpect.EOF)
-# finally:
-#     if child is not None:
-#         child.terminate()
-#         child.wait()
-#     if proc is not None:
-#         proc.terminate()
-#         proc.wait()

@@ -99,6 +99,10 @@ class McMirrorSite:
                     self.storageDict[item] = McMirrorSiteStorageFile(self)
                 elif item == "git":
                     self.storageDict[item] = McMirrorSiteStorageGit(self)
+                elif item == "mediawiki":
+                    self.storageDict[item] = McMirrorSiteStorageMediaWiki(self)
+                elif item == "mariadb":
+                    self.storageDict[item] = McMirrorSiteStorageMariadb(self)
                 else:
                     assert False
 
@@ -157,6 +161,52 @@ class McMirrorSiteStorageGit:
     @property
     def dataDir(self):
         return self._dataDir
+
+    def initialize(self):
+        McUtil.ensureDir(self._dataDir)
+
+    def getParamForPlugin(self):
+        return {
+            "data-directory": self._dataDir
+        }
+
+
+class McMirrorSiteStorageMediaWiki:
+
+    def __init__(self, parent):
+        self.parent = parent
+        self._dataDir = os.path.join(self.parent.masterDir, "storage-mediawiki")
+
+    @property
+    def dataDir(self):
+        return self._dataDir
+
+    @property
+    def tableInfo(self):
+        assert False
+
+    def initialize(self):
+        McUtil.ensureDir(self._dataDir)
+
+    def getParamForPlugin(self):
+        return {
+            "data-directory": self._dataDir
+        }
+
+
+class McMirrorSiteStorageMariadb:
+
+    def __init__(self, parent):
+        self.parent = parent
+        self._dataDir = os.path.join(self.parent.masterDir, "storage-mariadb")
+
+    @property
+    def dataDir(self):
+        return self._dataDir
+
+    @property
+    def tableInfo(self):
+        assert False
 
     def initialize(self):
         McUtil.ensureDir(self._dataDir)
