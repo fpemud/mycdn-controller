@@ -2,11 +2,15 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
+import re
 import glob
 import json
 import libxml2
+import sqlparse
 from mc_util import McUtil
+from mc_util import DynObject
 from mc_param import McConst
+from mc_advertiser import McAdvertiser
 
 
 class McPluginManager:
@@ -93,26 +97,45 @@ class McMirrorSite:
         # storage
         self.storageDict = dict()
         if True:
-            tstr = rootElem.xpathEval(".//storage")[0].getContent()
-            for item in tstr.split("|"):
-                if item == "file":
-                    self.storageDict[item] = McMirrorSiteStorageFile(self)
-                elif item == "git":
-                    self.storageDict[item] = McMirrorSiteStorageGit(self)
-                elif item == "mediawiki":
-                    self.storageDict[item] = McMirrorSiteStorageMediaWiki(self)
-                elif item == "mariadb":
-                    self.storageDict[item] = McMirrorSiteStorageMariadb(self)
-                else:
-                    assert False
+            for child in rootElem.xpathEval(".//storage"):
+                # deprecated
+                if not child.hasAttribute("type"):
+                    tstr = rootElem.xpathEval(".//storage")[0].getContent()
+                    for st in tstr.split("|"):
+                        self.storageDict[st] = DynObject()
+                        self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
+                        self.storageDict[st].pluginParam = {"data-directory": self.storageDict[st].dataDir}
+                    continue
+
+                st = child.getAttribute("type")
+                if st not in ["file", "git", "mariadb"]:
+                    raise Exception("invalid storage type %s" % (st))
+                self.storageDict[st] = DynObject()
+                self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
+                self.storageDict[st].pluginParam = {"data-directory": self.storageDict[st].dataDir}
+                if st == "mariadb":
+                    self.storageDict[st].tableInfo = dict()
+                    tl = child.xpathEval(".//database-schema")
+                    if len(tl) > 0:
+                        databaseSchemaFile = tl[0].getContent()
+                        for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
+                            m = re.match("^CREATE +TABLE +(\\S+)", sql)
+                            if m is None:
+                                raise Exception("invalid database schema for storage type %s" % (st))
+                            self.storageDict[st].tableInfo[m.group(1)] = sql
 
         # advertiser
         self.advertiseDict = dict()
         for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//interface"):
-            storageName, protocol = McUtil.splitToTuple(child.getContent(), ":")
-            if storageName not in self.advertiseDict:
-                self.advertiseDict[storageName] = []
-            self.advertiseDict[storageName].append(protocol)
+            if ":" in child.getContent():
+                advertiserName, interface = McUtil.splitToTuple(child.getContent(), ":")
+            else:
+                advertiserName, interface = child.getContent(), child.getContent()
+            if not all(x in self.storageDict.keys() for x in McAdvertiser.storageDependencyOfAdvertiser(advertiserName)):
+                raise Exception("lack storage for advertiser %s" % (advertiserName))
+            if advertiserName not in self.advertiseDict:
+                self.advertiseDict[advertiserName] = []
+            self.advertiseDict[advertiserName].append(interface)
 
         # initializer
         self.initializerExe = None
@@ -131,87 +154,3 @@ class McMirrorSite:
                 self.updaterExe = slist[0].xpathEval(".//executable")[0].getContent()
                 self.updaterExe = os.path.join(pluginDir, self.updaterExe)
                 self.schedExpr = slist[0].xpathEval(".//cron-expression")[0].getContent()   # FIXME: add check
-
-
-class McMirrorSiteStorageFile:
-
-    def __init__(self, parent):
-        self.parent = parent
-        self._dataDir = os.path.join(self.parent.masterDir, "storage-file")
-
-    @property
-    def dataDir(self):
-        return self._dataDir
-
-    def initialize(self):
-        McUtil.ensureDir(self._dataDir)
-
-    def getParamForPlugin(self):
-        return {
-            "data-directory": self._dataDir
-        }
-
-
-class McMirrorSiteStorageGit:
-
-    def __init__(self, parent):
-        self.parent = parent
-        self._dataDir = os.path.join(self.parent.masterDir, "storage-git")
-
-    @property
-    def dataDir(self):
-        return self._dataDir
-
-    def initialize(self):
-        McUtil.ensureDir(self._dataDir)
-
-    def getParamForPlugin(self):
-        return {
-            "data-directory": self._dataDir
-        }
-
-
-class McMirrorSiteStorageMediaWiki:
-
-    def __init__(self, parent):
-        self.parent = parent
-        self._dataDir = os.path.join(self.parent.masterDir, "storage-mediawiki")
-
-    @property
-    def dataDir(self):
-        return self._dataDir
-
-    @property
-    def tableInfo(self):
-        assert False
-
-    def initialize(self):
-        McUtil.ensureDir(self._dataDir)
-
-    def getParamForPlugin(self):
-        return {
-            "data-directory": self._dataDir
-        }
-
-
-class McMirrorSiteStorageMariadb:
-
-    def __init__(self, parent):
-        self.parent = parent
-        self._dataDir = os.path.join(self.parent.masterDir, "storage-mariadb")
-
-    @property
-    def dataDir(self):
-        return self._dataDir
-
-    @property
-    def tableInfo(self):
-        assert False
-
-    def initialize(self):
-        McUtil.ensureDir(self._dataDir)
-
-    def getParamForPlugin(self):
-        return {
-            "data-directory": self._dataDir
-        }

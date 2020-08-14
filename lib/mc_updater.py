@@ -90,9 +90,9 @@ class _OneMirrorSiteUpdater:
         if not os.path.exists(self.pluginStateDir):
             os.makedirs(self.pluginStateDir)
 
-        # storage object initialize
+        # initialize data directory
         for sobj in self.mirrorSite.storageDict.values():
-            sobj.initialize()
+            McUtil.ensureDir(sobj.dataDir)
 
         bInit = True
         if self._isInitialized():
@@ -308,7 +308,7 @@ class _OneMirrorSiteUpdater:
                 "location": self.param.mainCfg["location"],
             }
             for storageName, storageObj in self.mirrorSite.storageDict.items():
-                args["storage-" + storageName] = storageObj.getParamForPlugin()
+                args["storage-" + storageName] = storageObj.pluginParam
             if self.schedDatetime is not None:
                 args["run-mode"] = "update"
                 args["sched-datetime"] = datetime.strftime(self.schedDatetime, "%Y-%m-%d %H:%M")

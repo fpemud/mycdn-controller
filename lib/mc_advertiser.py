@@ -12,6 +12,18 @@ from mc_param import McConst
 
 class McAdvertiser:
 
+    @staticmethod
+    def storageDependencyOfAdvertiser(advertiserName):
+        if advertiserName == "file":
+            return ["file"]
+        if advertiserName == "git":
+            return ["git"]
+        if advertiserName == "mariadb":
+            return ["mariadb"]
+        if advertiserName == "mediawiki":
+            return ["file", "mariadb"]
+        assert False
+
     def __init__(self, param):
         self.param = param
         self.param.mainloop.run_until_complete(self._start())
@@ -36,12 +48,12 @@ class McAdvertiser:
                 pass                # FIXME
         if "mediawiki" in msObj.advertiseDict:
             if "database" in msObj.advertiseDict["mediawiki"]:
-                self.param.slaveServers.mariadbServer.addDatabaseDir(msObj.id, msObj.storageDict["mariadb"].dataDir, msObj.storageDict["mariadb"].tableInfo)
+                self.param.slaveServers.mariadbServer.exportDatabase(msObj.id)
             if "web" in msObj.advertiseDict["mediawiki"]:
                 pass                # FIXME
         if "mariadb" in msObj.advertiseDict:
             if "database" in msObj.advertiseDict["mariadb"]:
-                self.param.slaveServers.mariadbServer.addDatabaseDir(msObj.id, msObj.storageDict["mariadb"].dataDir, msObj.storageDict["mariadb"].tableInfo)
+                self.param.slaveServers.mariadbServer.exportDatabase(msObj.id)
             if "http" in msObj.advertiseDict["mariadb"]:
                 pass                # FIXME
 

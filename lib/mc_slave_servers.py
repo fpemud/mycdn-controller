@@ -21,32 +21,35 @@ class McSlaveServers:
         self.mariadbServer = None
 
         # register servers by storage
-        pass
+        for ms in self.param.mirrorSiteDict.values():
+            for storageName, obj in ms.storageDict.items():
+                if storageName == "mariadb":
+                    self.mariadbServer = True
 
         # register servers by advertiser
         for ms in self.param.mirrorSiteDict.values():
-            for storageName, protocolList in ms.advertiseDict.items():
-                if storageName == "file":
-                    if "http" in protocolList:
+            for advertiserName, interfaceList in ms.advertiseDict.items():
+                if advertiserName == "file":
+                    if "http" in interfaceList:
                         self.httpServer = True
-                    if "ftp" in protocolList:
+                    if "ftp" in interfaceList:
                         self.ftpServer = True
-                    if "rsync" in protocolList:
+                    if "rsync" in interfaceList:
                         self.rsyncServer = True
-                if storageName == "git":
-                    if "git" in protocolList:
+                if advertiserName == "git":
+                    if "git" in interfaceList:
                         self.gitServer = True
-                    if "http" in protocolList:
+                    if "http" in interfaceList:
                         self.httpServer = True
-                if storageName == "mediawiki":
-                    if "database" in protocolList:
+                if advertiserName == "mediawiki":
+                    if "database" in interfaceList:
                         self.mariadbServer = True
-                    if "web" in protocolList:
+                    if "web" in interfaceList:
                         self.httpServer = True              # export as mediawiki web page
-                if storageName == "mariadb":
-                    if "database" in protocolList:
+                if advertiserName == "mariadb":
+                    if "database" in interfaceList:
                         self.mariadbServer = True
-                    if "http" in protocolList:
+                    if "http" in interfaceList:
                         self.httpServer = True              # export as database web interface
 
         # create servers
@@ -65,6 +68,12 @@ class McSlaveServers:
         if self.mariadbServer is not None:
             self.mariadbServer = _MultiInstanceMariadbServer(self.param)
             self.mariadbServer.start()
+
+        # FIXME: register database
+        for ms in self.param.mirrorSiteDict.values():
+            for storageName, obj in ms.storageDict.items():
+                if storageName == "mariadb":
+                    self.mariadbServer.addDatabaseDir(ms.id, ms.storageDict["mariadb"].dataDir, ms.storageDict["mariadb"].tableInfo)
 
     def dispose(self):
         if self.mariadbServer is not None:
@@ -480,6 +489,10 @@ class _MultiInstanceMariadbServer:
             if os.path.exists(cfgFile):
                 os.unlink(cfgFile)
             raise
+
+    def exportDatabaseDir(self, databaseName):
+        # FIXME, currently addDatabaseDir does the export work which is obviously insecure
+        pass
 
     def getDatabasePort(self, databaseName):
         assert self._proc is not None
