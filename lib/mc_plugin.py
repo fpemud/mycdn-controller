@@ -7,6 +7,7 @@ import glob
 import json
 import libxml2
 import sqlparse
+from collections import OrderedDict
 from mc_util import McUtil
 from mc_util import DynObject
 from mc_param import McConst
@@ -93,36 +94,34 @@ class McMirrorSite:
             self.masterDir = os.path.join(McConst.varDir, self.id)
         else:
             self.masterDir = os.path.join(McConst.cacheDir, self.id)
+        McUtil.ensureDir(self.masterDir)
+
+        # state directory for plugin
+        self.pluginStateDir = os.path.join(self.masterDir, "state")
+        McUtil.ensureDir(self.pluginStateDir)
 
         # storage
         self.storageDict = dict()
-        if True:
-            for child in rootElem.xpathEval(".//storage"):
-                # deprecated
-                if not child.hasAttribute("type"):
-                    tstr = rootElem.xpathEval(".//storage")[0].getContent()
-                    for st in tstr.split("|"):
-                        self.storageDict[st] = DynObject()
-                        self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
-                        self.storageDict[st].pluginParam = {"data-directory": self.storageDict[st].dataDir}
-                    continue
+        for child in rootElem.xpathEval(".//storage"):
+            st = child.prop("type")
+            if st not in ["file", "git", "mariadb"]:
+                raise Exception("invalid storage type %s" % (st))
 
-                st = child.getAttribute("type")
-                if st not in ["file", "git", "mariadb"]:
-                    raise Exception("invalid storage type %s" % (st))
-                self.storageDict[st] = DynObject()
-                self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
-                self.storageDict[st].pluginParam = {"data-directory": self.storageDict[st].dataDir}
-                if st == "mariadb":
-                    self.storageDict[st].tableInfo = dict()
-                    tl = child.xpathEval(".//database-schema")
-                    if len(tl) > 0:
-                        databaseSchemaFile = tl[0].getContent()
-                        for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
-                            m = re.match("^CREATE +TABLE +(\\S+)", sql)
-                            if m is None:
-                                raise Exception("invalid database schema for storage type %s" % (st))
-                            self.storageDict[st].tableInfo[m.group(1)] = sql
+            self.storageDict[st] = DynObject()
+            self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
+            self.storageDict[st].pluginParam = {"data-directory": self.storageDict[st].dataDir}
+            McUtil.ensureDir(self.storageDict[st].dataDir)
+
+            if st == "mariadb":
+                self.storageDict[st].tableInfo = OrderedDict()
+                tl = child.xpathEval(".//database-schema")
+                if len(tl) > 0:
+                    databaseSchemaFile = os.path.join(pluginDir, tl[0].getContent())
+                    for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
+                        m = re.match("^CREATE +TABLE +(\\S+)", sql)
+                        if m is None:
+                            raise Exception("invalid database schema for storage type %s" % (st))
+                        self.storageDict[st].tableInfo[m.group(1)] = (-1, sql)
 
         # advertiser
         self.advertiseDict = dict()

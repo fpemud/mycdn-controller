@@ -74,25 +74,10 @@ class _OneMirrorSiteUpdater:
         self.invoker = parent.invoker
         self.scheduler = parent.scheduler
         self.mirrorSite = mirrorSite
-        self.pluginStateDir = os.path.join(self.mirrorSite.masterDir, "state")
 
         # state files
-        self.initFlagFile = os.path.join(self.mirrorSite.masterDir, "UNINITIALIZED")
+        self.initFlagFile = os.path.join(self.mirrorSite.masterDir, "INITIALIZED")
         self.lastUpdateDatetimeFile = os.path.join(self.mirrorSite.masterDir, "LAST_UPDATE_DATETIME")
-
-        # initialize master directory
-        if not os.path.exists(self.mirrorSite.masterDir):
-            os.makedirs(self.mirrorSite.masterDir)
-            if self.mirrorSite.initializerExe is not None:
-                self._setUnInitialized()
-
-        # initialize plugin state directory
-        if not os.path.exists(self.pluginStateDir):
-            os.makedirs(self.pluginStateDir)
-
-        # initialize data directory
-        for sobj in self.mirrorSite.storageDict.values():
-            McUtil.ensureDir(sobj.dataDir)
 
         bInit = True
         if self._isInitialized():
@@ -301,7 +286,7 @@ class _OneMirrorSiteUpdater:
             args = {
                 "id": self.mirrorSite.id,
                 "config": self.mirrorSite.cfgDict,
-                "state-directory": self.pluginStateDir,
+                "state-directory": self.mirrorSite.pluginStateDir,
                 "log-directory": logDir,
                 "debug-flag": "",
                 "country": self.param.mainCfg["country"],
@@ -327,13 +312,13 @@ class _OneMirrorSiteUpdater:
         return False
 
     def _isInitialized(self):
-        return not os.path.exists(self.initFlagFile)
+        return os.path.exists(self.initFlagFile)
 
     def _setUnInitialized(self):
-        McUtil.touchFile(self.initFlagFile)
+        McUtil.forceDelete(self.initFlagFile)
 
     def _setInitialized(self):
-        McUtil.forceDelete(self.initFlagFile)
+        McUtil.touchFile(self.initFlagFile)
 
     def _readLastUpdateDatetime(self):
         if not os.path.exists(self.lastUpdateDatetimeFile):

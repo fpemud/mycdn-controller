@@ -72,7 +72,7 @@ class McUtil:
     def cmdCallWithInput(cmd, inStr, *kargs):
         ret = subprocess.run([cmd] + list(kargs),
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                             inStr=inStr, universal_newlines=True)
+                             input=inStr, universal_newlines=True)
         if ret.returncode > 128:
             time.sleep(1.0)
         if ret.returncode != 0:

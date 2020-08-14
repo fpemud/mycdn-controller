@@ -79,5 +79,4 @@ class McPublicMirrorDatabase:
         return ret
 
 
-
-
+                                              "--enforce-storage-engine=\"\""

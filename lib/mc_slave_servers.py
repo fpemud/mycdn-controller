@@ -4,6 +4,7 @@
 import os
 import json
 import signal
+import mariadb
 import logging
 import subprocess
 from mc_util import McUtil
@@ -416,9 +417,11 @@ class _MultiInstanceMariadbServer:
         self._tableInfoDict = dict()        # <database-name,table-info>
         self._procDict = dict()             # <database-name,(proc,port,cfg-file,log-ile)>
         self._dbRootPassword = "root"       # FIXME
+        self._bStarted = False
 
     def start(self):
-        assert self._proc is None
+        assert not self._bStarted
+        self._bStarted = True
         logging.info("Slave server (multi-instanced-mariadb) started.")
 
     def stop(self):
@@ -432,15 +435,14 @@ class _MultiInstanceMariadbServer:
 
     def addDatabaseDir(self, databaseName, dataDir, tableInfo):
         # tableInfo { "table-name": ( block-size, "table-schema" ) }
-        import mariadb
-        assert self._proc is not None
+        assert self._bStarted
         assert _checkNameAndRealPath(self._dirDict, databaseName, dataDir)
 
         cfgFile = os.path.join(McConst.tmpDir, "mariadb-%s.cnf" % (databaseName))
         logFile = os.path.join(McConst.logDir, "mariadb-%s.log" % (databaseName))
 
         # initialize if needed
-        if self._isInitialized(dataDir):
+        if not self._isInitialized(dataDir):
             self._initialize(databaseName, dataDir, tableInfo, logFile)
 
         # start process
@@ -459,13 +461,19 @@ class _MultiInstanceMariadbServer:
             with open(logFile, "a") as f:
                 f.write("\n\n")
                 f.write("## mariadb-db #######################\n")
-            proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions(dataDir, port))
+            cmd = [
+                "/usr/sbin/mysqld",
+                "--no-defaults",
+                "--datadir=%s" % (dataDir),
+                "--bind-address=%s" % (self.param.listenIp),
+                "--port=%d" % (port),
+            ]
+            proc = subprocess.Popen(cmd)
             McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
 
             # check
-            with mariadb.connect(unix_socket=self._socketFile, user="root", password=self._dbRootPassword) as conn:
+            with mariadb.connect(port=port, database=databaseName, user="root", password=self._dbRootPassword) as conn:
                 cur = conn.cursor()
-                cur.execute("USE %s;" % (databaseName))
                 for tableName, value in tableInfo.items():
                     blockSize, tableSchema = value
                     out = cur.execute("SHOW CREATE TABLE %s;" % (tableName))
@@ -492,10 +500,10 @@ class _MultiInstanceMariadbServer:
 
     def exportDatabaseDir(self, databaseName):
         # FIXME, currently addDatabaseDir does the export work which is obviously insecure
-        pass
+        assert self._bStarted
 
     def getDatabasePort(self, databaseName):
-        assert self._proc is not None
+        assert self._bStarted
         return self._procDict[databaseName][1]
 
     def _isInitialized(self, dataDir):
@@ -521,10 +529,10 @@ class _MultiInstanceMariadbServer:
                     "SET @auth_root_socket=NULL;",
                 ]
                 tables = [
-                    "/usr/share/mariadb/fill_help_tables.sql",
                     "/usr/share/mariadb/mysql_system_tables.sql",
                     "/usr/share/mariadb/mysql_performance_tables.sql",
                     "/usr/share/mariadb/mysql_system_tables_data.sql",
+                    "/usr/share/mariadb/fill_help_tables.sql",
                     "/usr/share/mariadb/maria_add_gis_sp_bootstrap.sql",
                 ]
                 for fn in tables:
@@ -538,16 +546,17 @@ class _MultiInstanceMariadbServer:
             if True:
                 commands.append("CREATE DATABASE IF NOT EXISTS %s;" % (databaseName)),
                 commands.append("USE %s;" % (databaseName))
-                for dummy, sql in tableInfo.values():
-                    commands += sql.split("\n")
+                for tableName, value in tableInfo.items():
+                    for line in value[1].split("\n"):
+                        commands.append(line)
+                        print(line)
 
             # execute
             if True:
                 out = McUtil.cmdCallWithInput("/usr/sbin/mysqld",                                 # command
                                               "\n".join(commands),                                # input
-                                              "--no-defaults", "--bootstrap", "--basedir=/usr",   # arguments
-                                              "--datadir=%s" % (dataDir), "--log-warnings=0",     # arguments
-                                              "--enforce-storage-engine=''")                      # arguments
+                                              "--no-defaults", "--bootstrap",                     # arguments
+                                              "--datadir=%s" % (dataDir), "--log-warnings=0")     # arguments
                 with open(logFile, "w") as f:
                     f.write("## mariadb-install-db #######################\n")
                     f.write(out)
