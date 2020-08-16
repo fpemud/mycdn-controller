@@ -416,7 +416,7 @@ class _MultiInstanceMariadbServer:
         self._dirDict = dict()              # <database-name,data-dir>
         self._tableInfoDict = dict()        # <database-name,table-info>
         self._procDict = dict()             # <database-name,(proc,port,cfg-file,log-ile)>
-        self._dbRootPassword = "root"       # FIXME
+        self._dbRootPassword = "root"       # FIXME: currently, no password, there should be a write password
         self._bStarted = False
 
     def start(self):
@@ -474,13 +474,32 @@ class _MultiInstanceMariadbServer:
             McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
 
             # check
-            with mariadb.connect(unix_socket=socketFile, database=databaseName, user="root", password=self._dbRootPassword) as conn:
+            with mariadb.connect(unix_socket=socketFile, database=databaseName, user="root") as conn:
                 cur = conn.cursor()
                 for tableName, value in tableInfo.items():
                     blockSize, tableSchema = value
-                    out = cur.execute("SHOW CREATE TABLE %s;" % (tableName))
+                    cur.execute("SHOW CREATE TABLE %s;" % (tableName))
+                    out = cur.fetchall()[0][1]
                     if out != tableSchema:
-                        raise Exception("table schema error")
+                        # FIXME: We can't use simple string comparasion for checking, example:
+                        # ====================================
+                        # CREATE TABLE MovieDirector (
+                        #     directorId INTEGER,
+                        #     movieId INTEGER,
+                        #     FOREIGN KEY (directorId) REFERENCES Director(id), 
+                        #     FOREIGN KEY (movieId) REFERENCES Movie(id)
+                        # );
+                        # ====================================
+                        # CREATE TABLE `MovieDirector` (
+                        # `directorId` int(11) DEFAULT NULL,
+                        # `movieId` int(11) DEFAULT NULL,
+                        # KEY `directorId` (`directorId`),
+                        # KEY `movieId` (`movieId`),
+                        # CONSTRAINT `MovieDirector_ibfk_1` FOREIGN KEY (`directorId`) REFERENCES `Director` (`id`),
+                        # CONSTRAINT `MovieDirector_ibfk_2` FOREIGN KEY (`movieId`) REFERENCES `Movie` (`id`)
+                        # ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+                        # ====================================
+                        pass
 
             # save
             self._dirDict[databaseName] = dataDir
