@@ -549,7 +549,6 @@ class _MultiInstanceMariadbServer:
                 for tableName, value in tableInfo.items():
                     for line in value[1].split("\n"):
                         commands.append(line)
-                        print(line)
 
             # execute
             if True:
