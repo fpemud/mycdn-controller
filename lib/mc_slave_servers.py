@@ -439,6 +439,7 @@ class _MultiInstanceMariadbServer:
         assert _checkNameAndRealPath(self._dirDict, databaseName, dataDir)
 
         cfgFile = os.path.join(McConst.tmpDir, "mariadb-%s.cnf" % (databaseName))
+        socketFile = os.path.join(McConst.tmpDir, "mariadb-%s.socket" % (databaseName))
         logFile = os.path.join(McConst.logDir, "mariadb-%s.log" % (databaseName))
 
         # initialize if needed
@@ -465,6 +466,7 @@ class _MultiInstanceMariadbServer:
                 "/usr/sbin/mysqld",
                 "--no-defaults",
                 "--datadir=%s" % (dataDir),
+                "--socket=%s" % (socketFile),
                 "--bind-address=%s" % (self.param.listenIp),
                 "--port=%d" % (port),
             ]
@@ -472,7 +474,7 @@ class _MultiInstanceMariadbServer:
             McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
 
             # check
-            with mariadb.connect(port=port, database=databaseName, user="root", password=self._dbRootPassword) as conn:
+            with mariadb.connect(unix_socket=socketFile, database=databaseName, user="root", password=self._dbRootPassword) as conn:
                 cur = conn.cursor()
                 for tableName, value in tableInfo.items():
                     blockSize, tableSchema = value
@@ -483,7 +485,7 @@ class _MultiInstanceMariadbServer:
             # save
             self._dirDict[databaseName] = dataDir
             self._tableInfoDict[databaseName] = tableInfo
-            self._procDict[databaseName] = (proc, port, cfgFile, logFile)
+            self._procDict[databaseName] = (proc, port, cfgFile, socketFile, logFile)
         except Exception:
             if databaseName in self._procDict:
                 self._procDict[databaseName]
@@ -562,15 +564,6 @@ class _MultiInstanceMariadbServer:
         except Exception:
             McUtil.touchFile(os.path.join(dataDir, "initialize.failed"))
             raise
-
-    def __commonOptions(self, dataDir, port):
-        return [
-            "--no-defaults",
-            "--basedir=/usr",
-            "--datadir=%s" % (dataDir),
-            "--bind-address=%s" % (self.param.listenIp),
-            "--port=%d" % (port),
-        ]
 
 
 class _MongodbServer:
