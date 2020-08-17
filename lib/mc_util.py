@@ -14,6 +14,7 @@ import struct
 import shutil
 import random
 import socket
+import hashlib
 import logging
 import traceback
 import subprocess
@@ -26,6 +27,24 @@ from dbus.mainloop.glib import DBusGMainLoop
 
 
 class McUtil:
+
+    @staticmethod
+    def sqlInsertStatement(tableName, valueDict):
+        return "INSERT INTO " + tableName + " (" + ",".join(valueDict.keys()) + ") VALUES ('" + "','".join(valueDict.values()) + "');"
+
+    @staticmethod
+    def mysqlPrivJson(password=None):
+        if password is None:
+            return '{"access":0}'
+        else:
+            # password_last_changed must be >0, or else mysql would force the user change his/her password
+            return '{"access":0,"plugin":"mysql_native_password","authentication_string":"%s","password_last_changed":1}' % (McUtil.mysqlPasswordHash(password))
+
+    @staticmethod
+    def mysqlPasswordHash(password):
+        r = hashlib.sha1(password.encode("iso8859-1")).digest()
+        r = hashlib.sha1(r).hexdigest()
+        return '*' + r
 
     @staticmethod
     def readFile(filename):

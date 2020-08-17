@@ -422,7 +422,9 @@ class _MultiInstanceMariadbServer:
         self._dirDict = dict()              # <database-name,data-dir>
         self._tableInfoDict = dict()        # <database-name,table-info>
         self._procDict = dict()             # <database-name,(proc,port,cfg-file,log-ile)>
-        self._dbRootPassword = "root"       # FIXME: currently, no password, there should be a write password
+        self._dbWriteUser = "write"
+        self._dbWritePasswd = "write"
+        self._dbReadUser = "anonymous"
         self._bStarted = False
 
     def start(self):
@@ -481,67 +483,12 @@ class _MultiInstanceMariadbServer:
             proc = subprocess.Popen(cmd)
             McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
 
-            # record table schema
-            #
-            # two seperate files "tableInfoRecordFile" and "databaseTableSchemaRecordFile" must be used
-            # because we can't use simple string comparasion for "table info" and "table schema in database":
-            # ====================================
-            # CREATE TABLE MovieDirector (
-            #     directorId INTEGER,
-            #     movieId INTEGER,
-            #     FOREIGN KEY (directorId) REFERENCES Director(id),
-            #     FOREIGN KEY (movieId) REFERENCES Movie(id)
-            # );
-            # ====================================
-            # CREATE TABLE `MovieDirector` (
-            # `directorId` int(11) DEFAULT NULL,
-            # `movieId` int(11) DEFAULT NULL,
-            # KEY `directorId` (`directorId`),
-            # KEY `movieId` (`movieId`),
-            # CONSTRAINT `MovieDirector_ibfk_1` FOREIGN KEY (`directorId`) REFERENCES `Director` (`id`),
-            # CONSTRAINT `MovieDirector_ibfk_2` FOREIGN KEY (`movieId`) REFERENCES `Movie` (`id`)
-            # ) ENGINE=InnoDB DEFAULT CHARSET=utf8
-            # ====================================
+            # post-initialize if needed
             if bJustInitialized:
-                with open(tableInfoRecordFile, "w") as f:
-                    for tableName, value in tableInfo.items():
-                        f.write("---- " + tableName + " ----\n")
-                        f.write(value[1] + "\n")
-                        f.write("\n")
-                with mariadb.connect(unix_socket=socketFile, database=databaseName, user="root") as conn:
-                    cur = conn.cursor()
-                    cur.execute("SHOW TABLES;")
-                    tableNameList = [x[0] for x in cur.fetchall()]
-                    with open(databaseTableSchemaRecordFile, "w") as f:
-                        for tableName in tableNameList:
-                            cur.execute("SHOW CREATE TABLE %s;" % (tableName))
-                            out = cur.fetchall()[0][1]
-                            f.write("---- " + tableName + " ----\n")
-                            f.write(out + "\n")
-                            f.write("\n")
+                self._initializePostStart(databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, socketFile)
 
             # check
-            if True:
-                buf = ""
-                for tableName, value in tableInfo.items():
-                    buf += "---- " + tableName + " ----\n"
-                    buf += value[1] + "\n"
-                    buf += "\n"
-                if buf != McUtil.readFile(tableInfoRecordFile):
-                    raise Exception("table info changed")
-            with mariadb.connect(unix_socket=socketFile, database=databaseName, user="root") as conn:
-                cur = conn.cursor()
-                cur.execute("SHOW TABLES;")
-                tableNameList = [x[0] for x in cur.fetchall()]
-                buf = ""
-                for tableName in tableNameList:
-                    cur.execute("SHOW CREATE TABLE %s;" % (tableName))
-                    out = cur.fetchall()[0][1]
-                    buf += "---- " + tableName + " ----\n"
-                    buf += out + "\n"
-                    buf += "\n"
-                if buf != McUtil.readFile(databaseTableSchemaRecordFile):
-                    raise Exception("table schema in database changed")
+            self._check(databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, socketFile)
 
             # save
             self._dirDict[databaseName] = dataDir
@@ -581,50 +528,222 @@ class _MultiInstanceMariadbServer:
 
     def _initialize(self, databaseName, dataDir, tableInfo, logFile):
         McUtil.mkDirAndClear(dataDir)
-        try:
-            commands = []
+        McUtil.touchFile(os.path.join(dataDir, "initialize.failed"))
 
-            # the following commands are from script /usr/share/mariadb/scripts/mariadb-install-db
-            if True:
-                commands += [
-                    "CREATE DATABASE IF NOT EXISTS mysql;",
-                    "USE mysql;",
-                    "SET @auth_root_socket=NULL;",
-                ]
-                tables = [
-                    "/usr/share/mariadb/mysql_system_tables.sql",
-                    "/usr/share/mariadb/mysql_performance_tables.sql",
-                    "/usr/share/mariadb/mysql_system_tables_data.sql",
-                    "/usr/share/mariadb/fill_help_tables.sql",
-                    "/usr/share/mariadb/maria_add_gis_sp_bootstrap.sql",
-                ]
-                for fn in tables:
-                    tlist = McUtil.readFile(fn).split("\n")
-                    for line in tlist:
-                        if "@current_hostname" in line:
-                            continue
-                        commands.append(line)
+        commands = []
 
-            # create our database
+        # the following commands are from script /usr/share/mariadb/scripts/mariadb-install-db
+        if True:
+            commands += [
+                "CREATE DATABASE IF NOT EXISTS mysql;",
+                "USE mysql;",
+                "SET @auth_root_socket=NULL;",
+            ]
+            tables = [
+                "/usr/share/mariadb/mysql_system_tables.sql",
+                "/usr/share/mariadb/mysql_performance_tables.sql",
+                "/usr/share/mariadb/mysql_system_tables_data.sql",
+                "/usr/share/mariadb/fill_help_tables.sql",
+                "/usr/share/mariadb/maria_add_gis_sp_bootstrap.sql",
+            ]
+            for fn in tables:
+                tlist = McUtil.readFile(fn).split("\n")
+                for line in tlist:
+                    if "@current_hostname" in line:
+                        continue
+                    commands.append(line)
+
+        # keep root@localhost, remove root@127.0.0.1 and root@::1, so that only unix socket access is permitted
+        # remove proxy priviledges for root user
+        commands += [
+            "DELETE FROM global_priv WHERE Host = '127.0.0.1' AND User = 'root';",
+            "DELETE FROM user WHERE Host = '127.0.0.1' AND User = 'root';",
+        ]
+        commands += [
+            "DELETE FROM global_priv WHERE Host = '::1' AND User = 'root';",
+            "DELETE FROM user WHERE Host = '::1' AND User = 'root';",
+        ]
+        commands += [
+            "DELETE FROM proxies_priv WHERE Host = 'localhost' AND User = 'root';",
+        ]
+
+        # create write account
+        commands += [
+            McUtil.sqlInsertStatement("global_priv", {
+                "Host": "localhost",
+                "User": self._dbWriteUser,
+                "Priv": McUtil.mysqlPrivJson(self._dbWritePasswd),
+            }),
+            McUtil.sqlInsertStatement("db", {
+                "Host": "localhost",
+                "User": self._dbWriteUser,
+                "Db": databaseName,
+                "Select_priv": "Y",
+                "Insert_priv": "Y",
+                "Update_priv": "Y",
+                "Delete_priv": "Y",
+                "Create_priv": "Y",
+                "Drop_priv": "Y",
+                "Grant_priv": "N",              # this value is "N"
+                "References_priv": "Y",
+                "Index_priv": "Y",
+                "Alter_priv": "Y",
+                "Create_tmp_table_priv": "Y",
+                "Lock_tables_priv": "Y",
+                "Create_view_priv": "Y",
+                "Show_view_priv": "Y",
+                "Create_routine_priv": "Y",
+                "Alter_routine_priv": "Y",
+                "Execute_priv": "Y",
+                "Event_priv": "Y",
+                "Trigger_priv": "Y",
+                "Delete_history_priv": "Y",
+            }),
+        ]
+
+        # create anonymous read-only account
+        commands += [
+            McUtil.sqlInsertStatement("global_priv", {
+                "Host": "%",
+                "User": self._dbReadUser,
+                "Priv": McUtil.mysqlPrivJson(),
+            }),
+            McUtil.sqlInsertStatement("db", {
+                "Host": "%",
+                "User": self._dbReadUser,
+                "Db": databaseName,
+                "Select_priv": "Y",
+                "Insert_priv": "N",             # this value is "N"
+                "Update_priv": "N",             # this value is "N"
+                "Delete_priv": "N",             # this value is "N"
+                "Create_priv": "N",             # this value is "N"
+                "Drop_priv": "N",               # this value is "N"
+                "Grant_priv": "N",              # this value is "N"
+                "References_priv": "Y",
+                "Index_priv": "Y",
+                "Alter_priv": "N",              # this value is "N"
+                "Create_tmp_table_priv": "N",   # this value is "N"
+                "Lock_tables_priv": "Y",
+                "Create_view_priv": "N",        # this value is "N"
+                "Show_view_priv": "Y",
+                "Create_routine_priv": "N",     # this value is "N"
+                "Alter_routine_priv": "N",      # this value is "N"
+                "Execute_priv": "Y",
+                "Event_priv": "Y",
+                "Trigger_priv": "Y",
+                "Delete_history_priv": "N",     # this value is "N"
+            }),
+        ]
+
+        # create our database
+        if True:
+            commands.append("CREATE DATABASE IF NOT EXISTS %s;" % (databaseName)),
+            commands.append("USE %s;" % (databaseName))
+            for tableName, value in tableInfo.items():
+                for line in value[1].split("\n"):
+                    commands.append(line)
+
+        # execute
+        if True:
+            out = McUtil.cmdCallWithInput("/usr/sbin/mysqld",                                 # command
+                                          "\n".join(commands),                                # input
+                                          "--no-defaults", "--bootstrap",                     # arguments
+                                          "--datadir=%s" % (dataDir), "--log-warnings=0")     # arguments
+            with open(logFile, "w") as f:
+                f.write("## mariadb-install-db #######################\n")
+                f.write(out)
+
+        os.unlink(os.path.join(dataDir, "initialize.failed"))
+
+    def _initializePostStart(self, databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, socketFile):
+        # record table schema
+        #
+        # two seperate files "tableInfoRecordFile" and "databaseTableSchemaRecordFile" must be used
+        # because we can't use simple string comparasion for "table info" and "table schema in database":
+        # ====================================
+        # CREATE TABLE MovieDirector (
+        #     directorId INTEGER,
+        #     movieId INTEGER,
+        #     FOREIGN KEY (directorId) REFERENCES Director(id),
+        #     FOREIGN KEY (movieId) REFERENCES Movie(id)
+        # );
+        # ====================================
+        # CREATE TABLE `MovieDirector` (
+        # `directorId` int(11) DEFAULT NULL,
+        # `movieId` int(11) DEFAULT NULL,
+        # KEY `directorId` (`directorId`),
+        # KEY `movieId` (`movieId`),
+        # CONSTRAINT `MovieDirector_ibfk_1` FOREIGN KEY (`directorId`) REFERENCES `Director` (`id`),
+        # CONSTRAINT `MovieDirector_ibfk_2` FOREIGN KEY (`movieId`) REFERENCES `Movie` (`id`)
+        # ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+        # ====================================
+
+        with open(tableInfoRecordFile, "w") as f:
+            for tableName, value in tableInfo.items():
+                f.write("---- " + tableName + " ----\n")
+                f.write(value[1] + "\n")
+                f.write("\n")
+
+        with mariadb.connect(unix_socket=socketFile, database=databaseName, user=self._dbWriteUser, password=self._dbWritePasswd) as conn:
+            cur = conn.cursor()
+            cur.execute("SHOW TABLES;")
+            tableNameList = [x[0] for x in cur.fetchall()]
+            with open(databaseTableSchemaRecordFile, "w") as f:
+                for tableName in tableNameList:
+                    cur.execute("SHOW CREATE TABLE %s;" % (tableName))
+                    out = cur.fetchall()[0][1]
+                    f.write("---- " + tableName + " ----\n")
+                    f.write(out + "\n")
+                    f.write("\n")
+
+    def _check(self, databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, socketFile):
+        with mariadb.connect(unix_socket=socketFile, database=databaseName, user=self._dbWriteUser, password=self._dbWritePasswd) as conn:
+            cur = conn.cursor()
+
+            # check priviledge for write user
             if True:
-                commands.append("CREATE DATABASE IF NOT EXISTS %s;" % (databaseName)),
-                commands.append("USE %s;" % (databaseName))
+                cur.execute("SHOW GRANTS;")
+                lineList = [x[0] for x in cur.fetchall()]
+                if len(lineList) != 2:
+                    raise Exception("invalid priviledge for %s user" % (self._dbWriteUser))
+                if not lineList[0].startswith("GRANT USAGE ON *.* TO `%s`@`localhost` IDENTIFIED BY PASSWORD " % (self._dbWriteUser)):
+                    raise Exception("invalid priviledge for %s user" % (self._dbWriteUser))
+                if not lineList[1] == "GRANT ALL PRIVILEGES ON `%s`.* TO `%s`@`localhost`" % (databaseName, self._dbWriteUser):
+                    raise Exception("invalid priviledge for %s user" % (self._dbWriteUser))
+
+            # check table info
+            if True:
+                buf = ""
                 for tableName, value in tableInfo.items():
-                    for line in value[1].split("\n"):
-                        commands.append(line)
-
-            # execute
+                    buf += "---- " + tableName + " ----\n"
+                    buf += value[1] + "\n"
+                    buf += "\n"
+                if buf != McUtil.readFile(tableInfoRecordFile):
+                    raise Exception("table info changed")
             if True:
-                out = McUtil.cmdCallWithInput("/usr/sbin/mysqld",                                 # command
-                                              "\n".join(commands),                                # input
-                                              "--no-defaults", "--bootstrap",                     # arguments
-                                              "--datadir=%s" % (dataDir), "--log-warnings=0")     # arguments
-                with open(logFile, "w") as f:
-                    f.write("## mariadb-install-db #######################\n")
-                    f.write(out)
-        except Exception:
-            McUtil.touchFile(os.path.join(dataDir, "initialize.failed"))
-            raise
+                cur.execute("SHOW TABLES;")
+                tableNameList = [x[0] for x in cur.fetchall()]
+                buf = ""
+                for tableName in tableNameList:
+                    cur.execute("SHOW CREATE TABLE %s;" % (tableName))
+                    out = cur.fetchall()[0][1]
+                    buf += "---- " + tableName + " ----\n"
+                    buf += out + "\n"
+                    buf += "\n"
+                if buf != McUtil.readFile(databaseTableSchemaRecordFile):
+                    raise Exception("table schema in database changed")
+
+        with mariadb.connect(unix_socket=socketFile, database=databaseName, user=self._dbReadUser) as conn:
+            # check priviledge for anonymous user
+            cur = conn.cursor()
+            cur.execute("SHOW GRANTS;")
+            lineList = [x[0] for x in cur.fetchall()]
+            if len(lineList) != 2:
+                raise Exception("invalid priviledge for %s user" % (self._dbWriteUser))
+            if not lineList[0] == "GRANT USAGE ON *.* TO `%s`@`%%`" % (self._dbReadUser):
+                raise Exception("invalid priviledge for %s user" % (self._dbWriteUser))
+            if not lineList[1] == "GRANT SELECT, REFERENCES, INDEX, LOCK TABLES, EXECUTE, SHOW VIEW, EVENT, TRIGGER ON `%s`.* TO `%s`@`%%`" % (databaseName, self._dbReadUser):
+                raise Exception("invalid priviledge for %s user" % (self._dbWriteUser))
 
 
 class _MongodbServer:
