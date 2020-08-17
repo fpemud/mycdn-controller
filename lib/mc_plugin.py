@@ -105,7 +105,7 @@ class McMirrorSite:
         for child in rootElem.xpathEval(".//storage"):
             st = child.prop("type")
             if st not in ["file", "git", "mariadb"]:
-                raise Exception("invalid storage type %s" % (st))
+                raise Exception("mirror site %s: invalid storage type %s" % (self.id, st))
 
             self.storageDict[st] = DynObject()
             self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
@@ -120,7 +120,7 @@ class McMirrorSite:
                     for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
                         m = re.match("^CREATE +TABLE +(\\S+)", sql)
                         if m is None:
-                            raise Exception("invalid database schema for storage type %s" % (st))
+                            raise Exception("mirror site %s: invalid database schema for storage type %s" % (self.id, st))
                         self.storageDict[st].tableInfo[m.group(1)] = (-1, sql)
 
         # advertiser
@@ -131,7 +131,7 @@ class McMirrorSite:
             else:
                 advertiserName, interface = child.getContent(), child.getContent()
             if not all(x in self.storageDict.keys() for x in McAdvertiser.storageDependencyOfAdvertiser(advertiserName)):
-                raise Exception("lack storage for advertiser %s" % (advertiserName))
+                raise Exception("mirror site %s: lack storage for advertiser %s" % (self.id, advertiserName))
             if advertiserName not in self.advertiseDict:
                 self.advertiseDict[advertiserName] = []
             self.advertiseDict[advertiserName].append(interface)
