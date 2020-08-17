@@ -74,7 +74,13 @@ class McSlaveServers:
         for ms in self.param.mirrorSiteDict.values():
             for storageName, obj in ms.storageDict.items():
                 if storageName == "mariadb":
-                    self.mariadbServer.addDatabaseDir(ms.id, ms.storageDict["mariadb"].dataDir, ms.storageDict["mariadb"].tableInfo)
+                    tableInfoRecordFile = os.path.join(ms.masterDir, "TABLE_SCHEMAS_PLUGIN")
+                    databaseTableSchemaRecordFile = os.path.join(ms.masterDir, "TABLE_SCHEMAS_DATABASE")
+                    self.mariadbServer.addDatabaseDir(ms.id,
+                                                      ms.storageDict["mariadb"].dataDir,
+                                                      ms.storageDict["mariadb"].tableInfo,
+                                                      tableInfoRecordFile,
+                                                      databaseTableSchemaRecordFile)
 
     def dispose(self):
         if self.mariadbServer is not None:
@@ -433,30 +439,32 @@ class _MultiInstanceMariadbServer:
         self._tableInfoDict.clear()
         self._dirDict.clear()
 
-    def addDatabaseDir(self, databaseName, dataDir, tableInfo):
-        # tableInfo { "table-name": ( block-size, "table-schema" ) }
+    def addDatabaseDir(self, databaseName, dataDir, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile):
+        # tableInfo is OrderedDict, content format: { "table-name": ( block-size, "table-schema" ) }
         assert self._bStarted
         assert _checkNameAndRealPath(self._dirDict, databaseName, dataDir)
 
         cfgFile = os.path.join(McConst.tmpDir, "mariadb-%s.cnf" % (databaseName))
         socketFile = os.path.join(McConst.tmpDir, "mariadb-%s.socket" % (databaseName))
         logFile = os.path.join(McConst.logDir, "mariadb-%s.log" % (databaseName))
-
-        # initialize if needed
-        if not self._isInitialized(dataDir):
-            self._initialize(databaseName, dataDir, tableInfo, logFile)
-
-        # start process
         proc = None
         port = None
         try:
-            port = McUtil.getFreeSocketPort("tcp")
+            # initialize if needed
+            if not self._isInitialized(dataDir):
+                self._initialize(databaseName, dataDir, tableInfo, logFile)
+                bJustInitialized = True
+            else:
+                bJustInitialized = False
 
             # generate mariadb config file
             with open(cfgFile, "w") as f:
                 buf = ""
                 buf += "[mysqld]\n"
                 f.write(buf)
+
+            # allocate listening port
+            port = McUtil.getFreeSocketPort("tcp")
 
             # start mariadb
             with open(logFile, "a") as f:
@@ -473,33 +481,67 @@ class _MultiInstanceMariadbServer:
             proc = subprocess.Popen(cmd)
             McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
 
+            # record table schema
+            #
+            # two seperate files "tableInfoRecordFile" and "databaseTableSchemaRecordFile" must be used
+            # because we can't use simple string comparasion for "table info" and "table schema in database":
+            # ====================================
+            # CREATE TABLE MovieDirector (
+            #     directorId INTEGER,
+            #     movieId INTEGER,
+            #     FOREIGN KEY (directorId) REFERENCES Director(id),
+            #     FOREIGN KEY (movieId) REFERENCES Movie(id)
+            # );
+            # ====================================
+            # CREATE TABLE `MovieDirector` (
+            # `directorId` int(11) DEFAULT NULL,
+            # `movieId` int(11) DEFAULT NULL,
+            # KEY `directorId` (`directorId`),
+            # KEY `movieId` (`movieId`),
+            # CONSTRAINT `MovieDirector_ibfk_1` FOREIGN KEY (`directorId`) REFERENCES `Director` (`id`),
+            # CONSTRAINT `MovieDirector_ibfk_2` FOREIGN KEY (`movieId`) REFERENCES `Movie` (`id`)
+            # ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+            # ====================================
+            if bJustInitialized:
+                with open(tableInfoRecordFile, "w") as f:
+                    for tableName, value in tableInfo.items():
+                        f.write("---- " + tableName + " ----\n")
+                        f.write(value[1] + "\n")
+                        f.write("\n")
+                with mariadb.connect(unix_socket=socketFile, database=databaseName, user="root") as conn:
+                    cur = conn.cursor()
+                    cur.execute("SHOW TABLES;")
+                    tableNameList = [x[0] for x in cur.fetchall()]
+                    with open(databaseTableSchemaRecordFile, "w") as f:
+                        for tableName in tableNameList:
+                            cur.execute("SHOW CREATE TABLE %s;" % (tableName))
+                            out = cur.fetchall()[0][1]
+                            f.write("---- " + tableName + " ----\n")
+                            f.write(out + "\n")
+                            f.write("\n")
+
             # check
+            if True:
+                buf = ""
+                for tableName, value in tableInfo.items():
+                    buf += "---- " + tableName + " ----\n"
+                    buf += value[1] + "\n"
+                    buf += "\n"
+                if buf != McUtil.readFile(tableInfoRecordFile):
+                    raise Exception("table info changed")
             with mariadb.connect(unix_socket=socketFile, database=databaseName, user="root") as conn:
                 cur = conn.cursor()
-                for tableName, value in tableInfo.items():
-                    blockSize, tableSchema = value
+                cur.execute("SHOW TABLES;")
+                tableNameList = [x[0] for x in cur.fetchall()]
+                buf = ""
+                for tableName in tableNameList:
                     cur.execute("SHOW CREATE TABLE %s;" % (tableName))
                     out = cur.fetchall()[0][1]
-                    if out != tableSchema:
-                        # FIXME: We can't use simple string comparasion for checking, example:
-                        # ====================================
-                        # CREATE TABLE MovieDirector (
-                        #     directorId INTEGER,
-                        #     movieId INTEGER,
-                        #     FOREIGN KEY (directorId) REFERENCES Director(id), 
-                        #     FOREIGN KEY (movieId) REFERENCES Movie(id)
-                        # );
-                        # ====================================
-                        # CREATE TABLE `MovieDirector` (
-                        # `directorId` int(11) DEFAULT NULL,
-                        # `movieId` int(11) DEFAULT NULL,
-                        # KEY `directorId` (`directorId`),
-                        # KEY `movieId` (`movieId`),
-                        # CONSTRAINT `MovieDirector_ibfk_1` FOREIGN KEY (`directorId`) REFERENCES `Director` (`id`),
-                        # CONSTRAINT `MovieDirector_ibfk_2` FOREIGN KEY (`movieId`) REFERENCES `Movie` (`id`)
-                        # ) ENGINE=InnoDB DEFAULT CHARSET=utf8
-                        # ====================================
-                        pass
+                    buf += "---- " + tableName + " ----\n"
+                    buf += out + "\n"
+                    buf += "\n"
+                if buf != McUtil.readFile(databaseTableSchemaRecordFile):
+                    raise Exception("table schema in database changed")
 
             # save
             self._dirDict[databaseName] = dataDir
