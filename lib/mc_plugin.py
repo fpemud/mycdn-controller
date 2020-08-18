@@ -161,10 +161,16 @@ class McMirrorSite:
                     elif len(slist[0].xpathEval(".//cron")) > 0:
                         self.schedType = "cron"
                         self.schedExpr = slist[0].xpathEval(".//cron")[0].getContent()
-                    elif len(slist[0].xpathEval(".//continuous")) > 0:
-                        self.schedType = "continuous"
                     else:
                         assert False
                 else:
                     self.schedType = "cron"
                     self.schedExpr = slist[0].xpathEval(".//cron-expression")[0].getContent()   # FIXME: add check
+
+        # maintainer
+        self.maintainerExe = None
+        if True:
+            slist = rootElem.xpathEval(".//maintainer")
+            if len(slist) > 0:
+                self.maintainerExe = slist[0].xpathEval(".//executable")[0].getContent()
+                self.maintainerExe = os.path.join(pluginDir, self.maintainerExe)

@@ -80,7 +80,7 @@ class _OneMirrorSiteUpdater:
         self.lastUpdateDatetimeFile = os.path.join(self.mirrorSite.masterDir, "LAST_UPDATE_DATETIME")
 
         bInit = True
-        if self._isInitialized():
+        if self.__isInitialized():
             bInit = False
         if self.mirrorSite.initializerExe is None:
             bInit = False
@@ -90,7 +90,7 @@ class _OneMirrorSiteUpdater:
             self.lastUpdateDatetime = None
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
-            self.lastUpdateDatetime = self._readLastUpdateDatetime()
+            self.lastUpdateDatetime = self.__readLastUpdateDatetime()
         self.schedDatetime = None
         self.progress = -1
         self.proc = None
@@ -158,7 +158,7 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            self._setInitialized()
+            self.__setInitialized()
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
@@ -228,7 +228,7 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            self._writeLastUpdateDatetime(self.schedDatetime)
+            self.__writeLastUpdateDatetime(self.schedDatetime)
             self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE)
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
         except GLib.Error as e:
@@ -241,6 +241,21 @@ class _OneMirrorSiteUpdater:
                 # is there really any effect since the period is always hours?
                 self.scheduler.pauseJob(self.mirrorSite.id, datetime.now() + datetime.timedelta(seconds=holdFor))
                 logging.error("Mirror site \"%s\" updates failed (code: %d), hold for %d seconds." % (self.mirrorSite.id, e.code, holdFor))
+
+    def maintainStart(self):
+        pass
+
+    def maintainStop(self):
+        pass
+
+    def maintainProgressCallback(self, status, progress):
+        pass
+
+    def maintainErrorCallback(self, exc_info):
+        pass
+
+    def maintainExitCallback(self, pid, status):
+        pass
 
     def stdoutCallback(self, source, cb_condition):
         try:
@@ -311,22 +326,19 @@ class _OneMirrorSiteUpdater:
         self.initStart()
         return False
 
-    def _isInitialized(self):
+    def __isInitialized(self):
         return os.path.exists(self.initFlagFile)
 
-    def _setUnInitialized(self):
-        McUtil.forceDelete(self.initFlagFile)
-
-    def _setInitialized(self):
+    def __setInitialized(self):
         McUtil.touchFile(self.initFlagFile)
 
-    def _readLastUpdateDatetime(self):
+    def __readLastUpdateDatetime(self):
         if not os.path.exists(self.lastUpdateDatetimeFile):
             return datetime.min
         with open(self.lastUpdateDatetimeFile, "r") as f:
             return datetime.strptime(f.read(), "%Y-%m-%d %H:%M")
 
-    def _writeLastUpdateDatetime(self, schedDatetime):
+    def __writeLastUpdateDatetime(self, schedDatetime):
         with open(self.lastUpdateDatetimeFile, "w") as f:
             f.write(schedDatetime.strftime("%Y-%m-%d %H:%M"))
 
