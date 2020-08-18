@@ -565,8 +565,12 @@ class _MultiInstanceMariadbServer:
                         continue
                     commands.append(line)
 
-        # keep root@localhost, remove root@127.0.0.1 and root@::1, so that only unix socket access is permitted
+        # keep root@localhost using unix_socket plugin
+        # remove root@127.0.0.1 and root@::1, so that no network access is allowed
         # remove proxy priviledges for root user
+        commands += [
+            "UPDATE global_priv SET Priv = '{\"access\":0,\"plugin\":\"unix_socket\"}' WHERE Host = 'localhost' AND User = 'root';",
+        ]
         commands += [
             "DELETE FROM global_priv WHERE Host = '127.0.0.1' AND User = 'root';",
             "DELETE FROM user WHERE Host = '127.0.0.1' AND User = 'root';",
@@ -618,7 +622,7 @@ class _MultiInstanceMariadbServer:
             McUtil.sqlInsertStatement("global_priv", {
                 "Host": "%",
                 "User": self._dbReadUser,
-                "Priv": McUtil.mysqlPrivJson(),
+                "Priv": '{"access":0}',
             }),
             McUtil.sqlInsertStatement("db", {
                 "Host": "%",

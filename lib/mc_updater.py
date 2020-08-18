@@ -25,8 +25,8 @@ class McMirrorSiteUpdater:
     MIRROR_SITE_UPDATE_STATUS_INITING = 1
     MIRROR_SITE_UPDATE_STATUS_INIT_FAIL = 2
     MIRROR_SITE_UPDATE_STATUS_IDLE = 3
-    MIRROR_SITE_UPDATE_STATUS_SYNCING = 4
-    MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL = 5
+    MIRROR_SITE_UPDATE_STATUS_UPDATING = 4
+    MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL = 5
 
     MIRROR_SITE_RE_INIT_INTERVAL = 60
 
@@ -47,7 +47,7 @@ class McMirrorSiteUpdater:
         for updater in self.updaterDict.values():
             if updater.status == self.MIRROR_SITE_UPDATE_STATUS_INITING:
                 updater.initStop()
-            elif updater.status == self.MIRROR_SITE_UPDATE_STATUS_SYNCING:
+            elif updater.status == self.MIRROR_SITE_UPDATE_STATUS_UPDATING:
                 updater.updateStop()
         # FIXME, should use g_main_context_iteration to wait all the updaters to stop
         self.scheduler.dispose()
@@ -175,14 +175,14 @@ class _OneMirrorSiteUpdater:
                 self.reInitHandler = GLib.timeout_add_seconds(holdFor, self._reInitCallback)
 
     def updateStart(self, schedDatetime):
-        assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL]
+        assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL]
 
-        if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
+        if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
             logging.info("Mirror site \"%s\" updating ignored on \"%s\", last update is not finished." % (self.mirrorSite.id, schedDatetime.strftime("%Y-%m-%d %H:%M")))
             return
 
         try:
-            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
+            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
             self.schedDatetime = schedDatetime
             self.progress = 0
             self.proc = self._createInitOrUpdateProc()
@@ -193,15 +193,15 @@ class _OneMirrorSiteUpdater:
             self.holdFor = None
             logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, self.schedDatetime.strftime("%Y-%m-%d %H:%M")))
         except Exception:
-            self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL)
+            self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL)
             logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info=True)
 
     def updateStop(self):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
+        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
         self.proc.terminate()
 
     def updateProgressCallback(self, progress):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
+        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
         if progress > self.progress:
             self.progress = progress
             logging.info("Mirror site \"%s\" update progress %d%%." % (self.mirrorSite.id, self.progress))
@@ -211,18 +211,18 @@ class _OneMirrorSiteUpdater:
             raise Exception("invalid progress")
 
     def updateErrorCallback(self, exc_info):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
+        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
         assert self.excInfo is None
         self.excInfo = exc_info
 
     def updateErrorAndHoldForCallback(self, seconds, exc_info):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
+        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
         assert self.excInfo is None
         self.excInfo = exc_info
         self.holdFor = seconds
 
     def updateExitCallback(self, pid, status):
-        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING
+        assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
 
         self.proc = None
         try:
@@ -234,7 +234,7 @@ class _OneMirrorSiteUpdater:
         except GLib.Error as e:
             # child process returns failure
             holdFor = self.holdFor
-            self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNC_FAIL)
+            self._clearVars(McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL)
             if holdFor is None:
                 logging.error("Mirror site \"%s\" update failed (code: %d)." % (self.mirrorSite.id, e.code))
             else:
@@ -365,7 +365,7 @@ class _ApiServer(UnixDomainSocketApiServer):
 
             if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
                 obj.initProgressCallback(data["data"]["progress"])
-            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
+            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
                 obj.updateProgressCallback(data["data"]["progress"])
             else:
                 assert False
@@ -377,7 +377,7 @@ class _ApiServer(UnixDomainSocketApiServer):
 
             if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
                 obj.initErrorCallback(data["data"]["exc_info"])
-            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
+            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
                 obj.updateErrorCallback(data["data"]["exc_info"])
             else:
                 assert False
@@ -395,7 +395,7 @@ class _ApiServer(UnixDomainSocketApiServer):
 
             if obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
                 obj.initErrorAndHoldForCallback(data["data"]["seconds"], data["data"]["exc_info"])
-            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_SYNCING:
+            elif obj.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
                 obj.updateErrorAndHoldForCallback(data["data"]["seconds"], data["data"]["exc_info"])
             else:
                 assert False
