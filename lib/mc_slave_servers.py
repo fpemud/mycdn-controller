@@ -20,12 +20,15 @@ class McSlaveServers:
         self.rsyncServer = None
         self.gitServer = None
         self.mariadbServer = None
+        self.neo4jServer = None
 
         # register servers by storage
         for ms in self.param.mirrorSiteDict.values():
             for storageName, obj in ms.storageDict.items():
                 if storageName == "mariadb":
                     self.mariadbServer = True
+                if storageName == "neo4j":
+                    self.neo4jServer = True
 
         # register servers by advertiser
         for ms in self.param.mirrorSiteDict.values():
@@ -52,6 +55,9 @@ class McSlaveServers:
                         self.mariadbServer = True
                     if "http" in interfaceList:
                         self.httpServer = True              # export as database web interface
+                if advertiserName == "neo4j":
+                    if "database" in interfaceList:
+                        self.neo4jServer = True
 
         # create servers
         if self.httpServer is not None:
@@ -69,6 +75,9 @@ class McSlaveServers:
         if self.mariadbServer is not None:
             self.mariadbServer = _MultiInstanceMariadbServer(self.param)
             self.mariadbServer.start()
+        if self.neo4jServer is not None:
+            self.neo4jServer = _MultiInstanceNeo4jServer(self.param)
+            self.neo4jServer.start()
 
         # FIXME: register database
         for ms in self.param.mirrorSiteDict.values():
@@ -76,13 +85,16 @@ class McSlaveServers:
                 if storageName == "mariadb":
                     tableInfoRecordFile = os.path.join(ms.masterDir, "TABLE_SCHEMAS_PLUGIN")
                     databaseTableSchemaRecordFile = os.path.join(ms.masterDir, "TABLE_SCHEMAS_DATABASE")
-                    self.mariadbServer.addDatabaseDir(ms.id,
-                                                      ms.storageDict["mariadb"].dataDir,
+                    self.mariadbServer.addDatabaseDir(ms.id, ms.storageDict["mariadb"].dataDir,
                                                       ms.storageDict["mariadb"].tableInfo,
                                                       tableInfoRecordFile,
                                                       databaseTableSchemaRecordFile)
+                if storageName == "neo4j":
+                    self.neo4jServer.addDatabaseDir(ms.id, ms.storageDict["neo4j"].dataDir)
 
     def dispose(self):
+        if self.neo4jServer is not None:
+            self.neo4jServer.stop()
         if self.mariadbServer is not None:
             self.mariadbServer.stop()
         if self.gitServer is not None:
@@ -750,8 +762,116 @@ class _MongodbServer:
     pass
 
 
-class _Neo4jServer:
-    pass
+class _MultiInstanceNeo4jServer:
+
+    """
+    The best solution would be using a one-instance-neo4j-server, and dynamically
+    add databases stored in seperate directories.
+    """
+
+    def __init__(self, param):
+        self.param = param
+        self._dirDict = dict()              # <database-name,data-dir>
+        self._procDict = dict()             # <database-name,(proc,port,cfg-file,log-ile)>
+        self._dbWriteUser = "publisher"
+        self._dbWritePasswd = "publisher"
+        self._dbReadUser = "reader"
+        self._bStarted = False
+
+    def start(self):
+        assert not self._bStarted
+        self._bStarted = True
+        logging.info("Slave server (multi-instanced-neo4j) started.")
+
+    def stop(self):
+        for value in self._procDict.values():
+            proc = value[0]
+            proc.terminate()
+            proc.wait()
+        self._procDict.clear()
+        self._dirDict.clear()
+
+    def addDatabaseDir(self, databaseName, dataDir):
+        assert self._bStarted
+        assert _checkNameAndRealPath(self._dirDict, databaseName, dataDir)
+
+        cfgFile = os.path.join(McConst.tmpDir, "neo4j-%s.cnf" % (databaseName))
+        pidFile = os.path.join(McConst.tmpDir, "neo4j-%s.pid" % (databaseName))
+        logFile = os.path.join(McConst.logDir, "neo4j-%s.log" % (databaseName))
+        proc = None
+        port = None
+        try:
+            # initialize if needed
+            if not self._isInitialized(dataDir):
+                self._initialize(databaseName, dataDir, logFile)
+                bJustInitialized = True
+            else:
+                bJustInitialized = False
+
+            # generate neo4j config file
+            with open(cfgFile, "w") as f:
+                buf = ""
+                f.write(buf)
+
+            # allocate listening port
+            port = McUtil.getFreeSocketPort("tcp")
+
+            # start neo4j
+            with open(logFile, "a") as f:
+                f.write("\n\n")
+                f.write("## neo4j #######################\n")
+            envDict = {
+                "NEO4J_CONF": os.path.dirname(cfgFile),
+                "NEO4J_DATA": dataDir,
+                "NEO4J_LOGS": os.path.dirname(logFile),
+                "NEO4J_PIDFILE": pidFile,
+            }
+            proc = subprocess.Popen(["/opt/bin/neo4j", "console"], env=envDict)
+            McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
+
+            # post-initialize if needed
+            if bJustInitialized:
+                self._initializePostStart(databaseName)
+
+            # check
+            self._check(databaseName)
+
+            # save
+            self._dirDict[databaseName] = dataDir
+            self._procDict[databaseName] = (proc, port, cfgFile, pidFile, logFile)
+        except Exception:
+            if databaseName in self._procDict:
+                self._procDict[databaseName]
+            if databaseName in self._dirDict:
+                del self._dirDict[databaseName]
+            if proc is not None:
+                proc.terminate()
+                proc.wait()
+            if os.path.exists(pidFile):
+                assert False
+            if os.path.exists(cfgFile):
+                os.unlink(cfgFile)
+            raise
+
+    def exportDatabaseDir(self, databaseName):
+        # FIXME, currently addDatabaseDir does the export work which is obviously insecure
+        assert self._bStarted
+
+    def getDatabasePort(self, databaseName):
+        assert self._bStarted
+        return self._procDict[databaseName][1]
+
+    def _isInitialized(self, dataDir):
+        return len(os.listdir(dataDir)) > 0
+
+    def _initialize(self, databaseName, dataDir, logFile):
+        McUtil.mkDirAndClear(dataDir)
+
+    def _initializePostStart(self, databaseName):
+        pass
+
+    def _check(self, databaseName):
+        pass
 
 
 def _checkNameAndRealPath(dictObj, name, realPath):
