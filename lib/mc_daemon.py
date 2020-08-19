@@ -56,7 +56,7 @@ class McDaemon:
                     # load plugins
                     self.pluginManager = McPluginManager(self.param)
                     self.pluginManager.loadPlugins()
-                    logging.info("Plugins loaded: %s" % (",".join(self.param.pluginList)))
+                    logging.info("Plugins loaded: %s" % (",".join(sorted(self.param.pluginList))))
 
                     # advertiser
                     self.param.advertiser = McAdvertiser(self.param)
