@@ -244,7 +244,7 @@ class _OneMirrorSiteUpdater:
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" maintainer started.")
         except Exception:
-            self._clearVars("maintainer")
+            self._clearVars(self.JOB_MAINTAIN)
             logging.error("Mirror site \"%s\" maintainer start failed, restart it in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL), exc_info=True)
             self.reMaintainHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL, self._reMaintainCallback)
 
