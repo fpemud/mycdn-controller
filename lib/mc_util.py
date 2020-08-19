@@ -29,6 +29,13 @@ from dbus.mainloop.glib import DBusGMainLoop
 class McUtil:
 
     @staticmethod
+    def procTerminate(proc, wait=False):
+        if proc.poll() is None:
+            proc.terminate()
+        if wait:
+            proc.wait()
+
+    @staticmethod
     def sqlInsertStatement(tableName, valueDict):
         return "INSERT INTO " + tableName + " (" + ",".join(valueDict.keys()) + ") VALUES ('" + "','".join(valueDict.values()) + "');"
 
