@@ -131,7 +131,7 @@ class McAdvertiser:
                 "available": bAvail,
                 "update_status": updateState["update_status"],
                 "last_update_time": updateState["last_update_time"],
-                "update_progress": updateState["update_progress"],
+                "update_progress": updateState.get("update_progress", -1),
                 "help": {
                     "title": "",
                     "filename": "",
