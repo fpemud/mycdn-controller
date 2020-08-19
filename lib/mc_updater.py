@@ -32,15 +32,13 @@ class McMirrorSiteUpdater:
 
     def __init__(self, param):
         self.param = param
-
         self.invoker = GLibIdleInvoker()
         self.scheduler = _Scheduler()
+        self.apiServer = _ApiServer()
 
         self.updaterDict = dict()                                       # dict<mirror-id,updater-object>
         for ms in self.param.mirrorSiteDict.values():
             self.updaterDict[ms.id] = _OneMirrorSiteUpdater(self, ms)
-
-        self.apiServer = _ApiServer(self)
 
     def dispose(self):
         self.apiServer.dispose()
@@ -79,6 +77,7 @@ class _OneMirrorSiteUpdater:
         self.param = parent.param
         self.invoker = parent.invoker
         self.scheduler = parent.scheduler
+        self.apiServer = parent.apiServer
         self.mirrorSite = mirrorSite
 
         # state files
@@ -111,7 +110,7 @@ class _OneMirrorSiteUpdater:
             self._createVars(self.JOB_INIT)
             self.proc = self._createProc(self.JOB_INIT)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
-            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
+            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except Exception:
@@ -181,7 +180,7 @@ class _OneMirrorSiteUpdater:
             self.schedDatetime = schedDatetime
             self.proc = self._createProc(self.JOB_UPDATE)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
-            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
+            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, self.schedDatetime.strftime("%Y-%m-%d %H:%M")))
         except Exception:
@@ -241,7 +240,7 @@ class _OneMirrorSiteUpdater:
             self._createVars(self.JOB_MAINTAIN)
             self.proc = self._createProc(self.JOB_MAINTAIN)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.maintainExitCallback)
-            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self.stdoutCallback)
+            self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" maintainer started.")
         except Exception:
@@ -266,7 +265,7 @@ class _OneMirrorSiteUpdater:
         logging.error("Mirror site \"%s\" maintainer exited (code: %d), restart it in %d seconds." % (self.mirrorSite.id, code, McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL))
         self.reMaintainHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL, self._reMaintainCallback)
 
-    def stdoutCallback(self, source, cb_condition):
+    def _stdoutCallback(self, source, cb_condition):
         try:
             self.logger.write(source.read())
         finally:
@@ -307,16 +306,18 @@ class _OneMirrorSiteUpdater:
         del self.excInfo
         if self.logger is not None:
             self.logger.close()
-        del self.loger
+        del self.logger
         if self.stdoutWatch is not None:
             GLib.source_remove(self.stdoutWatch)
         del self.stdoutWatch
         if self.pidWatch is not None:
             GLib.source_remove(self.pidWatch)
         del self.pidWatch
-        if self.proc is not None and self.proc.returncode is not None:
-            self.proc.terminate()
-            self.proc.wait()
+        if self.proc is not None:
+            if self.proc.poll() is None:
+                self.proc.terminate()
+                self.proc.wait()
+            self.apiServer.removeMirrorSite(self.mirrorSite.id, self, self.proc.pid)
         del self.proc
 
     def _createProc(self, jobType):
@@ -357,6 +358,8 @@ class _OneMirrorSiteUpdater:
         # create process
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
         fcntl.fcntl(proc.stdout, fcntl.F_SETFL, fcntl.fcntl(proc.stdout, fcntl.F_GETFL) | os.O_NONBLOCK)
+        self.apiServer.addMirrorSite(self.mirrorSite.id, self, proc.pid)
+
         return proc
 
     def _reInitCallback(self):
@@ -398,22 +401,40 @@ class _OneMirrorSiteUpdater:
 
 class _ApiServer(UnixDomainSocketApiServer):
 
-    def __init__(self, parent):
-        self.updaterDict = parent.updaterDict
-        super().__init__(McConst.apiServerFile,
-                         self._clientAppearFunc,
-                         None,                       # we track client life-time by its process object, not by clientDisappearFunc
-                         self._clientNoitfyFunc)
+    def __init__(self):
+        self._clientPidDict = dict()                 # <pid,mirror-id>
+        self._mirrorSiteUpdaterDict = dict()         # <mirror-id,mirror-site-updater>
+        self._sockDict = dict()                      # <mirror-id,sock>
+        super().__init__(McConst.apiServerFile, self._clientAppearFunc, self._clientDisappearFunc, self._clientNoitfyFunc)
+
+    def addMirrorSite(self, mirrorId, mirrorSiteUpdater, pid):
+        assert pid not in self._clientPidDict
+        assert mirrorId not in self._mirrorSiteUpdaterDict
+
+        self._mirrorSiteUpdaterDict[mirrorId] = mirrorSiteUpdater
+        self._clientPidDict[pid] = mirrorId
+
+    def removeMirrorSite(self, mirrorId, mirrorSiteUpdater, pid):
+        assert self._clientPidDict[pid] == mirrorId
+        assert self._mirrorSiteUpdaterDict[mirrorId] == mirrorSiteUpdater
+        assert mirrorId not in self._sockDict
+
+        del self._mirrorSiteUpdaterDict[mirrorId]
+        del self._clientPidDict[pid]
 
     def _clientAppearFunc(self, sock):
         pid = McUtil.getUnixDomainSocketPeerInfo(sock)[0]
-        for mirrorId, obj in self.updaterDict.items():
-            if obj.proc is not None and obj.proc.pid == pid:
-                return mirrorId
-        raise Exception("client not found")
+        if pid not in self._clientPidDict:
+            raise Exception("client not found")
+        mirrorId = self._clientPidDict[pid]
+        self._sockDict[mirrorId] = sock
+        return mirrorId
+
+    def _clientDisappearFunc(self, mirrorId):
+        del self._sockDict[mirrorId]
 
     def _clientNoitfyFunc(self, mirrorId, data):
-        obj = self.updaterDict[mirrorId]
+        obj = self._mirrorSiteUpdaterDict[mirrorId]
 
         if "message" not in data:
             raise Exception("\"message\" field does not exist in notification")
