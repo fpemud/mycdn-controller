@@ -4,6 +4,7 @@
 import os
 import sys
 import json
+import prctl
 import signal
 import shutil
 import socket
@@ -36,7 +37,7 @@ class McDaemon:
             McUtil.prepareTransientDir(McConst.runDir, McConst.uid, McConst.gid, 0o755)
             McUtil.prepareTransientDir(McConst.tmpDir, McConst.uid, McConst.gid, 0o755)
 
-            with DropPriviledge(McConst.uid, McConst.gid):
+            with DropPriviledge(McConst.uid, McConst.gid, caps=[prctl.CAP_NET_BIND_SERVICE]):
                 try:
                     # initialize logging
                     sys.stdout = StdoutRedirector(os.path.join(McConst.logDir, "mirrors.out"))
