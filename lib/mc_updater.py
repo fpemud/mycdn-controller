@@ -65,7 +65,7 @@ class McMirrorSiteUpdater:
         ret = dict()
         ret["update_status"] = updater.status
         ret["last_update_time"] = updater.lastUpdateDatetime
-        if self.updater.status in [self.MIRROR_SITE_UPDATE_STATUS_INITING, self.MIRROR_SITE_UPDATE_STATUS_UPDATING]:
+        if updater.status in [self.MIRROR_SITE_UPDATE_STATUS_INITING, self.MIRROR_SITE_UPDATE_STATUS_UPDATING]:
             ret["update_progress"] = updater.progress
         return ret
 
