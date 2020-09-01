@@ -151,8 +151,8 @@ class _OneMirrorSiteUpdater:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
             bStop = self.bStop
-            self._clearVars()
             self.__setInitialized()
+            self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             if not bStop:
@@ -223,8 +223,8 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            self._clearVars()
             self.__writeLastUpdateDatetime(self.schedDatetime)
+            self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
         except GLib.Error as e:
@@ -361,7 +361,6 @@ class _OneMirrorSiteUpdater:
                 "country": self.param.mainCfg["country"],
                 "location": self.param.mainCfg["location"],
             }
-
             for storageName, storageObj in self.mirrorSite.storageDict.items():
                 args["storage-" + storageName] = storageObj.pluginParam
 
