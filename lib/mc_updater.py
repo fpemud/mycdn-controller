@@ -72,10 +72,6 @@ class McMirrorSiteUpdater:
 
 class _OneMirrorSiteUpdater:
 
-    JOB_INIT = 0
-    JOB_UPDATE = 1
-    JOB_MAINTAIN = 2
-
     def __init__(self, parent, mirrorSite):
         self.param = parent.param
         self.invoker = parent.invoker
@@ -110,14 +106,14 @@ class _OneMirrorSiteUpdater:
 
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
-            self._createVars(self.JOB_INIT)
+            self._createVars()
             self.proc = self._createProc(self.JOB_INIT)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except Exception:
-            self._clearVars(self.JOB_INIT)
+            self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL
             logging.error("Mirror site \"%s\" initialization failed, re-initialize in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL), exc_info=True)
             self.reInitHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL, self._reInitCallback)
@@ -155,7 +151,7 @@ class _OneMirrorSiteUpdater:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
             bStop = self.bStop
-            self._clearVars(self.JOB_INIT)
+            self._clearVars()
             self.__setInitialized()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
@@ -165,7 +161,7 @@ class _OneMirrorSiteUpdater:
             # child process returns failure
             bStop = self.bStop
             holdFor = self.holdFor
-            self._clearVars(self.JOB_INIT)
+            self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL
             if holdFor is None:
                 logging.error("Mirror site \"%s\" initialization failed (code: %d), re-initialize in %d seconds." % (self.mirrorSite.id, e.code, McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL))
@@ -184,7 +180,7 @@ class _OneMirrorSiteUpdater:
 
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
-            self._createVars(self.JOB_UPDATE)
+            self._createVars()
             self.schedDatetime = schedDatetime
             self.proc = self._createProc(self.JOB_UPDATE)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
@@ -192,7 +188,7 @@ class _OneMirrorSiteUpdater:
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, self.schedDatetime.strftime("%Y-%m-%d %H:%M")))
         except Exception:
-            self._clearVars(self.JOB_UPDATE)
+            self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL
             logging.error("Mirror site \"%s\" update failed." % (self.mirrorSite.id), exc_info=True)
 
@@ -227,7 +223,7 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            self._clearVars(self.JOB_UPDATE)
+            self._clearVars()
             self.__writeLastUpdateDatetime(self.schedDatetime)
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
@@ -235,7 +231,7 @@ class _OneMirrorSiteUpdater:
             # child process returns failure
             bStop = self.bStop
             holdFor = self.holdFor
-            self._clearVars(self.JOB_UPDATE)
+            self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL
             if holdFor is None:
                 logging.error("Mirror site \"%s\" update failed (code: %d)." % (self.mirrorSite.id, e.code))
@@ -249,14 +245,15 @@ class _OneMirrorSiteUpdater:
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING
-            self._createVars(self.JOB_MAINTAIN)
+            self._createVars()
             self.proc = self._createProc(self.JOB_MAINTAIN)
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.maintainExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" maintainer started." % (self.mirrorSite.id))
         except Exception:
-            self._clearVars(self.JOB_MAINTAIN)
+            self._clearVars()
+            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.error("Mirror site \"%s\" maintainer start failed, restart it in %d seconds." % (self.mirrorSite.id, McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL), exc_info=True)
             self.reMaintainHandler = GLib.timeout_add_seconds(McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL, self._reMaintainCallback)
 
@@ -275,7 +272,7 @@ class _OneMirrorSiteUpdater:
 
         bStop = self.bStop
         code = self.proc.poll()
-        self._clearVars(self.JOB_MAINTAIN)
+        self._clearVars()
         self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
         logging.error("Mirror site \"%s\" maintainer exited (code: %d), restart it in %d seconds." % (self.mirrorSite.id, code, McMirrorSiteUpdater.MIRROR_SITE_RESTART_INTERVAL))
         if not bStop:
@@ -287,7 +284,7 @@ class _OneMirrorSiteUpdater:
         finally:
             return True
 
-    def _createVars(self, jobType):
+    def _createVars(self):
         self.bStop = False
         self.proc = None
         self.pidWatch = None
@@ -295,27 +292,27 @@ class _OneMirrorSiteUpdater:
         self.logger = None
         self.excInfo = None
 
-        if jobType == self.JOB_INIT:
+        if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
             self.progress = 0
             self.holdFor = None
-        elif jobType == self.JOB_UPDATE:
+        elif self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
             self.schedDatetime = None
             self.progress = 0
             self.holdFor = None
-        elif jobType == self.JOB_MAINTAIN:
+        elif self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING:
             pass
         else:
             assert False
 
-    def _clearVars(self, jobType):
-        if jobType == self.JOB_INIT:
+    def _clearVars(self):
+        if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
             del self.holdFor
             del self.progress
-        elif jobType == self.JOB_UPDATE:
+        elif self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
             del self.schedDatetime
             del self.holdFor
             del self.progress
-        elif jobType == self.JOB_MAINTAIN:
+        elif self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING:
             pass
         else:
             assert False
@@ -336,7 +333,7 @@ class _OneMirrorSiteUpdater:
         del self.proc
         del self.bStop
 
-    def _createProc(self, jobType):
+    def _createProc(self):
         cmd = []
 
         # create log directory
@@ -344,11 +341,11 @@ class _OneMirrorSiteUpdater:
         McUtil.ensureDir(logDir)
 
         # executable
-        if jobType == self.JOB_INIT:
+        if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
             cmd.append(self.mirrorSite.initializerExe)
-        elif jobType == self.JOB_UPDATE:
+        elif self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
             cmd.append(self.mirrorSite.updaterExe)
-        elif jobType == self.JOB_MAINTAIN:
+        elif self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING:
             cmd.append(self.mirrorSite.maintainerExe)
         else:
             assert False
@@ -363,13 +360,22 @@ class _OneMirrorSiteUpdater:
                 "debug-flag": "",
                 "country": self.param.mainCfg["country"],
                 "location": self.param.mainCfg["location"],
-                "run-mode": jobType,
             }
+
             for storageName, storageObj in self.mirrorSite.storageDict.items():
                 args["storage-" + storageName] = storageObj.pluginParam
-            if jobType == self.JOB_UPDATE:
+
+            if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
+                args["run-mode"] = "init"
+            elif self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
+                args["run-mode"] = "update"
                 args["sched-datetime"] = datetime.strftime(self.schedDatetime, "%Y-%m-%d %H:%M")
-        cmd.append(json.dumps(args))
+            elif self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING:
+                args["run-mode"] = "maintain"
+            else:
+                assert False
+
+            cmd.append(json.dumps(args))
 
         # create process
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
