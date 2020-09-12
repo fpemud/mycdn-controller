@@ -107,7 +107,7 @@ class _OneMirrorSiteUpdater:
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
             self._createVars()
-            self.proc = self._createProc(self.JOB_INIT)
+            self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
@@ -182,7 +182,7 @@ class _OneMirrorSiteUpdater:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
             self._createVars()
             self.schedDatetime = schedDatetime
-            self.proc = self._createProc(self.JOB_UPDATE)
+            self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
@@ -246,7 +246,7 @@ class _OneMirrorSiteUpdater:
         try:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING
             self._createVars()
-            self.proc = self._createProc(self.JOB_MAINTAIN)
+            self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.maintainExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
             self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
