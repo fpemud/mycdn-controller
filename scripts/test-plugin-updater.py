@@ -12,57 +12,93 @@ import subprocess
 from datetime import datetime
 from gi.repository import GLib
 sys.path.append("/usr/lib64/mirrors")
+from mc_util import DynObject
 from mc_util import McUtil
 from mc_util import UnixDomainSocketApiServer
 from mc_param import McConst
 
 
-def loadInitializerAndUpdater(path, mirrorSiteId):
-    metadata_file = os.path.join(path, "metadata.xml")
-    root = libxml2.parseFile(metadata_file).getRootElement()
-    msRoot = None
+class MirrorSite:
 
-    # find mirror site
-    if msRoot is None:
-        for child in root.xpathEval(".//mirror-site"):
-            if child.prop("id") == mirrorSiteId:
-                msRoot = child
-                break
-    assert msRoot is not None
+    def __init__(self, pluginId, path, mirrorSiteId):
+        metadata_file = os.path.join(path, "metadata.xml")
+        root = libxml2.parseFile(metadata_file).getRootElement()
+        rootElem = None
 
-    # load elements
-    dataDir = os.path.join(McConst.cacheDir, mirrorSiteId)
-    initExec = os.path.join(path, msRoot.xpathEval(".//initializer")[0].xpathEval(".//executable")[0].getContent())
-    updateExec = os.path.join(path, msRoot.xpathEval(".//updater")[0].xpathEval(".//executable")[0].getContent())
+        # find mirror site
+        if rootElem is None:
+            for child in root.xpathEval(".//mirror-site"):
+                if child.prop("id") == mirrorSiteId:
+                    rootElem = child
+                    break
+        assert rootElem is not None
 
-    return dataDir, initExec, updateExec
-
-
-class InitOrUpdateProc:
-
-    def __init__(self, pluginId, mirrorSiteId, execFile, dataDir, debugFlag, bInitOrUpdate):
-        cmd = [execFile]
-
-        # read config for current directory
+        # read config from current directory
         cfgFile = pluginId + ".conf"
         cfg = dict()
         if os.path.exists(cfgFile):
             with open(cfgFile) as f:
                 cfg = json.load(f)
 
+        # load elements
+        self.id = mirrorSiteId
+        self.cfgDict = cfg
+        self.masterDir = os.path.join(McConst.cacheDir, mirrorSiteId)
+        self.pluginStateDir = os.path.join(self.masterDir, "state")
+        self.initExec = os.path.join(path, rootElem.xpathEval(".//initializer")[0].xpathEval(".//executable")[0].getContent())
+        self.updateExec = os.path.join(path, rootElem.xpathEval(".//updater")[0].xpathEval(".//executable")[0].getContent())
+
+        # storage
+        self.storageDict = dict()
+        for child in rootElem.xpathEval(".//storage"):
+            st = child.prop("type")
+            if st not in ["file", "git", "mariadb"]:
+                raise Exception("mirror site %s: invalid storage type %s" % (self.id, st))
+
+            self.storageDict[st] = DynObject()
+            self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
+            self.storageDict[st].pluginParam = {"data-directory": self.storageDict[st].dataDir}
+            McUtil.ensureDir(self.storageDict[st].dataDir)
+
+            if st == "mariadb":
+                self.storageDict[st].tableInfo = OrderedDict()
+                tl = child.xpathEval(".//database-schema")
+                if len(tl) > 0:
+                    databaseSchemaFile = os.path.join(pluginDir, tl[0].getContent())
+                    for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
+                        m = re.match("^CREATE +TABLE +(\\S+)", sql)
+                        if m is None:
+                            raise Exception("mirror site %s: invalid database schema for storage type %s" % (self.id, st))
+                        self.storageDict[st].tableInfo[m.group(1)] = (-1, sql)
+
+
+class InitOrUpdateProc:
+
+    def __init__(self, pluginId, msObj, debugFlag, bInitOrUpdate):
+        if bInitOrUpdate:
+            cmd = [msObj.initExec]
+        else:
+            cmd = [msObj.updateExec]
+
         # create log directory
-        logDir = os.path.join(McConst.logDir, mirrorSiteId)
+        logDir = os.path.join(McConst.logDir, msObj.id)
         McUtil.ensureDir(logDir)
 
         args = {
-            "id": mirrorSiteId,
-            "config": cfg,
+            "id": msObj.id,
+            "config": msObj.cfgDict,
+            "state-directory": msObj.pluginStateDir,
             "log-directory": logDir,
             "debug-flag": debugFlag,
             "country": "CN",
             "location": "",
         }
-        if not bInitOrUpdate:
+        for storageName, storageObj in msObj.storageDict.items():
+            args["storage-" + storageName] = storageObj.pluginParam
+        if bInitOrUpdate:
+            args["run-mode"] = "init"
+        else:
+            args["run-mode"] = "update"
             args["sched-datetime"] = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M")
         cmd.append(json.dumps(args))
 
@@ -122,25 +158,25 @@ else:
 apiServer = None
 proc = None
 mainloop = GLib.MainLoop()
-dataDir, initExec, updateExec = loadInitializerAndUpdater(pluginDir, mirrorSiteId)
-initFlagFile = dataDir + ".uninitialized"
+msObj = MirrorSite(pluginId, pluginDir, mirrorSiteId)
+initFlagFile = msObj.masterDir + ".uninitialized"
 
 # directories
 McUtil.mkDirAndClear(McConst.runDir)
-if not os.path.exists(dataDir):
-    os.makedirs(dataDir)
+if not os.path.exists(msObj.masterDir):
+    os.makedirs(msObj.masterDir)
     McUtil.touchFile(initFlagFile)
 
 # do test
 apiServer = ApiServer(mirrorSiteId)
 if os.path.exists(initFlagFile):
     print("init start begin")
-    proc = InitOrUpdateProc(pluginId, mirrorSiteId, initExec, dataDir, debugFlag, True)
+    proc = InitOrUpdateProc(pluginId, msObj, debugFlag, True)
     mainloop.run()
     print("init start end, we don't delete the init-flag-file")
 else:
     print("update start begin")
-    proc = InitOrUpdateProc(pluginId, mirrorSiteId, updateExec, dataDir, debugFlag, False)
+    proc = InitOrUpdateProc(pluginId, msObj, debugFlag, False)
     mainloop.run()
     print("update start end")
 
