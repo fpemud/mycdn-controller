@@ -92,7 +92,7 @@ class McMirrorSite:
             self.masterDir = os.path.join(McConst.cacheDir, self.id)
         McUtil.ensureDir(self.masterDir)
 
-        # state directory for plugin
+        # state directory (plugin can use it)
         self.pluginStateDir = os.path.join(self.masterDir, "state")
         McUtil.ensureDir(self.pluginStateDir)
 

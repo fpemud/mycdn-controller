@@ -47,7 +47,7 @@ class McParam:
         self.webAcceptForeign = True
 
         self.mainCfg = {
-            "preferedUpdatePeriod": [],
+            "preferedUpdatePeriodList": [],     # { "start": CRON-EXPRESSION, "time": HOURS }
             "country": "CN",
             "location": "",
         }

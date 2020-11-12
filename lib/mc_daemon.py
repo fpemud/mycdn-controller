@@ -64,7 +64,7 @@ class McDaemon:
                     logging.info("Master server started.")
 
                     # slave servers
-                    # this function shows log messages
+                    # McSlaveServers object shows log messages by itself
                     self.param.slaveServers = McSlaveServers(self.param)
 
                     # updater
@@ -112,8 +112,8 @@ class McDaemon:
             self.param.mainPort = dataObj["mainPort"]
         if "webAcceptForeign" in dataObj:
             self.param.webAcceptForeign = dataObj["webAcceptForeign"]
-        if "preferedUpdatePeriod" in dataObj:
-            self.param.mainCfg["preferedUpdatePeriod"] = dataObj["preferedUpdatePeriod"]
+        if "preferedUpdatePeriodList" in dataObj:
+            self.param.mainCfg["preferedUpdatePeriodList"] = dataObj["preferedUpdatePeriodList"]
         if "country" in dataObj:
             self.param.mainCfg["country"] = dataObj["country"]
         if "location" in dataObj:
