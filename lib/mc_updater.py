@@ -8,6 +8,7 @@ import json
 import fcntl
 import logging
 import subprocess
+import statistics
 from datetime import datetime
 from croniter import croniter
 from collections import OrderedDict
@@ -56,16 +57,13 @@ class McMirrorSiteUpdater:
         self.invoker.dispose()
 
     def isMirrorSiteInitialized(self, mirrorSiteId):
-        ret = self.updaterDict[mirrorSiteId].status
-        if ret in [self.MIRROR_SITE_UPDATE_STATUS_INIT, self.MIRROR_SITE_UPDATE_STATUS_INITING, self.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL]:
-            return False
-        return True
+        return self.updaterDict[mirrorSiteId].updateHistory.isInitialized()
 
     def getMirrorSiteUpdateState(self, mirrorSiteId):
         updater = self.updaterDict[mirrorSiteId]
         ret = dict()
         ret["update_status"] = updater.status
-        ret["last_update_time"] = updater.lastUpdateDatetime
+        ret["last_update_time"] = updater.updateHistory.getLastUpdateTime()
         if updater.status in [self.MIRROR_SITE_UPDATE_STATUS_INITING, self.MIRROR_SITE_UPDATE_STATUS_UPDATING]:
             ret["update_progress"] = updater.progress
         return ret
@@ -80,26 +78,15 @@ class _OneMirrorSiteUpdater:
         self.apiServer = parent.apiServer
         self.mirrorSite = mirrorSite
 
-        # state files
-        self.initFlagFile = os.path.join(self.mirrorSite.masterDir, "INITIALIZED")
-        self.updateHistoryFile = os.path.join(self.mirrorSite.masterDir, "UPDATE_HISTORY")
+        self.updateHistory = _UpdateHistory(os.path.join(self.mirrorSite.masterDir, "INITIALIZED"),
+                                            os.path.join(self.mirrorSite.masterDir, "UPDATE_HISTORY"),
+                                            self.mirrorSite.initializerExe is not None)
 
-        bInit = True
-        if self.__isInitialized():
-            bInit = False
-        if self.mirrorSite.initializerExe is None:
-            bInit = False
-
-        if bInit:
+        if not self.updateHistory.isInitialized():
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
-        else:
-            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
-
-        self.updateHistory = _UpdateHistory(self.updateHistoryFile, reset=bInit)
-
-        if bInit:
             self.invoker.add(self.initStart)
         else:
+            self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             self._postInit()
 
     def initStart(self):
@@ -148,13 +135,11 @@ class _OneMirrorSiteUpdater:
     def initExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
 
-        curDt = datetime.now()
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
             bStop = self.bStop
-            self.__setInitialized()
-            self.updateHistory.addUpdateInfo(curDt, curDt)
+            self.updateHistory.initFinished(datetime.now())
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
@@ -228,7 +213,7 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            self.updateHistory.addUpdateInfo(self.schedDatetime, curDt)
+            self.updateHistory.updateFinished(self.schedDatetime, curDt)
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
@@ -409,12 +394,6 @@ class _OneMirrorSiteUpdater:
         del self.reMaintainHandler
         self.maintainStart()
         return False
-
-    def __isInitialized(self):
-        return os.path.exists(self.initFlagFile)
-
-    def __setInitialized(self):
-        McUtil.touchFile(self.initFlagFile)
 
 
 class _ApiServer(UnixDomainSocketApiServer):
@@ -669,34 +648,58 @@ class _Scheduler:
 
 class _UpdateHistory:
 
-    def __init__(self, filename, reset=False):
-        self._fn = filename
+    def __init__(self, initFilename, updateHistoryFilename, needInitialization=True):
+        self._initFn = initFilename
+        self._updateFn = updateHistoryFilename
+        self._needInit = needInitialization
         self._tfmt = "%Y-%m-%d %H:%M:%S"
         self._maxLen = 10
 
+        if not self._needInit:
+            McUtil.touchFile(self._initFn)
+
         self._updateInfoList = []
-        if not reset:
-            if os.path.exists(self._fn):
-                for line in McUtil.readFile(self._fn).split("\n"):
-                    m = re.fullmatch(line, " *(\\S+) +(\\S+) *")
-                    if m is not None:
-                        try:
-                            obj = DynObject()
-                            obj.startTime = datetime.strptime(m.group(1), self._tfmt)
-                            obj.endTime = datetime.strptime(m.group(2), self._tfmt)
-                            self._updateInfoList.append(obj)
-                        except ValueError:
-                            pass
-        else:
-            McUtil.forceDelete(self._fn)
+        if True:
+            self._readFromFile()
+
+        self._averageUpdateDuration = None      # unit: seconds
+        if True:
+            self._calcAverageDuration()
+
+    def isInitialized(self):
+        return os.path.exists(self._initFn)
 
     def getLastUpdateTime(self):
-        if len(self._updateInfoList) == 0:
+        if len(self._updateInfoList) > 0:
+            # list order: from old to new
+            return self._updateInfoList[-1].endTime
+        else:
             return None
-        return self._updateInfoList[-1].endTime       # list order: from old to new
 
-    def addUpdateInfo(self, startTime, endTime):
-        # add item
+    def getAverageUpdateDuration(self):
+        return self._averageUpdateDuration
+
+    def initFinished(self, endTime):
+        assert self._needInit
+        assert len(self._updateInfoList) == 0
+
+        # add init-item
+        obj = DynObject()
+        obj.startTime = "none"
+        obj.endTime = endTime
+        self._updateInfoList.append(obj)
+
+        # save to file
+        McUtil.touchFile(self._initFn)
+        self._saveToFile()
+
+    def updateFinished(self, startTime, endTime):
+        # remove init-item
+        if len(self._updateInfoList) > 0 and self._updateInfoList[-1].startTime == "none":
+            assert len(self._updateInfoList) == 1
+            self._updateInfoList = []
+
+        # add update-item
         obj = DynObject()
         obj.startTime = startTime
         obj.endTime = endTime
@@ -707,7 +710,39 @@ class _UpdateHistory:
             self._updateInfoList.pop(0)
 
         # save to file
-        with open(self._fn, "w") as f:
+        self._saveToFile()
+
+    def _readFromFile(self):
+        if not os.path.exists(self._updateFn):
+            return
+        for line in McUtil.readFile(self._updateFn).split("\n"):
+            m = re.fullmatch(line, " *(\\S+) +(\\S+) *")
+            if m is not None:
+                try:
+                    obj = DynObject()
+                    if m.group(1) == "none":
+                        obj.startTime = m.group(1)
+                    else:
+                        obj.startTime = datetime.strptime(m.group(1), self._tfmt)
+                    obj.endTime = datetime.strptime(m.group(2), self._tfmt)
+                    self._updateInfoList.append(obj)
+                except ValueError:
+                    pass
+
+    def _saveToFile(self):
+        with open(self._updateFn, "w") as f:
             f.write("# start-time             end-time\n")
             for item in self._updateInfoList:
-                f.write("  " + item.startTime.strftime(self._tfmt) + "    " + item.endTime.strftime(self._tfmt) + "\n")
+                if item.startTime == "none":
+                    f.write("  none                   " + item.endTime.strftime(self._tfmt) + "\n")
+                else:
+                    f.write("  " + item.startTime.strftime(self._tfmt) + "    " + item.endTime.strftime(self._tfmt) + "\n")
+
+    def _calcAverageDuration(self):
+        if len(self._updateInfoList) == 0:
+            self._averageUpdateDuration = 1
+        elif len(self._updateInfoList) == 1 and self._updateInfoList[-1].startTime == "none":
+            self._averageUpdateDuration = 1
+        else:
+            self._averageUpdateDuration = statistics.fmean([(x.endTime - x.startTime).total_seconds // 60 for x in self._updateInfoList])
+            self._averageUpdateDuration = min(1, int(self._averageUpdateDuration))
