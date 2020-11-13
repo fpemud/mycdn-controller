@@ -744,5 +744,5 @@ class _UpdateHistory:
         elif len(self._updateInfoList) == 1 and self._updateInfoList[-1].startTime == "none":
             self._averageUpdateDuration = 1
         else:
-            self._averageUpdateDuration = statistics.fmean([(x.endTime - x.startTime).total_seconds // 60 for x in self._updateInfoList])
+            self._averageUpdateDuration = statistics.fmean([(x.endTime - x.startTime).total_seconds() // 60 for x in self._updateInfoList])
             self._averageUpdateDuration = min(1, int(self._averageUpdateDuration))
