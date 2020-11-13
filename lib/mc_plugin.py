@@ -75,13 +75,6 @@ class McMirrorSite:
         self.id = rootElem.prop("id")
         self.cfgDict = cfgDict
 
-        # availablity mode
-        self.availablityMode = "initialized"
-        if True:
-            slist = rootElem.xpathEval(".//availablity")
-            if len(slist) > 0 and slist[0].getContent() == "always":
-                self.availablityMode = "always"
-
         # persist mode
         self.bPersist = cfgDict.get("persist", False)
 

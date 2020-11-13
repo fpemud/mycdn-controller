@@ -114,13 +114,6 @@ class McAdvertiser:
     def __getMirrorSiteDict(self):
         ret = dict()
         for msId, msObj in self.param.mirrorSiteDict.items():
-            if msObj.availablityMode == "always":
-                bAvail = True
-            elif msObj.availablityMode == "initialized":
-                bAvail = self.param.updater.isMirrorSiteInitialized(msId)
-            else:
-                assert False
-
             updateState = self.param.updater.getMirrorSiteUpdateState(msId)
             if updateState["last_update_time"] is None:
                 updateState["last_update_time"] = ""
@@ -128,7 +121,7 @@ class McAdvertiser:
                 updateState["last_update_time"] = updateState["last_update_time"].strftime("%Y-%m-%d %H:%M")
 
             ret[msId] = {
-                "available": bAvail,
+                "available": self.param.updater.isMirrorSiteInitialized(msId),
                 "update_status": updateState["update_status"],
                 "last_update_time": updateState["last_update_time"],
                 "update_progress": updateState.get("update_progress", -1),
