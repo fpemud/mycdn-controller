@@ -13,6 +13,7 @@ from croniter import croniter
 from collections import OrderedDict
 from gi.repository import GLib
 from mc_util import McUtil
+from mc_util import DynObject
 from mc_util import RotatingFile
 from mc_util import GLibIdleInvoker
 from mc_util import UnixDomainSocketApiServer
@@ -81,7 +82,7 @@ class _OneMirrorSiteUpdater:
 
         # state files
         self.initFlagFile = os.path.join(self.mirrorSite.masterDir, "INITIALIZED")
-        self.lastUpdateDatetimeFile = os.path.join(self.mirrorSite.masterDir, "LAST_UPDATE_DATETIME")
+        self.updateHistoryFile = os.path.join(self.mirrorSite.masterDir, "UPDATE_HISTORY")
 
         bInit = True
         if self.__isInitialized():
@@ -91,10 +92,10 @@ class _OneMirrorSiteUpdater:
 
         if bInit:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
-            self.lastUpdateDatetime = None
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
-            self.lastUpdateDatetime = self.__readLastUpdateDatetime()
+
+        self.updateHistory = _UpdateHistory(self.updateHistoryFile, reset=bInit)
 
         if bInit:
             self.invoker.add(self.initStart)
@@ -147,11 +148,13 @@ class _OneMirrorSiteUpdater:
     def initExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
 
+        curDt = datetime.now()
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
             bStop = self.bStop
             self.__setInitialized()
+            self.updateHistory.addUpdateInfo(curDt, curDt)
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
@@ -220,10 +223,12 @@ class _OneMirrorSiteUpdater:
 
     def updateExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
+
+        curDt = datetime.now()
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            self.__writeLastUpdateDatetime(self.schedDatetime)
+            self.updateHistory.addUpdateInfo(self.schedDatetime, curDt)
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
@@ -239,7 +244,7 @@ class _OneMirrorSiteUpdater:
                 logging.error("Mirror site \"%s\" updates failed (code: %d), hold for %d seconds." % (self.mirrorSite.id, e.code, holdFor))
                 if not bStop:
                     # is there really any effect since the period is always hours?
-                    self.scheduler.pauseJob(self.mirrorSite.id, datetime.now() + datetime.timedelta(seconds=holdFor))
+                    self.scheduler.pauseJob(self.mirrorSite.id, curDt + datetime.timedelta(seconds=holdFor))
 
     def maintainStart(self):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
@@ -410,16 +415,6 @@ class _OneMirrorSiteUpdater:
 
     def __setInitialized(self):
         McUtil.touchFile(self.initFlagFile)
-
-    def __readLastUpdateDatetime(self):
-        if not os.path.exists(self.lastUpdateDatetimeFile):
-            return datetime.min
-        with open(self.lastUpdateDatetimeFile, "r") as f:
-            return datetime.strptime(f.read(), "%Y-%m-%d %H:%M")
-
-    def __writeLastUpdateDatetime(self, schedDatetime):
-        with open(self.lastUpdateDatetimeFile, "w") as f:
-            f.write(schedDatetime.strftime("%Y-%m-%d %H:%M"))
 
 
 class _ApiServer(UnixDomainSocketApiServer):
@@ -670,3 +665,49 @@ class _Scheduler:
 
     def _intervalGetNextDatetime(self, curDatetime, interval):
         return curDatetime + interval
+
+
+class _UpdateHistory:
+
+    def __init__(self, filename, reset=False):
+        self._fn = filename
+        self._tfmt = "%Y-%m-%d %H:%M:%S"
+        self._maxLen = 10
+
+        self._updateInfoList = []
+        if not reset:
+            if os.path.exists(self._fn):
+                for line in McUtil.readFile(self._fn).split("\n"):
+                    m = re.fullmatch(line, " *(\\S+) +(\\S+) *")
+                    if m is not None:
+                        try:
+                            obj = DynObject()
+                            obj.startTime = datetime.strptime(m.group(1), self._tfmt)
+                            obj.endTime = datetime.strptime(m.group(2), self._tfmt)
+                            self._updateInfoList.append(obj)
+                        except ValueError:
+                            pass
+        else:
+            McUtil.forceDelete(self._fn)
+
+    def getLastUpdateTime(self):
+        if len(self._updateInfoList) == 0:
+            return None
+        return self._updateInfoList[-1].endTime       # list order: from old to new
+
+    def addUpdateInfo(self, startTime, endTime):
+        # add item
+        obj = DynObject()
+        obj.startTime = startTime
+        obj.endTime = endTime
+        self._updateInfoList.append(obj)
+
+        # keep list length
+        while len(self._updateInfoList) >= self._maxLen:
+            self._updateInfoList.pop(0)
+
+        # save to file
+        with open(self._fn, "w") as f:
+            f.write("# start-time             end-time\n")
+            for item in self._updateInfoList:
+                f.write("  " + item.startTime.strftime(self._tfmt) + "    " + item.endTime.strftime(self._tfmt) + "\n")
