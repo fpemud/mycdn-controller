@@ -31,6 +31,10 @@ from dbus.mainloop.glib import DBusGMainLoop
 class McUtil:
 
     @staticmethod
+    def stdTmFmt():
+        return "%Y-%m-%d %H:%M:%S"
+
+    @staticmethod
     def procTerminate(proc, wait=False):
         if proc.poll() is None:
             proc.terminate()

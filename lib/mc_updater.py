@@ -63,7 +63,7 @@ class McMirrorSiteUpdater:
         updater = self.updaterDict[mirrorSiteId]
         ret = dict()
         ret["update_status"] = updater.status
-        ret["last_update_time"] = updater.updateHistory.getLastUpdateTime()
+        ret["last_update_time"] = updater.updateHistory.getLastSuccessfulUpdateTime()
         if updater.status in [self.MIRROR_SITE_UPDATE_STATUS_INITING, self.MIRROR_SITE_UPDATE_STATUS_UPDATING]:
             ret["update_progress"] = updater.progress
         return ret
@@ -78,8 +78,7 @@ class _OneMirrorSiteUpdater:
         self.apiServer = parent.apiServer
         self.mirrorSite = mirrorSite
 
-        self.updateHistory = _UpdateHistory(os.path.join(self.mirrorSite.masterDir, "INITIALIZED"),
-                                            os.path.join(self.mirrorSite.masterDir, "UPDATE_HISTORY"),
+        self.updateHistory = _UpdateHistory(os.path.join(self.mirrorSite.masterDir, "UPDATE_HISTORY"),
                                             self.mirrorSite.initializerExe is not None)
 
         if not self.updateHistory.isInitialized():
@@ -221,6 +220,7 @@ class _OneMirrorSiteUpdater:
             # child process returns failure
             bStop = self.bStop
             holdFor = self.holdFor
+            self.updateHistory.updateFailed()
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL
             if holdFor is None:
@@ -648,16 +648,15 @@ class _Scheduler:
 
 class _UpdateHistory:
 
-    def __init__(self, initFilename, updateHistoryFilename, needInitialization=True):
-        self._initFn = initFilename
+    def __init__(self, updateHistoryFilename, needInitialization=True):
         self._updateFn = updateHistoryFilename
         self._needInit = needInitialization
-        self._tfmt = "%Y-%m-%d %H:%M:%S"
         self._maxLen = 10
 
         if not self._needInit:
-            McUtil.touchFile(self._initFn)
+            McUtil.touchFile(self._updateFn)
 
+        self._lastUpdateSuccessful = True
         self._updateInfoList = []
         if True:
             self._readFromFile()
@@ -667,9 +666,12 @@ class _UpdateHistory:
             self._calcAverageDuration()
 
     def isInitialized(self):
-        return os.path.exists(self._initFn)
+        return os.path.exists(self._updateFn)
 
-    def getLastUpdateTime(self):
+    def isLastUpdateSuccessful(self):
+        return self._lastUpdateSuccessful
+
+    def getLastSuccessfulUpdateTime(self):
         if len(self._updateInfoList) > 0:
             # list order: from old to new
             return self._updateInfoList[-1].endTime
@@ -690,7 +692,12 @@ class _UpdateHistory:
         self._updateInfoList.append(obj)
 
         # save to file
-        McUtil.touchFile(self._initFn)
+        self._saveToFile()
+
+    def updateFailed(self):
+        if not self._lastUpdateSuccessful:
+            return
+        self._lastUpdateSuccessful = False
         self._saveToFile()
 
     def updateFinished(self, startTime, endTime):
@@ -709,34 +716,47 @@ class _UpdateHistory:
         while len(self._updateInfoList) >= self._maxLen:
             self._updateInfoList.pop(0)
 
-        # save to file
+        # post processing
+        self._calcAverageDuration()
         self._saveToFile()
 
     def _readFromFile(self):
         if not os.path.exists(self._updateFn):
             return
+
         for line in McUtil.readFile(self._updateFn).split("\n"):
-            m = re.fullmatch(line, " *(\\S+) +(\\S+) *")
-            if m is not None:
-                try:
-                    obj = DynObject()
-                    if m.group(1) == "none":
-                        obj.startTime = m.group(1)
-                    else:
-                        obj.startTime = datetime.strptime(m.group(1), self._tfmt)
-                    obj.endTime = datetime.strptime(m.group(2), self._tfmt)
-                    self._updateInfoList.append(obj)
-                except ValueError:
-                    pass
+            if re.fullmatch(line, " *last-update-successful *"):
+                self._lastUpdateSuccessful = True
+            elif re.fullmatch(line, " *last-update-failed *"):
+                self._lastUpdateSuccessful = False
+            else:
+                m = re.fullmatch(line, " *(\\S+) +(\\S+) *")
+                if m is not None:
+                    try:
+                        obj = DynObject()
+                        if m.group(1) == "none":
+                            obj.startTime = m.group(1)
+                        else:
+                            obj.startTime = datetime.strptime(m.group(1), McUtil.stdTmFmt())
+                        obj.endTime = datetime.strptime(m.group(2), McUtil.stdTmFmt())
+                        self._updateInfoList.append(obj)
+                    except ValueError:
+                        pass
 
     def _saveToFile(self):
         with open(self._updateFn, "w") as f:
+            if self._lastUpdateSuccessful:
+                f.write("last-update-successful\n")
+            else:
+                f.write("last-update-failed\n")
+            f.write("\n")
+
             f.write("# start-time             end-time\n")
             for item in self._updateInfoList:
                 if item.startTime == "none":
-                    f.write("  none                   " + item.endTime.strftime(self._tfmt) + "\n")
+                    f.write("  none                   " + item.endTime.strftime(McUtil.stdTmFmt()) + "\n")
                 else:
-                    f.write("  " + item.startTime.strftime(self._tfmt) + "    " + item.endTime.strftime(self._tfmt) + "\n")
+                    f.write("  " + item.startTime.strftime(McUtil.stdTmFmt()) + "    " + item.endTime.strftime(McUtil.stdTmFmt()) + "\n")
 
     def _calcAverageDuration(self):
         if len(self._updateInfoList) == 0:
