@@ -383,13 +383,13 @@ class _OneMirrorSiteUpdater:
         self.initStart()
         return False
 
-    def _postInit(self):
+    def _postInit(self, curDt):
         self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
         if self.mirrorSite.updaterExe is not None:
             if self.mirrorSite.schedType == "interval":
-                self.scheduler.addIntervalJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
+                self.scheduler.addIntervalJob(self.mirrorSite.id, curDt, self.mirrorSite.schedExpr, self.updateStart)
             elif self.mirrorSite.schedType == "cron":
-                self.scheduler.addCronJob(self.mirrorSite.id, self.mirrorSite.schedExpr, self.updateStart)
+                self.scheduler.addCronJob(self.mirrorSite.id, curDt, self.mirrorSite.schedExpr, self.updateStart)
             else:
                 assert False
         elif self.mirrorSite.maintainerExe is not None:
