@@ -8,6 +8,7 @@ import logging.handlers
 import aiohttp
 import aiohttp_jinja2
 from mc_param import McConst
+from mc_updater import McMirrorSiteUpdater
 
 
 class McAdvertiser:
@@ -64,6 +65,8 @@ class McAdvertiser:
                 self._app.router.add_route("GET", "/api/mirrors", self._apiMirrorsHandler)
                 self._app.router.add_route("GET", "/", self._indexHandler)
             if True:
+                self._app.router.add_route("POST", "/api/mirror/{id}/update-now", self._apiMirrorsHandler)
+            if True:
                 self._log = logging.getLogger("aiohttp")
                 self._log.propagate = False
                 self._log.addHandler(logging.handlers.RotatingFileHandler(os.path.join(McConst.logDir, 'main-httpd.log'),
@@ -110,6 +113,26 @@ class McAdvertiser:
 
     async def _apiMirrorsHandler(self, request):
         return aiohttp.web.json_response(self.__getMirrorSiteDict())
+
+    async def _apiMirrorUpdateNow(self, request):
+        mirrorSiteId = request.match_info["id"]
+        try:
+            if self.param.mirrorSiteDict.get(mirrorSiteId) is None:
+                raise _WebException("mirror site not found")
+
+            if not self.param.updater.isMirrorSiteInitialized(mirrorSiteId):
+                raise _WebException("mirror site has not been initialized")
+
+            s = self.param.updater.getMirrorSiteUpdateState(mirrorSiteId)["update_status"]
+            if s == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
+                raise _WebException("mirror site is updating")
+            if s == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING:
+                raise _WebException("mirror site is maintaining")
+
+            self.updateMirrorSiteNow(mirrorSiteId)
+            return aiohttp.web.Response()
+        except _WebException as e:
+            return aiohttp.web.json_response({"message": e.message}, status=400)
 
     def __getMirrorSiteDict(self):
         ret = dict()
@@ -169,3 +192,7 @@ class McAdvertiser:
                         continue
 
         return ret
+
+
+class _WebException(Exception):
+    pass

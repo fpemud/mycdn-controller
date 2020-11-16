@@ -68,6 +68,9 @@ class McMirrorSiteUpdater:
             ret["update_progress"] = updater.progress
         return ret
 
+    def updateMirrorSiteNow(self, mirrorSiteId):
+        self.scheduler.triggerJobNow(mirrorSiteId)
+
 
 class _OneMirrorSiteUpdater:
 
@@ -86,7 +89,7 @@ class _OneMirrorSiteUpdater:
             self.invoker.add(self.initStart)
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
-            self._postInit()
+            self._postInit(self.updateHistory.getLastSuccessfulUpdateTime())
 
     def initStart(self):
         assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL]
@@ -134,16 +137,17 @@ class _OneMirrorSiteUpdater:
     def initExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
 
+        curDt = datetime.now()
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
             bStop = self.bStop
-            self.updateHistory.initFinished(datetime.now())
+            self.updateHistory.initFinished(curDt)
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" initialization finished." % (self.mirrorSite.id))
             if not bStop:
-                self._postInit()
+                self._postInit(curDt)
         except GLib.Error as e:
             # child process returns failure
             bStop = self.bStop
@@ -229,7 +233,7 @@ class _OneMirrorSiteUpdater:
                 logging.error("Mirror site \"%s\" updates failed (code: %d), hold for %d seconds." % (self.mirrorSite.id, e.code, holdFor))
                 if not bStop:
                     # is there really any effect since the period is always hours?
-                    self.scheduler.pauseJob(self.mirrorSite.id, curDt + datetime.timedelta(seconds=holdFor))
+                    self.scheduler.pauseJobUntil(self.mirrorSite.id, curDt + datetime.timedelta(seconds=holdFor))
 
     def maintainStart(self):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
@@ -493,44 +497,34 @@ class _ApiServer(UnixDomainSocketApiServer):
 class _Scheduler:
 
     def __init__(self):
-        self.jobDict = OrderedDict()       # dict<id,(type,param,callback)>
-        self.jobPauseDict = dict()         # dict<id,datetime>
-
-        self.nextDatetime = None
-        self.nextJobList = None
-
+        self.jobDict = OrderedDict()            # dict<id,(type,param,callback)>
+        self.jobInfoDict = dict()               # dict<id,[lastSchedDatetime,nextSchedDatetime]>
+        self.nextDatetime = datetime.max
         self.timeoutHandler = None
 
     def dispose(self):
         if self.timeoutHandler is not None:
             GLib.source_remove(self.timeoutHandler)
             self.timeoutHandler = None
-        self.nextJobList = None
-        self.nextDatetime = None
+        self.nextDatetime = datetime.max
+        self.jobInfoDict = dict()
         self.jobDict = OrderedDict()
 
-    def addCronJob(self, jobId, cronExpr, jobCallback):
+    def addCronJob(self, jobId, lastSchedDatetime, cronExpr, jobCallback):
         assert jobId not in self.jobDict
-
         now = datetime.now()
 
         # add job
-        iter = self._cronCreateIter(cronExpr, now)
-        self.jobDict[jobId] = ("cron", iter, jobCallback)
+        self.jobDict[jobId] = ("cron", croniter(cronExpr, now, datetime), jobCallback)
+        self.jobInfoDict[jobId] = [lastSchedDatetime, self._cronGetNextDatetime(now, self.jobDict[jobId][1])]
 
-        # add job or recalcluate timeout if it is first job
-        if self.nextDatetime is not None:
-            now = min(now, self.nextDatetime)
-            if self._cronGetNextDatetime(now, iter) < self.nextDatetime:
-                self._clearTimeout()
-                self._calcTimeout(now)
-            elif self._cronGetNextDatetime(now, iter) == self.nextDatetime:
-                self.nextJobList.append(jobId)
-        else:
-            self._calcTimeout(now)
+        # recalculate timeout
+        if self.jobInfoDict[jobId][1] < self.nextDatetime:
+            self._updateTimeout(self.jobInfoDict[jobId][1])
 
-    def addIntervalJob(self, jobId, intervalStr, jobCallback):
+    def addIntervalJob(self, jobId, lastSchedDatetime, intervalStr, jobCallback):
         assert jobId not in self.jobDict
+        now = datetime.now()
 
         # get timedelta
         m = re.match("([0-9]+)(h|d|w|m)", intervalStr)
@@ -549,101 +543,100 @@ class _Scheduler:
 
         # add job
         self.jobDict[jobId] = ("interval", interval, jobCallback)
+        self.jobInfoDict[jobId] = [lastSchedDatetime, self._intervalGetNextDatetime(now, lastSchedDatetime, interval)]
 
-        # add job or recalcluate timeout if it is first job
-        now = datetime.now()
-        if self.nextDatetime is not None:
-            now = min(now, self.nextDatetime)
-            if self._intervalGetNextDatetime(now, interval) < self.nextDatetime:
-                self._clearTimeout()
-                self._calcTimeout(now)
-            elif self._intervalGetNextDatetime(now, interval) == self.nextDatetime:
-                self.nextJobList.append(jobId)
-        else:
-            self._calcTimeout(now)
+        # recalculate timeout
+        if self.jobInfoDict[jobId][1] < self.nextDatetime:
+            self._updateTimeout(self.jobInfoDict[jobId][1])
 
     def removeJob(self, jobId):
         assert jobId in self.jobDict
 
         # remove job
+        del self.jobInfoDict[jobId]
         del self.jobDict[jobId]
 
-        # recalculate timeout if neccessary
-        now = datetime.now()
-        if self.nextDatetime is not None:
-            if jobId in self.nextJobList:
-                self.nextJobList.remove(jobId)
-                if len(self.nextJobList) == 0:
-                    self._clearTimeout()
-                    self._calcTimeout(now)
-        else:
-            assert False
+        # recalculate timeout
+        m = min([x[1] for x in self.jobInfoDict.values()])
+        assert m >= self.nextDatetime
+        if m > self.nextDatetime:
+            self._updateTimeout(m)
 
-    def pauseJob(self, jobId, datetime):
+    def pauseJobUntil(self, jobId, untilDatetime):
         assert jobId in self.jobDict
-        self.jobPauseDict[jobId] = datetime
 
-    def _calcTimeout(self, now):
-        assert self.nextDatetime is None
+        if untilDatetime <= self.jobInfoDict[jobId][1]:
+            return
 
-        for jobId, v in self.jobDict.items():
-            if v[0] == "cron":
-                iter = v[1]
-                if self.nextDatetime is None or self._cronGetNextDatetime(now, iter) < self.nextDatetime:
-                    self.nextDatetime = self._cronGetNextDatetime(now, iter)
-                    self.nextJobList = [jobId]
-                    continue
-                if self._cronGetNextDatetime(now, iter) == self.nextDatetime:
-                    self.nextJobList.append(jobId)
-                    continue
-            elif v[0] == "interval":
-                interval = v[1]
-                if self.nextDatetime is None or self._intervalGetNextDatetime(now, interval) < self.nextDatetime:
-                    self.nextDatetime = self._intervalGetNextDatetime(now, interval)
-                    self.nextJobList = [jobId]
-                if self._intervalGetNextDatetime(now, interval) == self.nextDatetime:
-                    self.nextJobList.append(jobId)
-                    continue
-            else:
-                assert False
+        # modify sched time
+        self.jobInfoDict[jobId][1] = untilDatetime
 
-        if self.nextDatetime is not None:
-            interval = math.ceil((self.nextDatetime - now).total_seconds())
-            assert interval > 0
-            self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
+        # recalculate timeout
+        m = min([x[1] for x in self.jobInfoDict.values()])
+        assert m >= self.nextDatetime
+        if m > self.nextDatetime:
+            self._updateTimeout(m)
 
-    def _clearTimeout(self):
-        assert self.nextDatetime is not None
+    def triggerJobNow(self, jobId):
+        assert jobId in self.jobDict
+        now = datetime.now()
 
-        GLib.source_remove(self.timeoutHandler)
-        self.timeoutHandler = None
-        self.nextJobList = None
-        self.nextDatetime = None
+        # execute job
+        self._execJob(jobId, now)
+
+        # recalculate timeout
+        m = min([x[1] for x in self.jobInfoDict.values()])
+        assert m >= self.nextDatetime
+        if m > self.nextDatetime:
+            self._updateTimeout(m)
+
+    def _updateTimeout(self, nextDatetime):
+        if self.timeoutHandler is not None:
+            GLib.source_remove(self.timeoutHandler)
+        self.nextDatetime = nextDatetime
+        interval = math.ceil((self.nextDatetime - datetime.now()).total_seconds())
+        assert interval > 0
+        self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
 
     def _jobCallback(self):
+        now = datetime.now()
+
+        # execute jobs
         for jobId in self.nextJobList:
-            if jobId not in self.jobPauseDict:
-                self.jobDict[jobId][2](self.nextDatetime)
-            else:
-                if self.jobPauseDict[jobId] <= self.nextDatetime:
-                    del self.jobPauseDict[jobId]
-                    self.jobDict[jobId][2](self.nextDatetime)
-        self._clearTimeout()
-        self._calcTimeout(datetime.now())           # self._calcTimeout(self.nextDatetime) is stricter but less robust
+            if self.jobInfoDict[jobId][1] < now:
+                self._execJob(jobId, self.nextDatetime)
+
+        # recalculate timeout
+        self.nextDatetime = min([x[1] for x in self.jobInfoDict.values()])
+        self._updateTimeout(self.nextDatetime)
+
         return False
 
-    def _cronCreateIter(self, cronExpr, curDatetime):
-        iter = croniter(cronExpr, curDatetime, datetime)
-        iter.get_next()
-        return iter
+    def _execJob(self, jobId, curDatetime):
+        # execute job
+        self.jobDict[jobId][2](curDatetime)
+
+        # record last sched time
+        self.jobInfoDict[jobId][0] = curDatetime
+
+        # calculate next sched time
+        if self.jobDict[jobId][0] == "cron":
+            self.jobInfoDict[jobId][1] = self._cronGetNextDatetime(curDatetime, self.jobDict[jobId][1])
+        elif self.jobDict[jobId][0] == "interval":
+            self.jobInfoDict[jobId][1] = self._intervalGetNextDatetime(curDatetime, self.jobInfoDict[jobId][0], self.jobDict[jobId][1])
+        else:
+            assert False
 
     def _cronGetNextDatetime(self, curDatetime, croniterIter):
         while croniterIter.get_current() < curDatetime:
             croniterIter.get_next()
         return croniterIter.get_current()
 
-    def _intervalGetNextDatetime(self, curDatetime, interval):
-        return curDatetime + interval
+    def _intervalGetNextDatetime(self, curDatetime, lastSchedTime, interval):
+        if lastSchedTime is None:
+            return curDatetime
+        else:
+            return max(lastSchedTime + interval, curDatetime)
 
 
 class _UpdateHistory:
