@@ -561,7 +561,6 @@ class _Scheduler:
 
         # recalculate timeout
         m = min([x[1] for x in self.jobInfoDict.values()])
-        assert m >= self.nextDatetime
         if m > self.nextDatetime:
             self._updateTimeout(m)
 
@@ -574,7 +573,6 @@ class _Scheduler:
 
         # recalculate timeout
         m = min([x[1] for x in self.jobInfoDict.values()])
-        assert m >= self.nextDatetime
         if m > self.nextDatetime:
             self._updateTimeout(m)
 
@@ -583,7 +581,7 @@ class _Scheduler:
             GLib.source_remove(self.timeoutHandler)
         self.nextDatetime = nextDatetime
         interval = math.ceil((self.nextDatetime - datetime.now()).total_seconds())
-        assert interval > 0
+        interval = max(interval, 1)
         self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
 
     def _jobCallback(self):
@@ -591,7 +589,7 @@ class _Scheduler:
 
         # execute jobs
         for jobId in self.jobDict:
-            if self.jobInfoDict[jobId][1] < now:
+            if self.jobInfoDict[jobId][1] <= now:
                 self._execJob(jobId, self.nextDatetime)
 
         # recalculate timeout
