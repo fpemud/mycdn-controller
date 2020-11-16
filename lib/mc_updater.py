@@ -10,6 +10,7 @@ import logging
 import subprocess
 import statistics
 from datetime import datetime
+from datetime import timedelta
 from croniter import croniter
 from collections import OrderedDict
 from gi.repository import GLib
@@ -234,7 +235,7 @@ class _OneMirrorSiteUpdater:
                 logging.error("Mirror site \"%s\" updates failed (code: %d), hold for %d seconds." % (self.mirrorSite.id, e.code, holdFor))
                 if not bStop:
                     # is there really any effect since the period is always hours?
-                    self.scheduler.pauseJobUntil(self.mirrorSite.id, curDt + datetime.timedelta(seconds=holdFor))
+                    self.scheduler.pauseJobUntil(self.mirrorSite.id, curDt + timedelta(seconds=holdFor))
 
     def maintainStart(self):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
@@ -532,13 +533,13 @@ class _Scheduler:
         if m is None:
             raise Exception("invalid interval %s" % (intervalStr))
         if m.group(2) == "h":
-            interval = datetime.timedelta(hours=int(m.group(1)))
+            interval = timedelta(hours=int(m.group(1)))
         elif m.group(2) == "d":
-            interval = datetime.timedelta(days=int(m.group(1)))
+            interval = timedelta(days=int(m.group(1)))
         elif m.group(2) == "w":
-            interval = datetime.timedelta(weeks=int(m.group(1)))
+            interval = timedelta(weeks=int(m.group(1)))
         elif m.group(2) == "m":
-            interval = datetime.timedelta(months=int(m.group(1)))
+            interval = timedelta(months=int(m.group(1)))
         else:
             assert False
 
@@ -614,7 +615,7 @@ class _Scheduler:
             assert False
 
     def _cronGetNextDatetime(self, curDatetime, croniterIter):
-        while croniterIter.get_current() < curDatetime:
+        while croniterIter.get_current() <= curDatetime:
             croniterIter.get_next()
         return croniterIter.get_current()
 
