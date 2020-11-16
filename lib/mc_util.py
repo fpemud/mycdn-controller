@@ -455,6 +455,7 @@ class UnixDomainSocketApiServer:
         return True
 
     def onRecv(self, source, cb_condition):
+        bCloseSocket = False
         try:
             obj = self.clientInfoDict[source]
 
@@ -476,13 +477,9 @@ class UnixDomainSocketApiServer:
 
             # remote closed
             if (cb_condition & GLib.IO_HUP):
-                if self.clientDisappearFunc is not None:
-                    self.clientDisappearFunc(self.clientInfoDict[source].clientData)
-                del self.clientInfoDict[source]
-                source.close()
-                return False
-
-            return True
+                bCloseSocket = True
+                if len(obj.recvBuf) > 0:
+                    raise Exception("remote close")
         except Exception:
             print("excp IO_IN, %d" % (cb_condition & GLib.IO_IN))               # FIXME
             print("excp IO_PRI, %d" % (cb_condition & GLib.IO_PRI))
@@ -490,11 +487,15 @@ class UnixDomainSocketApiServer:
             print("excp IO_HUP, %d" % (cb_condition & GLib.IO_HUP))
             print("excp IO_NVAL, %d" % (cb_condition & GLib.IO_NVAL))
             traceback.print_exc()
-            if self.clientDisappearFunc is not None:
-                self.clientDisappearFunc(self.clientInfoDict[source].clientData)
-            del self.clientInfoDict[source]
-            source.close()
-            return False
+        finally:
+            if bCloseSocket:
+                if self.clientDisappearFunc is not None:
+                    self.clientDisappearFunc(self.clientInfoDict[source].clientData)
+                del self.clientInfoDict[source]
+                source.close()
+                return False
+            else:
+                return True
 
 
 class DropPriviledge:
