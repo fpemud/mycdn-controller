@@ -99,7 +99,8 @@ class McAdvertiser:
             "static": {
                 "title": "mirror site",
                 "name": "镜像名",
-                "update_time": "上次更新时间",
+                "last_update_time": "上次更新时间",
+                "next_update_time": "",
                 "help": "使用帮助",
             },
             "mirror_site_dict": self.__getMirrorSiteDict(),
@@ -135,11 +136,16 @@ class McAdvertiser:
                 updateState["last_update_time"] = ""
             else:
                 updateState["last_update_time"] = updateState["last_update_time"].strftime("%Y-%m-%d %H:%M")
+            if updateState["next_update_time"] is None:
+                updateState["next_update_time"] = ""
+            else:
+                updateState["next_update_time"] = updateState["next_update_time"].strftime("%Y-%m-%d %H:%M")
 
             ret[msId] = {
                 "available": self.param.updater.isMirrorSiteInitialized(msId),
                 "update_status": updateState["update_status"],
                 "last_update_time": updateState["last_update_time"],
+                "next_update_time": updateState["next_update_time"],
                 "update_progress": updateState.get("update_progress", -1),
                 "help": {
                     "title": "",

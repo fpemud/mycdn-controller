@@ -64,7 +64,12 @@ class McMirrorSiteUpdater:
         updater = self.updaterDict[mirrorSiteId]
         ret = dict()
         ret["update_status"] = updater.status
-        ret["last_update_time"] = updater.updateHistory.getLastSuccessfulUpdateTime()
+        if mirrorSiteId in self.scheduler.jobDict:
+            ret["last_update_time"] = self.scheduler.jobInfoDict[mirrorSiteId][0]
+            ret["next_update_time"] = self.scheduler.jobInfoDict[mirrorSiteId][1]
+        else:
+            ret["last_update_time"] = None
+            ret["next_update_time"] = None
         if updater.status in [self.MIRROR_SITE_UPDATE_STATUS_INITING, self.MIRROR_SITE_UPDATE_STATUS_UPDATING]:
             ret["update_progress"] = updater.progress
         return ret
