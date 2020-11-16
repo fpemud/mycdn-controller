@@ -590,7 +590,7 @@ class _Scheduler:
         now = datetime.now()
 
         # execute jobs
-        for jobId in self.nextJobList:
+        for jobId in self.jobDict:
             if self.jobInfoDict[jobId][1] < now:
                 self._execJob(jobId, self.nextDatetime)
 

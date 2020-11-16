@@ -7,7 +7,6 @@ import sys
 import imp
 import time
 import dbus
-import math
 import json
 import stat
 import prctl
@@ -20,9 +19,6 @@ import hashlib
 import logging
 import traceback
 import subprocess
-from datetime import datetime
-from collections import OrderedDict
-from croniter import croniter
 from gi.repository import GLib
 from OpenSSL import crypto
 from dbus.mainloop.glib import DBusGMainLoop
@@ -408,115 +404,6 @@ class GLibIdleInvoker:
     def _idleCallback(self, func, *args):
         func(*args)
         return False
-
-
-class GLibCronScheduler:
-
-    def __init__(self):
-        self.jobDict = OrderedDict()       # dict<id,(iter,callback)>
-        self.jobPauseDict = dict()         # dict<id,datetime>
-
-        self.nextDatetime = None
-        self.nextJobList = None
-
-        self.timeoutHandler = None
-
-    def dispose(self):
-        if self.timeoutHandler is not None:
-            GLib.source_remove(self.timeoutHandler)
-            self.timeoutHandler = None
-        self.nextJobList = None
-        self.nextDatetime = None
-        self.jobDict = OrderedDict()
-
-    def addJob(self, jobId, cronExpr, jobCallback):
-        assert jobId not in self.jobDict
-
-        now = datetime.now()
-
-        # add job
-        iter = self._createCronIter(cronExpr, now)
-        self.jobDict[jobId] = (iter, jobCallback)
-
-        # add job or recalcluate timeout if it is first job
-        if self.nextDatetime is not None:
-            now = min(now, self.nextDatetime)
-            if self._getNextDatetime(now, iter) < self.nextDatetime:
-                self._clearTimeout()
-                self._calcTimeout(now)
-            elif self._getNextDatetime(now, iter) == self.nextDatetime:
-                self.nextJobList.append(jobId)
-        else:
-            self._calcTimeout(now)
-
-    def removeJob(self, jobId):
-        assert jobId in self.jobDict
-
-        # remove job
-        del self.jobDict[jobId]
-
-        # recalculate timeout if neccessary
-        now = datetime.now()
-        if self.nextDatetime is not None:
-            if jobId in self.nextJobList:
-                self.nextJobList.remove(jobId)
-                if len(self.nextJobList) == 0:
-                    self._clearTimeout()
-                    self._calcTimeout(now)
-        else:
-            assert False
-
-    def pauseJob(self, jobId, datetime):
-        assert jobId in self.jobDict
-        self.jobPauseDict[jobId] = datetime
-
-    def _calcTimeout(self, now):
-        assert self.nextDatetime is None
-
-        for jobId, v in self.jobDict.items():
-            iter = v[0]
-            if self.nextDatetime is None or self._getNextDatetime(now, iter) < self.nextDatetime:
-                self.nextDatetime = self._getNextDatetime(now, iter)
-                self.nextJobList = [jobId]
-                continue
-            if self._getNextDatetime(now, iter) == self.nextDatetime:
-                self.nextJobList.append(jobId)
-                continue
-
-        if self.nextDatetime is not None:
-            interval = math.ceil((self.nextDatetime - now).total_seconds())
-            assert interval > 0
-            self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
-
-    def _clearTimeout(self):
-        assert self.nextDatetime is not None
-
-        GLib.source_remove(self.timeoutHandler)
-        self.timeoutHandler = None
-        self.nextJobList = None
-        self.nextDatetime = None
-
-    def _jobCallback(self):
-        for jobId in self.nextJobList:
-            if jobId not in self.jobPauseDict:
-                self.jobDict[jobId][1](self.nextDatetime)
-            else:
-                if self.jobPauseDict[jobId] <= self.nextDatetime:
-                    del self.jobPauseDict[jobId]
-                    self.jobDict[jobId][1](self.nextDatetime)
-        self._clearTimeout()
-        self._calcTimeout(datetime.now())           # self._calcTimeout(self.nextDatetime) is stricter but less robust
-        return False
-
-    def _createCronIter(self, cronExpr, curDatetime):
-        iter = croniter(cronExpr, curDatetime, datetime)
-        iter.get_next()
-        return iter
-
-    def _getNextDatetime(self, curDatetime, croniterIter):
-        while croniterIter.get_current() < curDatetime:
-            croniterIter.get_next()
-        return croniterIter.get_current()
 
 
 class UnixDomainSocketApiServer:
