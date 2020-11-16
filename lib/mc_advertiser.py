@@ -95,11 +95,6 @@ class McAdvertiser:
             self._app = None
 
     async def _indexHandler(self, request):
-        if not self.param.webAcceptForeign:
-            if request.remote != "127.0.0.1":
-                # FIXME: should reset TCP connection
-                raise Exception("foreign denied")
-
         data = {
             "static": {
                 "title": "mirror site",
@@ -124,10 +119,8 @@ class McAdvertiser:
                 raise _WebException("mirror site has not been initialized")
 
             s = self.param.updater.getMirrorSiteUpdateState(mirrorSiteId)["update_status"]
-            if s == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING:
+            if s in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING]:
                 raise _WebException("mirror site is updating")
-            if s == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING:
-                raise _WebException("mirror site is maintaining")
 
             self.updateMirrorSiteNow(mirrorSiteId)
             return aiohttp.web.Response()

@@ -69,6 +69,7 @@ class McMirrorSiteUpdater:
         return ret
 
     def updateMirrorSiteNow(self, mirrorSiteId):
+        assert self.updaterDict[mirrorSiteId].status in [self.MIRROR_SITE_UPDATE_STATUS_IDLE, self.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL]
         self.scheduler.triggerJobNow(mirrorSiteId)
 
 
@@ -548,19 +549,6 @@ class _Scheduler:
         # recalculate timeout
         if self.jobInfoDict[jobId][1] < self.nextDatetime:
             self._updateTimeout(self.jobInfoDict[jobId][1])
-
-    def removeJob(self, jobId):
-        assert jobId in self.jobDict
-
-        # remove job
-        del self.jobInfoDict[jobId]
-        del self.jobDict[jobId]
-
-        # recalculate timeout
-        m = min([x[1] for x in self.jobInfoDict.values()])
-        assert m >= self.nextDatetime
-        if m > self.nextDatetime:
-            self._updateTimeout(m)
 
     def pauseJobUntil(self, jobId, untilDatetime):
         assert jobId in self.jobDict
