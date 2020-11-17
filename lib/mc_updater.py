@@ -650,6 +650,7 @@ class _UpdateHistory:
 
         # add init-item
         obj = DynObject()
+        obj.bSuccess = True
         obj.startTime = None
         obj.endTime = endTime
         self._updateInfoList.append(obj)
@@ -657,7 +658,7 @@ class _UpdateHistory:
         # save to file
         self._saveToFile()
 
-    def updateFinished(self, bSucceed, startTime, endTime):
+    def updateFinished(self, bSuccess, startTime, endTime):
         # remove init-item
         if len(self._updateInfoList) > 0 and self._updateInfoList[-1].startTime is None:
             assert len(self._updateInfoList) == 1
@@ -665,12 +666,12 @@ class _UpdateHistory:
 
         # remove update-failed-item
         # we only store the last one update-failed-item
-        if len(self._updateInfoList) > 0 and not self._updateInfoList[-1].bSucceed:
+        if len(self._updateInfoList) > 0 and not self._updateInfoList[-1].bSuccess:
             del self._updateInfoList[-1]
 
         # add update-item
         obj = DynObject()
-        obj.bSucceed = bSucceed
+        obj.bSuccess = bSuccess
         obj.startTime = startTime
         obj.endTime = endTime
         self._updateInfoList.append(obj)
@@ -692,7 +693,7 @@ class _UpdateHistory:
             if m is not None:
                 try:
                     obj = DynObject()
-                    obj.bSucceed = bool(m.group(1))
+                    obj.bSuccess = bool(m.group(1))
                     if m.group(2) == "none":
                         obj.startTime = None
                     else:
@@ -706,7 +707,7 @@ class _UpdateHistory:
         with open(self._updateFn, "w") as f:
             f.write("# is-successful             start-time             end-time\n")
             for item in self._updateInfoList:
-                if item.bSucceed:
+                if item.bSuccess:
                     f.write("  true                      ")
                 else:
                     f.write("  false                     ")
