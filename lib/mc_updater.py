@@ -524,60 +524,42 @@ class _Scheduler:
     def addCronJob(self, jobId, lastSchedDatetime, cronExpr, jobCallback):
         assert jobId not in self.jobDict
         now = datetime.now()
-
-        # add job
         self.jobDict[jobId] = ("cron", croniter(cronExpr, now, datetime), jobCallback)
-        self.jobInfoDict[jobId] = [lastSchedDatetime, self._cronGetNextDatetime(now, self.jobDict[jobId][1])]
-
-        # recalculate timeout
-        if self.jobInfoDict[jobId][1] < self.nextDatetime:
-            self._updateTimeout(self.jobInfoDict[jobId][1])
+        self.jobInfoDict[jobId] = [lastSchedDatetime, self.__cronGetNextDatetime(now, self.jobDict[jobId][1])]
+        self._timeoutMayBecomeEarly(jobId)
 
     def addIntervalJob(self, jobId, lastSchedDatetime, interval, jobCallback):
         assert jobId not in self.jobDict
         now = datetime.now()
-
-        # add job
         self.jobDict[jobId] = ("interval", interval, jobCallback)
-        self.jobInfoDict[jobId] = [lastSchedDatetime, self._intervalGetNextDatetime(now, lastSchedDatetime, interval)]
-
-        # recalculate timeout
-        if self.jobInfoDict[jobId][1] < self.nextDatetime:
-            self._updateTimeout(self.jobInfoDict[jobId][1])
+        self.jobInfoDict[jobId] = [lastSchedDatetime, self.__intervalGetNextDatetime(now, lastSchedDatetime, interval)]
+        self._timeoutMayBecomeEarly(jobId)
 
     def pauseJobUntil(self, jobId, untilDatetime):
         assert jobId in self.jobDict
+        if untilDatetime > self.jobInfoDict[jobId][1]:
+            self.jobInfoDict[jobId][1] = untilDatetime
+            self._timeoutMayBecomeLate()
 
-        if untilDatetime <= self.jobInfoDict[jobId][1]:
-            return
-
-        # modify sched time
-        self.jobInfoDict[jobId][1] = untilDatetime
-
-        # recalculate timeout
-        m = min([x[1] for x in self.jobInfoDict.values()])
-        if m > self.nextDatetime:
-            self._updateTimeout(m)
+    def triggerJobAt(self, jobId, triggerDatetime):
+        assert jobId in self.jobDict
+        if triggerDatetime < self.jobInfoDict[jobId][1]:
+            self.jobInfoDict[jobId][1] = triggerDatetime
+            self._timeoutMayBecomeEarly(jobId)
 
     def triggerJobNow(self, jobId):
         assert jobId in self.jobDict
-        now = datetime.now()
+        self._execJob(jobId, datetime.now())
+        self._timeoutMayBecomeLate()
 
-        # execute job
-        self._execJob(jobId, now)
-
-        # recalculate timeout
+    def _timeoutMayBecomeLate(self):
         m = min([x[1] for x in self.jobInfoDict.values()])
         if m > self.nextDatetime:
-            self._updateTimeout(m)
+            self.__updateTimeout(m)
 
-    def _updateTimeout(self, nextDatetime):
-        if self.timeoutHandler is not None:
-            GLib.source_remove(self.timeoutHandler)
-        self.nextDatetime = nextDatetime
-        interval = math.ceil((self.nextDatetime - datetime.now()).total_seconds())
-        interval = max(interval, 1)
-        self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
+    def _timeoutMayBecomeEarly(self, jobId):
+        if self.jobInfoDict[jobId][1] < self.nextDatetime:
+            self.__updateTimeout(self.jobInfoDict[jobId][1])
 
     def _jobCallback(self):
         now = datetime.now()
@@ -585,11 +567,12 @@ class _Scheduler:
         # execute jobs
         for jobId in self.jobDict:
             if self.jobInfoDict[jobId][1] <= now:
-                self._execJob(jobId, self.nextDatetime)
+                self._execJob(jobId, self.jobInfoDict[jobId][1])
 
         # recalculate timeout
-        self.nextDatetime = min([x[1] for x in self.jobInfoDict.values()])
-        self._updateTimeout(self.nextDatetime)
+        m = min([x[1] for x in self.jobInfoDict.values()])
+        assert m > self.nextDatetime
+        self.__updateTimeout(m)
 
         return False
 
@@ -602,18 +585,26 @@ class _Scheduler:
 
         # calculate next sched time
         if self.jobDict[jobId][0] == "cron":
-            self.jobInfoDict[jobId][1] = self._cronGetNextDatetime(curDatetime, self.jobDict[jobId][1])
+            self.jobInfoDict[jobId][1] = self.__cronGetNextDatetime(curDatetime, self.jobDict[jobId][1])
         elif self.jobDict[jobId][0] == "interval":
-            self.jobInfoDict[jobId][1] = self._intervalGetNextDatetime(curDatetime, self.jobInfoDict[jobId][0], self.jobDict[jobId][1])
+            self.jobInfoDict[jobId][1] = self.__intervalGetNextDatetime(curDatetime, self.jobInfoDict[jobId][0], self.jobDict[jobId][1])
         else:
             assert False
 
-    def _cronGetNextDatetime(self, curDatetime, croniterIter):
+    def __updateTimeout(self, nextDatetime):
+        if self.timeoutHandler is not None:
+            GLib.source_remove(self.timeoutHandler)
+        self.nextDatetime = nextDatetime
+        interval = math.ceil((self.nextDatetime - datetime.now()).total_seconds())
+        interval = max(interval, 1)
+        self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
+
+    def __cronGetNextDatetime(self, curDatetime, croniterIter):
         while croniterIter.get_current() <= curDatetime:
             croniterIter.get_next()
         return croniterIter.get_current()
 
-    def _intervalGetNextDatetime(self, curDatetime, lastSchedTime, interval):
+    def __intervalGetNextDatetime(self, curDatetime, lastSchedTime, interval):
         if lastSchedTime is None:
             return curDatetime
         else:
