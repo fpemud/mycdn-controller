@@ -10,7 +10,6 @@ import logging
 import subprocess
 import statistics
 from datetime import datetime
-from datetime import timedelta
 from croniter import croniter
 from collections import OrderedDict
 from gi.repository import GLib
@@ -215,10 +214,10 @@ class _OneMirrorSiteUpdater:
         self.excInfo = exc_info
 
     def updateErrorAndHoldForCallback(self, seconds, exc_info):
+        # we only use hold-for when initializating
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
         assert self.excInfo is None
         self.excInfo = exc_info
-        self.holdFor = seconds
 
     def updateExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
@@ -234,17 +233,12 @@ class _OneMirrorSiteUpdater:
         except GLib.Error as e:
             # child process returns failure
             bStop = self.bStop
-            holdFor = self.holdFor
             self.updateHistory.updateFinished(False, self.schedDatetime, curDt)
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL
-            if holdFor is None:
-                logging.error("Mirror site \"%s\" update failed (code: %d)." % (self.mirrorSite.id, e.code))
-            else:
-                logging.error("Mirror site \"%s\" updates failed (code: %d), hold for %d seconds." % (self.mirrorSite.id, e.code, holdFor))
-                if not bStop:
-                    # is there really any effect since the period is always hours?
-                    self.scheduler.pauseJobUntil(self.mirrorSite.id, curDt + timedelta(seconds=holdFor))
+            logging.error("Mirror site \"%s\" update failed (code: %d)." % (self.mirrorSite.id, e.code))
+            if not bStop:
+                self._retryUpdate(curDt)
 
     def maintainStart(self):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
@@ -404,6 +398,14 @@ class _OneMirrorSiteUpdater:
                 assert False
         elif self.mirrorSite.maintainerExe is not None:
             self.invoker.add(self.maintainStart)
+
+    def _retryUpdate(self, finishDatetime):
+        if self.mirrorSite.updateRetryType == "interval":
+            newDt = finishDatetime + self.mirrorSite.updateRetryInterval
+            self.scheduler.triggerJobAt(self.mirrorSite.id, newDt)
+        elif self.mirrorSite.updateRetryType == "cronexpr":
+            newDt = croniter(self.mirrorSite.updateRetryCronExpr, finishDatetime, datetime).get_next()
+            self.scheduler.triggerJobAt(self.mirrorSite.id, newDt)
 
     def _reMaintainCallback(self):
         del self.reMaintainHandler
