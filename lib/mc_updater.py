@@ -708,9 +708,9 @@ class _UpdateHistory:
             f.write("# is-successful             start-time             end-time\n")
             for item in self._updateInfoList:
                 if item.bSuccess:
-                    f.write("  true                      ")
+                    f.write("  true                    ")
                 else:
-                    f.write("  false                     ")
+                    f.write("  false                   ")
                 if item.startTime is None:
                     f.write("  none                   ")
                 else:
