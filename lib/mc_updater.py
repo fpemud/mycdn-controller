@@ -719,11 +719,10 @@ class _UpdateHistory:
                     f.write(item.endTime.strftime(McUtil.stdTmFmt()) + "\n")
 
     def _calcAverageDuration(self):
-        if len(self._updateInfoList) == 0:
-            self._averageUpdateDuration = 1
-        elif len(self._updateInfoList) > 0 and self._updateInfoList[-1].startTime is None:
-            assert len(self._updateInfoList) == 1
-            self._averageUpdateDuration = 1
-        else:
-            self._averageUpdateDuration = statistics.mean([(x.endTime - x.startTime).total_seconds() // 60 for x in self._updateInfoList if x.bSuccess])
+        tlist = [x for x in self._updateInfoList if x.startTime is not None and x.bSuccess]     # remove init-item and update-failed-item
+        if len(tlist) > 0:
+            tlist = [(x.endTime - x.startTime).total_seconds() // 60 for x in tlist]
+            self._averageUpdateDuration = statistics.mean(tlist)
             self._averageUpdateDuration = min(1, int(self._averageUpdateDuration))
+        else:
+            self._averageUpdateDuration = 1
