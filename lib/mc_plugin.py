@@ -7,6 +7,7 @@ import glob
 import json
 import libxml2
 import sqlparse
+from datetime import timedelta
 from collections import OrderedDict
 from mc_util import McUtil
 from mc_util import DynObject
@@ -135,26 +136,38 @@ class McMirrorSite:
 
         # updater
         self.updaterExe = None
-        self.schedType = None
-        self.schedExpr = None
+        self.schedType = None              # "interval" or "cronexpr"
+        self.schedInterval = None          # timedelta
+        self.schedCronExpr = None          # string
+        self.updateRetryType = None        # "interval" or "cronexpr"
+        self.updateRetryInterval = None    # timedelta
+        self.updateRetryCronExpr = None    # string
         if True:
             slist = rootElem.xpathEval(".//updater")
             if len(slist) > 0:
                 self.updaterExe = slist[0].xpathEval(".//executable")[0].getContent()
                 self.updaterExe = os.path.join(pluginDir, self.updaterExe)
-                tlist = slist[0].xpathEval(".//scheduler")
-                if len(tlist) > 0:
-                    if len(slist[0].xpathEval(".//interval")) > 0:
-                        self.schedType = "interval"
-                        self.schedExpr = slist[0].xpathEval(".//interval")[0].getContent()
-                    elif len(slist[0].xpathEval(".//cron")) > 0:
-                        self.schedType = "cron"
-                        self.schedExpr = slist[0].xpathEval(".//cron")[0].getContent()
-                    else:
-                        assert False
+
+                tag = slist[0].xpathEval(".//schedule")[0]
+                self.schedType = tag.prop("type")
+                if self.schedType == "interval":
+                    self.schedInterval = self._parseInterval(tag.getContent())
+                elif self.schedType == "cronexpr":
+                    self.schedCronExpr = self._parseCronExpr(tag.getContent())
                 else:
-                    self.schedType = "cron"
-                    self.schedExpr = slist[0].xpathEval(".//cron-expression")[0].getContent()   # FIXME: add check
+                    raise Exception("mirror site %s: invalid schedule type %s" % (self.id, self.schedType))
+
+                if len(slist[0].xpathEval(".//retry-after-failure")) > 0:
+                    tag = slist[0].xpathEval(".//retry-after-failure")[0]
+                    self.updateRetryType = tag.prop("type")
+                    if self.updateRetryType == "interval":
+                        self.updateRetryInterval = self._parseInterval(tag.getContent())
+                    elif self.updateRetryType == "cronexpr":
+                        if self.schedType == "interval":
+                            raise Exception("mirror site %s: invalid retry-after-update type %s" % (self.id, self.updateRetryType))
+                        self.updateRetryCronExpr = self._parseCronExpr(tag.getContent())
+                    else:
+                        raise Exception("mirror site %s: invalid retry-after-update type %s" % (self.id, self.updateRetryType))
 
         # maintainer
         self.maintainerExe = None
@@ -163,3 +176,23 @@ class McMirrorSite:
             if len(slist) > 0:
                 self.maintainerExe = slist[0].xpathEval(".//executable")[0].getContent()
                 self.maintainerExe = os.path.join(pluginDir, self.maintainerExe)
+
+    def _parseInterval(self, intervalStr):
+        m = re.match("([0-9]+)(h|d|w|m)", intervalStr)
+        if m is None:
+            raise Exception("invalid interval %s" % (intervalStr))
+
+        if m.group(2) == "h":
+            return timedelta(hours=int(m.group(1)))
+        elif m.group(2) == "d":
+            return timedelta(days=int(m.group(1)))
+        elif m.group(2) == "w":
+            return timedelta(weeks=int(m.group(1)))
+        elif m.group(2) == "m":
+            return timedelta(months=int(m.group(1)))
+        else:
+            assert False
+
+    def _parseCronExpr(self, cronExprStr):
+        # FIXME: should add checking
+        return cronExprStr

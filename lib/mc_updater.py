@@ -96,7 +96,11 @@ class _OneMirrorSiteUpdater:
             self.invoker.add(self.initStart)
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
-            self._postInit(self.updateHistory.getLastSuccessfulUpdateTime())
+            obj = self.updateHistory.getLastUpdateInfo()
+            if obj is not None:
+                self._postInit(obj.endTime)
+            else:
+                self._postInit(None)
 
     def initStart(self):
         assert self.status in [McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT, McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT_FAIL]
@@ -223,7 +227,7 @@ class _OneMirrorSiteUpdater:
         try:
             GLib.spawn_check_exit_status(status)
             # child process returns ok
-            self.updateHistory.updateFinished(self.schedDatetime, curDt)
+            self.updateHistory.updateFinished(True, self.schedDatetime, curDt)
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             logging.info("Mirror site \"%s\" update finished." % (self.mirrorSite.id))
@@ -231,7 +235,7 @@ class _OneMirrorSiteUpdater:
             # child process returns failure
             bStop = self.bStop
             holdFor = self.holdFor
-            self.updateHistory.updateFailed()
+            self.updateHistory.updateFinished(False, self.schedDatetime, curDt)
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL
             if holdFor is None:
@@ -389,13 +393,13 @@ class _OneMirrorSiteUpdater:
         self.initStart()
         return False
 
-    def _postInit(self, curDt):
+    def _postInit(self, finishDatetime):
         self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
         if self.mirrorSite.updaterExe is not None:
             if self.mirrorSite.schedType == "interval":
-                self.scheduler.addIntervalJob(self.mirrorSite.id, curDt, self.mirrorSite.schedExpr, self.updateStart)
-            elif self.mirrorSite.schedType == "cron":
-                self.scheduler.addCronJob(self.mirrorSite.id, curDt, self.mirrorSite.schedExpr, self.updateStart)
+                self.scheduler.addIntervalJob(self.mirrorSite.id, finishDatetime, self.mirrorSite.schedInterval, self.updateStart)
+            elif self.mirrorSite.schedType == "cronexpr":
+                self.scheduler.addCronJob(self.mirrorSite.id, finishDatetime, self.mirrorSite.schedCronExpr, self.updateStart)
             else:
                 assert False
         elif self.mirrorSite.maintainerExe is not None:
@@ -529,24 +533,9 @@ class _Scheduler:
         if self.jobInfoDict[jobId][1] < self.nextDatetime:
             self._updateTimeout(self.jobInfoDict[jobId][1])
 
-    def addIntervalJob(self, jobId, lastSchedDatetime, intervalStr, jobCallback):
+    def addIntervalJob(self, jobId, lastSchedDatetime, interval, jobCallback):
         assert jobId not in self.jobDict
         now = datetime.now()
-
-        # get timedelta
-        m = re.match("([0-9]+)(h|d|w|m)", intervalStr)
-        if m is None:
-            raise Exception("invalid interval %s" % (intervalStr))
-        if m.group(2) == "h":
-            interval = timedelta(hours=int(m.group(1)))
-        elif m.group(2) == "d":
-            interval = timedelta(days=int(m.group(1)))
-        elif m.group(2) == "w":
-            interval = timedelta(weeks=int(m.group(1)))
-        elif m.group(2) == "m":
-            interval = timedelta(months=int(m.group(1)))
-        else:
-            assert False
 
         # add job
         self.jobDict[jobId] = ("interval", interval, jobCallback)
@@ -641,7 +630,6 @@ class _UpdateHistory:
         if not self._needInit:
             McUtil.touchFile(self._updateFn)
 
-        self._lastUpdateSuccessful = True
         self._updateInfoList = []
         if True:
             self._readFromFile()
@@ -653,13 +641,10 @@ class _UpdateHistory:
     def isInitialized(self):
         return os.path.exists(self._updateFn)
 
-    def isLastUpdateSuccessful(self):
-        return self._lastUpdateSuccessful
-
-    def getLastSuccessfulUpdateTime(self):
+    def getLastUpdateInfo(self):
         if len(self._updateInfoList) > 0:
             # list order: from old to new
-            return self._updateInfoList[-1].endTime
+            return self._updateInfoList[-1]
         else:
             return None
 
@@ -672,27 +657,27 @@ class _UpdateHistory:
 
         # add init-item
         obj = DynObject()
-        obj.startTime = "none"
+        obj.startTime = None
         obj.endTime = endTime
         self._updateInfoList.append(obj)
 
         # save to file
         self._saveToFile()
 
-    def updateFailed(self):
-        if not self._lastUpdateSuccessful:
-            return
-        self._lastUpdateSuccessful = False
-        self._saveToFile()
-
-    def updateFinished(self, startTime, endTime):
+    def updateFinished(self, bSucceed, startTime, endTime):
         # remove init-item
-        if len(self._updateInfoList) > 0 and self._updateInfoList[-1].startTime == "none":
+        if len(self._updateInfoList) > 0 and self._updateInfoList[-1].startTime is None:
             assert len(self._updateInfoList) == 1
             self._updateInfoList = []
 
+        # remove update-failed-item
+        # we only store the last one update-failed-item
+        if len(self._updateInfoList) > 0 and not self._updateInfoList[-1].bSucceed:
+            del self._updateInfoList[-1]
+
         # add update-item
         obj = DynObject()
+        obj.bSucceed = bSucceed
         obj.startTime = startTime
         obj.endTime = endTime
         self._updateInfoList.append(obj)
@@ -710,45 +695,41 @@ class _UpdateHistory:
             return
 
         for line in McUtil.readFile(self._updateFn).split("\n"):
-            if re.fullmatch(line, " *last-update-successful *"):
-                self._lastUpdateSuccessful = True
-            elif re.fullmatch(line, " *last-update-failed *"):
-                self._lastUpdateSuccessful = False
-            else:
-                m = re.fullmatch(line, " *(\\S+) +(\\S+) *")
-                if m is not None:
-                    try:
-                        obj = DynObject()
-                        if m.group(1) == "none":
-                            obj.startTime = m.group(1)
-                        else:
-                            obj.startTime = datetime.strptime(m.group(1), McUtil.stdTmFmt())
-                        obj.endTime = datetime.strptime(m.group(2), McUtil.stdTmFmt())
-                        self._updateInfoList.append(obj)
-                    except ValueError:
-                        pass
+            m = re.fullmatch(line, " *(\\S+) +(\\S+) +(\\S+) *")
+            if m is not None:
+                try:
+                    obj = DynObject()
+                    obj.bSucceed = bool(m.group(1))
+                    if m.group(2) == "none":
+                        obj.startTime = None
+                    else:
+                        obj.startTime = datetime.strptime(m.group(2), McUtil.stdTmFmt())
+                    obj.endTime = datetime.strptime(m.group(3), McUtil.stdTmFmt())
+                    self._updateInfoList.append(obj)
+                except ValueError:
+                    pass
 
     def _saveToFile(self):
         with open(self._updateFn, "w") as f:
-            if self._lastUpdateSuccessful:
-                f.write("last-update-successful\n")
-            else:
-                f.write("last-update-failed\n")
-            f.write("\n")
-
-            f.write("# start-time             end-time\n")
+            f.write("# is-successful             start-time             end-time\n")
             for item in self._updateInfoList:
-                if item.startTime == "none":
-                    f.write("  none                   " + item.endTime.strftime(McUtil.stdTmFmt()) + "\n")
+                if item.bSucceed:
+                    f.write("  true                      ")
                 else:
-                    f.write("  " + item.startTime.strftime(McUtil.stdTmFmt()) + "    " + item.endTime.strftime(McUtil.stdTmFmt()) + "\n")
+                    f.write("  false                     ")
+                if item.startTime is None:
+                    f.write("  none                   ")
+                else:
+                    f.write("  " + item.startTime.strftime(McUtil.stdTmFmt()) + "    ")
+                if True:
+                    f.write(item.endTime.strftime(McUtil.stdTmFmt()) + "\n")
 
     def _calcAverageDuration(self):
         if len(self._updateInfoList) == 0:
             self._averageUpdateDuration = 1
-        elif len(self._updateInfoList) > 0 and self._updateInfoList[-1].startTime == "none":
+        elif len(self._updateInfoList) > 0 and self._updateInfoList[-1].startTime is None:
             assert len(self._updateInfoList) == 1
             self._averageUpdateDuration = 1
         else:
-            self._averageUpdateDuration = statistics.mean([(x.endTime - x.startTime).total_seconds() // 60 for x in self._updateInfoList])
+            self._averageUpdateDuration = statistics.mean([(x.endTime - x.startTime).total_seconds() // 60 for x in self._updateInfoList if x.bSuccess])
             self._averageUpdateDuration = min(1, int(self._averageUpdateDuration))
