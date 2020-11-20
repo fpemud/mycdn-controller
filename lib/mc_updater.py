@@ -236,9 +236,14 @@ class _OneMirrorSiteUpdater:
             self.updateHistory.updateFinished(False, self.schedDatetime, curDt)
             self._clearVars()
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATE_FAIL
-            logging.error("Mirror site \"%s\" update failed (code: %d)." % (self.mirrorSite.id, e.code))
             if not bStop:
-                self._retryUpdate(curDt)
+                newDt = self._retryUpdate(curDt)
+            else:
+                newDt = None
+            if newDt is not None:
+                logging.error("Mirror site \"%s\" update failed (code: %d), re-update is scheduled at %s." % (self.mirrorSite.id, e.code, newDt.strftime("%Y-%m-%d %H:%M:%S")))
+            else:
+                logging.error("Mirror site \"%s\" update failed (code: %d)." % (self.mirrorSite.id, e.code))
 
     def maintainStart(self):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
@@ -402,10 +407,18 @@ class _OneMirrorSiteUpdater:
     def _retryUpdate(self, finishDatetime):
         if self.mirrorSite.updateRetryType == "interval":
             newDt = finishDatetime + self.mirrorSite.updateRetryInterval
-            self.scheduler.triggerJobAt(self.mirrorSite.id, newDt)
         elif self.mirrorSite.updateRetryType == "cronexpr":
             newDt = croniter(self.mirrorSite.updateRetryCronExpr, finishDatetime, datetime).get_next()
-            self.scheduler.triggerJobAt(self.mirrorSite.id, newDt)
+        else:
+            newDt = None
+
+        if newDt is not None:
+            if self.scheduler.triggerJobAt(self.mirrorSite.id, newDt):
+                return newDt
+            else:
+                return None
+        else:
+            return None
 
     def _reMaintainCallback(self):
         del self.reMaintainHandler
@@ -542,12 +555,18 @@ class _Scheduler:
         if untilDatetime > self.jobInfoDict[jobId][1]:
             self.jobInfoDict[jobId][1] = untilDatetime
             self._timeoutMayBecomeLate()
+            return True
+        else:
+            return False
 
     def triggerJobAt(self, jobId, triggerDatetime):
         assert jobId in self.jobDict
         if triggerDatetime < self.jobInfoDict[jobId][1]:
             self.jobInfoDict[jobId][1] = triggerDatetime
             self._timeoutMayBecomeEarly(jobId)
+            return True
+        else:
+            return False
 
     def triggerJobNow(self, jobId):
         assert jobId in self.jobDict
