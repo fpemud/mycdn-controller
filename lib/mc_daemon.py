@@ -11,6 +11,7 @@ import socket
 import logging
 import asyncio
 import asyncio_glib
+from gi.repository import GLib
 from mc_util import McUtil
 from mc_util import DropPriviledge
 from mc_util import StdoutRedirector
@@ -79,8 +80,8 @@ class McDaemon:
 
                     # start main loop
                     logging.info("Mainloop begins.")
-                    self.param.mainloop.add_signal_handler(signal.SIGINT, self._sigHandlerINT)
-                    self.param.mainloop.add_signal_handler(signal.SIGTERM, self._sigHandlerTERM)
+                    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self._sigHandlerINT, None)
+                    GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, self._sigHandlerTERM, None)
                     self.param.mainloop.run_forever()
                     logging.info("Mainloop exits.")
                 finally:
@@ -121,12 +122,12 @@ class McDaemon:
                 raise Exception("only \"location\" specified in main config file")
             self.param.mainCfg["location"] = dataObj["location"]
 
-    def _sigHandlerINT(self):
+    def _sigHandlerINT(self, signum):
         logging.info("SIGINT received.")
         self.param.mainloop.stop()
         return True
 
-    def _sigHandlerTERM(self):
+    def _sigHandlerTERM(self, signum):
         logging.info("SIGTERM received.")
         self.param.mainloop.stop()
         return True
