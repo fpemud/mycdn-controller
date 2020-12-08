@@ -18,9 +18,7 @@ from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
 from mc_param import McConst
 from mc_plugin import McPluginManager
-from mc_slave_servers import McSlaveServers
 from mc_updater import McMirrorSiteUpdater
-from mc_advertiser import McAdvertiser
 
 
 class McDaemon:
@@ -55,18 +53,12 @@ class McDaemon:
                     # write pid file
                     McUtil.writePidFile(McConst.pidFile)
 
-                    # load plugins
-                    self.pluginManager = McPluginManager(self.param)
-                    self.pluginManager.loadPlugins()
-                    logging.info("Plugins loaded: %s" % (",".join(sorted(self.param.pluginList))))
-
-                    # advertiser
-                    self.param.advertiser = McAdvertiser(self.param)
-                    logging.info("Master server started.")
-
-                    # slave servers
-                    # McSlaveServers object shows log messages by itself
-                    self.param.slaveServers = McSlaveServers(self.param)
+                    # load plugin, storage, advertiser
+                    self.param.pluginManager = McPluginManager(self.param)
+                    self.param.pluginManager.loadMirrorSitePlugins()
+                    logging.info("Mirror site plugins loaded: %s" % (",".join(sorted(self.param.pluginManager.getMirrorSitePluginNameList()))))
+                    self.param.pluginManager.loadStorageObjects()           # log by itself
+                    self.param.pluginManager.loadAdvertiserObjects()        # log by itself
 
                     # updater
                     self.param.updater = McMirrorSiteUpdater(self.param)
@@ -89,10 +81,10 @@ class McDaemon:
                         self.param.avahiObj.stop()
                     if self.param.updater is not None:
                         self.param.updater.dispose()
-                    if self.param.slaveServers is not None:
-                        self.param.slaveServers.dispose()
-                    if self.param.advertiser is not None:
-                        self.param.advertiser.dispose()
+                    for obj in self.param.advertiserDict.values():
+                        obj.dispose()
+                    for obj in self.param.storageDict.values():
+                        obj.dispose()
                     logging.shutdown()
         finally:
             shutil.rmtree(McConst.tmpDir)

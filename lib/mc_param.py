@@ -11,6 +11,8 @@ class McConst:
     etcDir = "/etc/mirrors"
     libDir = "/usr/lib64/mirrors"
     libexecDir = "/usr/libexec/mirrors"
+    storageDir = os.path.join(libDir, "storage")
+    advertiserDir = os.path.join(libDir, "advertiser")
     pluginsDir = os.path.join(libDir, "plugins")
 
     varDir = "/var/lib/mirrors"
@@ -39,9 +41,6 @@ class McConst:
 class McParam:
 
     def __init__(self):
-        self.pluginList = []
-        self.mirrorSiteDict = dict()
-
         self.listenIp = "0.0.0.0"
         self.mainPort = 2300
         self.webAcceptForeign = True
@@ -55,7 +54,8 @@ class McParam:
         # objects
         self.mainloop = None
         self.pluginManager = None
-        self.slaveServers = None
+        self.mirrorSiteDict = dict()
+        self.storageDict = dict()
+        self.advertiserDict = dict()
         self.avahiObj = None
         self.updater = None
-        self.advertiser = None

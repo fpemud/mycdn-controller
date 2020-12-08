@@ -18,6 +18,7 @@ import socket
 import hashlib
 import logging
 import traceback
+import importlib
 import subprocess
 from gi.repository import GLib
 from OpenSSL import crypto
@@ -25,6 +26,15 @@ from dbus.mainloop.glib import DBusGMainLoop
 
 
 class McUtil:
+
+    @staticmethod
+    def loadPythonFile(filename):
+        # returns (mod-name,mod-object)
+        modname = os.path.basename(filename).replace('.py', '').replace('-', '_')
+        spec = importlib.util.spec_from_file_location(modname, filename)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return (modname, mod)
 
     @staticmethod
     def stdTmFmt():

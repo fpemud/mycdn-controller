@@ -61,8 +61,8 @@ storage-with-integrated-advertiser arguments:
         MIRROR-SITE-ID: {
             "plugin-directory": "",
             "state-directory": "",
+            "data-directory": "",
             "config-xml": "",
-            "advertiser-config-xml": "",
         }
     },
 }
@@ -122,6 +122,4 @@ class StorageWithIntegratedAdvertiser:
     def advertise_mirror_site(self, mirror_site_id):
         pass
 
-
-tostring(node, encoding="unicode")
 

@@ -5,14 +5,10 @@ import os
 import re
 import glob
 import json
-import sqlparse
 import lxml.etree
 from datetime import timedelta
-from collections import OrderedDict
 from mc_util import McUtil
-from mc_util import DynObject
 from mc_param import McConst
-from mc_advertiser import McAdvertiser
 
 
 class McPluginManager:
@@ -20,7 +16,10 @@ class McPluginManager:
     def __init__(self, param):
         self.param = param
 
-    def loadPlugins(self):
+    def getMirrorSitePluginNameList(self):
+        return os.listdir(McConst.pluginsDir)
+
+    def loadMirrorSitePlugins(self):
         for fn in glob.glob(McConst.pluginCfgFileGlobPattern):
             pluginName = McUtil.rreplace(os.path.basename(fn).replace("plugin-", "", 1), ".conf", "", 1)
             pluginPath = os.path.join(McConst.pluginsDir, pluginName)
@@ -31,9 +30,45 @@ class McPluginManager:
                 buf = f.read()
                 if buf != "":
                     pluginCfg = json.loads(buf)
-            self._load(pluginName, pluginPath, pluginCfg)
+            self._loadOnePlugin(pluginName, pluginPath, pluginCfg)
 
-    def _load(self, name, path, cfgDict):
+    def getStorageNameList(self):
+        return os.listdir(McConst.storageDir)
+
+    def loadStorageObjects(self):
+        nameDict = dict()
+        for msId, msObj in self.param.mirrorSiteDict.items():
+            for st in msObj.storageXmlDict.keys():
+                if st not in nameDict:
+                    nameDict[st] = []
+                nameDict[st].add(msId)
+
+        nameList = sorted(list(nameDict.keys()))
+        if "file" in nameList:
+            # always load built-in storage object first
+            nameList.remove("file")
+            nameList.insert(0, "file")
+
+        for st in nameList:
+            obj = self._loadOneStorageObject(st, os.path.join(McConst.storageDir, st), nameDict[st])
+            self.param.storageDict[st] = obj
+
+    def getAdvertiserNameList(self):
+        return os.listdir(McConst.advertiserDir)
+
+    def loadAdvertiserObjects(self):
+        nameDict = dict()
+        for msId, msObj in self.param.mirrorSiteDict.items():
+            for st in msObj.advertiserXmlDict.keys():
+                if st not in nameDict:
+                    nameDict[st] = []
+                nameDict[st].add(msId)
+
+        for name in sorted(list(nameDict.keys())):
+            obj = self._loadOneAdvertiserObject(st, os.path.join(McConst.advertiserDir, name), nameDict[name])
+            self.param.advertiserDict[st] = obj
+
+    def _loadOnePlugin(self, name, path, cfgDict):
         # get metadata.xml file
         metadata_file = os.path.join(path, "metadata.xml")
         if not os.path.exists(metadata_file):
@@ -63,8 +98,80 @@ class McPluginManager:
             assert obj.id not in self.param.mirrorSiteDict
             self.param.mirrorSiteDict[obj.id] = obj
 
-        # record plugin id
-        self.param.pluginList.append(rootElem.get("id"))
+    def _loadOneStorageObject(self, name, path, mirrorSiteIdList):
+        # get metadata.xml file
+        metadata_file = os.path.join(path, "metadata.xml")
+        if not os.path.exists(metadata_file):
+            raise Exception("storage %s has no metadata.xml" % (name))
+        if not os.path.isfile(metadata_file):
+            raise Exception("metadata.xml for storage %s is not a file" % (name))
+        if not os.access(metadata_file, os.R_OK):
+            raise Exception("metadata.xml for storage %s is invalid" % (name))
+
+        # check metadata.xml file content
+        # FIXME
+        rootElem = lxml.etree.parse(metadata_file)
+        fn = rootElem.xpath(".//file")[0]
+        klass = rootElem.xpath(".//class")[0]
+        bAdvertiser = (len(rootElem.xpath(".//with-integrated-advertiser")) > 0)
+
+        # prepare storage initialization parameter
+        param = {
+            "mirror-sites": dict(),
+        }
+        if bAdvertiser:
+            param.update({
+                "listen-ip": "",            # FIXME
+                "tmp-directory": "",        # FIXME
+                "log-directory": "",        # FIXME
+            })
+        for msId in mirrorSiteIdList:
+            param["mirror-sites"][msId] = {
+                "plugin-directory": "",
+                "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
+                "data-directory": self.param.mirrorSiteDict[msId].getDataDirForStorage(name),
+                "config-xml": self.param.mirrorSiteDict[msId].storageXmlDict[name],
+            }
+
+        # create object
+        fn = os.path.join(path, fn)
+        return exec("McUtil.loadPythonFile(fn).%s(param)" % (klass))
+
+    def _loadOneAdvertiserObject(self, name, path, mirrorSiteIdList):
+        # get metadata.xml file
+        metadata_file = os.path.join(path, "metadata.xml")
+        if not os.path.exists(metadata_file):
+            raise Exception("advertiser %s has no metadata.xml" % (name))
+        if not os.path.isfile(metadata_file):
+            raise Exception("metadata.xml for advertiser %s is not a file" % (name))
+        if not os.access(metadata_file, os.R_OK):
+            raise Exception("metadata.xml for advertiser %s is invalid" % (name))
+
+        # check metadata.xml file content
+        # FIXME
+        rootElem = lxml.etree.parse(metadata_file)
+        fn = rootElem.xpath(".//file")[0]
+        klass = rootElem.xpath(".//class")[0]
+
+        # prepare advertiser initialization parameter
+        param = {
+            "listen-ip": "",            # FIXME
+            "tmp-directory": "",        # FIXME
+            "log-directory": "",        # FIXME
+            "mirror-sites": dict(),
+        }
+        for msId in mirrorSiteIdList:
+            param["mirror-sites"][msId] = {
+                "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
+                "config-xml": self.param.mirrorSiteDict[msId].storageXmlDict[name],
+                "storage-param": dict()
+            }
+            for st in self.param.mirrorSiteDict[msId].storageXmlDict.keys():
+                param["mirror-sites"]["storage-param"][st] = self.param.storageDict[st].get_param(msId)
+
+        # create object
+        fn = os.path.join(path, fn)
+        return exec("McUtil.loadPythonFile(fn).%s(param)" % (klass))
 
 
 class McMirrorSite:
@@ -88,40 +195,24 @@ class McMirrorSite:
         McUtil.ensureDir(self.pluginStateDir)
 
         # storage
-        self.storageDict = dict()
+        self.storageXmlDict = dict()
         for child in rootElem.xpath(".//storage"):
             st = child.get("type")
-            if st not in ["file", "git", "mariadb"]:
+            if st not in self.param.pluginManager.getStorageNameList():
                 raise Exception("mirror site %s: invalid storage type %s" % (self.id, st))
-
-            self.storageDict[st] = DynObject()
-            self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
-            self.storageDict[st].pluginParam = {"data-directory": self.storageDict[st].dataDir}
-            McUtil.ensureDir(self.storageDict[st].dataDir)
-
-            if st == "mariadb":
-                self.storageDict[st].tableInfo = OrderedDict()
-                tl = child.xpath(".//database-schema")
-                if len(tl) > 0:
-                    databaseSchemaFile = os.path.join(pluginDir, tl[0].text)
-                    for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
-                        m = re.match("^CREATE +TABLE +(\\S+)", sql)
-                        if m is None:
-                            raise Exception("mirror site %s: invalid database schema for storage type %s" % (self.id, st))
-                        self.storageDict[st].tableInfo[m.group(1)] = (-1, sql)
+            # record inner xml
+            self.storageXmlDict[st] = child.text + ''.join(lxml.etree.tostring(x) for x in child)
+            # create data directory
+            McUtil.ensureDir(self.getDataDirForStorage(st))
 
         # advertiser
-        self.advertiseDict = dict()
-        for child in rootElem.xpath(".//advertiser")[0].xpath(".//interface"):
-            if ":" in child.text:
-                advertiserName, interface = McUtil.splitToTuple(child.text, ":")
-            else:
-                advertiserName, interface = child.text, child.text
-            if not all(x in self.storageDict.keys() for x in McAdvertiser.storageDependencyOfAdvertiser(advertiserName)):
-                raise Exception("mirror site %s: lack storage for advertiser %s" % (self.id, advertiserName))
-            if advertiserName not in self.advertiseDict:
-                self.advertiseDict[advertiserName] = []
-            self.advertiseDict[advertiserName].append(interface)
+        self.advertiserXmlDict = dict()
+        for child in rootElem.xpath(".//advertiser"):
+            st = child.get("type")
+            if st not in self.param.pluginManager.getAdvertiserNameList():
+                raise Exception("mirror site %s: invalid advertiser type %s" % (self.id, st))
+            # record inner xml
+            self.advertiserXmlDict[st] = child.text + ''.join(lxml.etree.tostring(x) for x in child)
 
         # initializer
         self.initializerExe = None
@@ -173,6 +264,9 @@ class McMirrorSite:
             if len(slist) > 0:
                 self.maintainerExe = slist[0].xpath(".//executable")[0].text
                 self.maintainerExe = os.path.join(pluginDir, self.maintainerExe)
+
+    def getDataDirForStorage(self, storageName):
+        return os.path.join(self.masterDir, "storage-%s" % (storageName))
 
     def _parseInterval(self, intervalStr):
         m = re.match("([0-9]+)(h|d|w|m)", intervalStr)

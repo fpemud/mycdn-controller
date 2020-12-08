@@ -388,7 +388,8 @@ class _OneMirrorSiteUpdater:
         return False
 
     def _postInit(self, finishDatetime):
-        self.invoker.add(lambda: self.param.advertiser.advertiseMirrorSite(self.mirrorSite.id))
+        for name in self.mirrorSite.advertiserXmlDict.keys():
+            self.invoker.add(lambda: self.param.advertiserDict[name].advertise_mirror_site(self.mirrorSite.id))
         if self.mirrorSite.updaterExe is not None:
             if self.mirrorSite.schedType == "interval":
                 self.scheduler.addIntervalJob(self.mirrorSite.id, finishDatetime, self.mirrorSite.schedInterval, self.updateStart)
