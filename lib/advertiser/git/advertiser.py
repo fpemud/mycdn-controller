@@ -49,10 +49,10 @@ class Advertiser:
             self._port = None
         _Util.forceDelete(self._virtRootDir)
 
-    def advertiseMirrorSite(self, mirrorSiteId):
-        assert mirrorSiteId in self._mirrorSiteDict
-        realPath = self._mirrorSiteDict[mirrorSiteId]["storage-param"]["file"]["data-directory"]
-        os.symlink(realPath, os.path.join(self._virtRootDirFile, mirrorSiteId))
+    def advertise_mirror_site(self, mirror_site_id):
+        assert mirror_site_id in self._mirrorSiteDict
+        realPath = self._mirrorSiteDict[mirror_site_id]["storage-param"]["file"]["data-directory"]
+        os.symlink(realPath, os.path.join(self._virtRootDirFile, mirror_site_id))
 
 
 class _Util:

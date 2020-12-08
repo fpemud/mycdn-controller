@@ -123,7 +123,7 @@ class Advertiser:
     def dispose(self):
         pass
 
-    def advertiseMirrorSite(self, mirrorSiteId):
+    def advertise_mirror_site(self, mirror_site_id):
         pass
 
 

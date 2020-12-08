@@ -48,9 +48,9 @@ class Advertiser:
         if self._port is not None:
             self._port = None
 
-    def advertiseMirrorSite(self, mirrorSiteId):
-        assert mirrorSiteId in self._mirrorSiteDict
-        self._advertisedMirrorSiteIdList.append(mirrorSiteId)
+    def advertise_mirror_site(self, mirror_site_id):
+        assert mirror_site_id in self._mirrorSiteDict
+        self._advertisedMirrorSiteIdList.append(mirror_site_id)
         self._generateCfgFile()
         os.kill(self._proc.pid, signal.SIGUSR1)
 
