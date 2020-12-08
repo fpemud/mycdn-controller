@@ -1,40 +1,3 @@
-region_1: {
-    country_1: {
-        url_1,
-        url_2,
-        url_3,
-    },
-    country_2: {
-        geolocation_1: {
-            url_1,
-            url_2,
-            url_3,
-        },
-        geolocation_2: {
-            url_1,
-            url_2,
-            url_3,
-        },
-    },
-}
-
-
-region:
-1. north-america
-2. south-america
-3. europe
-4. austrialia
-5. asia
-6. middle-east
-
-
-location type is per contry.
-
-
-
-
-
-
 
 updater arguments:
 {
@@ -63,8 +26,8 @@ advertiser arguments:
     "log-directory": ""
     "mirror-sites": {
         MIRROR-SITE-ID: {
-            "master-directory": "",
             "config-xml": "",
+            "state-directory": "",
             "storage-param": {
                 "file": {
                     ...
@@ -82,7 +45,8 @@ storage arguments:
     "mirror-sites": {
         MIRROR-SITE-ID: {
             "plugin-directory": "",
-            "master-directory": "",
+            "state-directory": "",
+            "data-directory": "",
             "config-xml": "",
         }
     },
@@ -96,7 +60,7 @@ storage-with-integrated-advertiser arguments:
     "mirror-sites": {
         MIRROR-SITE-ID: {
             "plugin-directory": "",
-            "master-directory": "",
+            "state-directory": "",
             "config-xml": "",
             "advertiser-config-xml": "",
         }
@@ -108,6 +72,11 @@ storage-with-integrated-advertiser arguments:
 storage-file
 {
     "data-directory": ""
+}
+storage-mariadb
+{
+    "port": -1
+    "database": ""
 }
 
 

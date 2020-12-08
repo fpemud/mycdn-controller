@@ -20,8 +20,6 @@ class StorageWithIntegratedAdvertiser:
 
         # create data directory and table information structure
         for msId in self._mirrorSiteDict:
-            # create data directory
-            _Util.ensureDir(self._dataDir(msId))
             # create table information structure
             self._tableInfoDict[msId] = dict()
             if True:
@@ -40,7 +38,7 @@ class StorageWithIntegratedAdvertiser:
             self._mariadbServer = _MultiInstanceMariadbServer(self._listenIp, self._tmpDir, self._logDir)
             self._mariadbServer.start()
             for msId in self._mirrorSiteDict:
-                self._mariadbServer.addDatabaseDir(msId, self._dataDir(msId), self._tableInfoDict[msId], None, None)
+                self._mariadbServer.addDatabaseDir(msId, self._mirrorSiteDict[msId]["data-directory"], self._tableInfoDict[msId], None, None)
         except Exception:
             self.dispose()
             raise
@@ -51,6 +49,7 @@ class StorageWithIntegratedAdvertiser:
             self._mariadbServer = None
 
     def get_param(self, mirror_site_id):
+        assert mirror_site_id in self._mirrorSiteDict
         return {
             "port": self._mariadbServer.port,
             "database": mirror_site_id,
@@ -58,9 +57,6 @@ class StorageWithIntegratedAdvertiser:
 
     def advertise_mirror_site(self, mirror_site_id):
         self._mariadbServer.exportDatabase(mirror_site_id)
-
-    def _dataDir(self, mirrorSiteId):
-        return os.path.join(self._mirrorSiteDict[mirrorSiteId]["master-directory"], "storage-file")
 
 
 class _MultiInstanceMariadbServer:

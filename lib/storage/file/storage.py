@@ -8,24 +8,12 @@ class Storage:
 
     def __init__(self, param):
         self._mirrorSiteDict = param["mirror-sites"]
-        for msId in self._mirrorSiteDict:
-            _Util.ensureDir(self._dataDir(msId))
 
     def dispose(self):
         pass
 
     def get_param(self, mirror_site_id):
+        assert mirror_site_id in self._mirrorSiteDict
         return {
-            "data-directory": self._dataDir(mirror_site_id),
+            "data-directory": self._mirrorSiteDict[mirror_site_id]["data-directory"],
         }
-
-    def _dataDir(self, mirrorSiteId):
-        return os.path.join(self._mirrorSiteDict[mirrorSiteId]["master-directory"], "storage-file")
-
-
-class _Util:
-
-    @staticmethod
-    def ensureDir(dirname):
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
