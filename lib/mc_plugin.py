@@ -121,11 +121,11 @@ class McPluginManager:
         }
         if bAdvertiser:
             param.update({
-                "listen-ip": "",            # FIXME
-                "temp-directory": "",       # FIXME
-                "log-directory": "",        # FIXME
-                "log-file-size": -1,
-                "log-file-count": -1,
+                "listen-ip": self.param.listenIp,
+                "temp-directory": McConst.tmpDir,
+                "log-directory": McConst.logDir,
+                "log-file-size": 100000,                # FIXME
+                "log-file-count": 3,                    # FIXME
             })
         for msId in mirrorSiteIdList:
             param["mirror-sites"][msId] = {
@@ -157,11 +157,11 @@ class McPluginManager:
 
         # prepare advertiser initialization parameter
         param = {
-            "listen-ip": "",            # FIXME
-            "temp-directory": "",        # FIXME
-            "log-directory": "",        # FIXME
-            "log-file-size": -1,
-            "log-file-count": -1,
+            "listen-ip": self.param.listenIp,
+            "temp-directory": McConst.tmpDir,
+            "log-directory": McConst.logDir,
+            "log-file-size": 100000,                # FIXME
+            "log-file-count": 3,                    # FIXME
             "mirror-sites": dict(),
         }
         for msId in mirrorSiteIdList:
@@ -175,7 +175,6 @@ class McPluginManager:
 
         # create object
         modname, mod = McUtil.loadPythonFile(os.path.join(path, fn))
-        print(name)
         return eval("mod.%s(param)" % (klass))
 
 
