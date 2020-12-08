@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<storage-engine>
-  <file>storage.py</file>
-  <class>StorageEngine</class>
-</storage-engine>

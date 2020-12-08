@@ -36,10 +36,123 @@ location type is per contry.
 
 
 
+updater arguments:
+{
+    "id": self.mirrorSite.id,
+    "config": self.mirrorSite.cfgDict,
+    "state-directory": self.mirrorSite.pluginStateDir,
+    "log-directory": logDir,
+    "debug-flag": "",
+    "country": self.param.mainCfg["country"],
+    "location": self.param.mainCfg["location"],
+    "run-mode": "init", "update", "maintain",
+    "storage-file": {
+        ...
+    },
+    "storage-mariadb": {
+        ...
+    },
+}
 
 
 
+advertiser arguments:
+{
+    "listen-ip": ""
+    "tmp-directory": ""
+    "log-directory": ""
+    "mirror-sites": {
+        MIRROR-SITE-ID: {
+            "master-directory": "",
+            "config-xml": "",
+            "storage-param": {
+                "file": {
+                    ...
+                },
+                "mariadb": {
+                    ...
+                },
+            }
+        },
+    }
+}
+
+storage arguments:
+{
+    "mirror-sites": {
+        MIRROR-SITE-ID: {
+            "plugin-directory": "",
+            "master-directory": "",
+            "config-xml": "",
+        }
+    },
+}
+
+storage-with-integrated-advertiser arguments:
+{
+    "listen-ip": ""
+    "tmp-directory": ""
+    "log-directory": ""
+    "mirror-sites": {
+        MIRROR-SITE-ID: {
+            "plugin-directory": "",
+            "master-directory": "",
+            "config-xml": "",
+            "advertiser-config-xml": "",
+        }
+    },
+}
 
 
 
+storage-file
+{
+    "data-directory": ""
+}
+
+
+class Advertiser:
+
+    def __init__(self, param):
+        pass
+
+    @property                   FIXME
+    def port(self):
+        return self._port
+
+    def dispose(self):
+        pass
+
+    def advertiseMirrorSite(self, mirrorSiteId):
+        pass
+
+
+class Storage:
+
+    def __init__(self, param):
+        pass
+
+    def dispose(self):
+        pass
+
+    def get_param(self, mirror_site_id):
+        return dict()
+
+
+class StorageWithIntegratedAdvertiser:
+
+    def __init__(self, param):
+        pass
+
+    def dispose(self):
+        pass
+
+    def get_param(self, mirror_site_id):
+        return dict()
+
+    def advertise_mirror_site(self, mirror_site_id):
+        pass
+
+
+tostring(node, encoding="unicode")
 

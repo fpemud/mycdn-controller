@@ -3,79 +3,64 @@
 
 import os
 import re
-import json
-import time
-import shutil
-import signal
-import socket
 import logging
+import sqlparse
+import lxml.etree
 import subprocess
 
 
-class StorageEngine:
+class StorageWithIntegratedAdvertiser:
 
-    def __init__(self, listenIp, tmpDir, logDir):
-        self._listenIp = listenIp
-        self._tmpDir = tmpDir
-        self._logDir = logDir
+    def __init__(self, param):
+        self._listenIp = param["listen-ip"]
+        self._tmpDir = param["tmp-directory"]
+        self._logDir = param["log-directory"]
+        self._mirrorSiteDict = param["mirror-sites"]
+        self._tableInfoDict = dict()
 
-        self._bStart = False
-        self._mariadbServer = None 
+        # create data directory and table information structure
+        for msId in self._mirrorSiteDict:
+            # create data directory
+            _Util.ensureDir(self._dataDir(msId))
+            # create table information structure
+            self._tableInfoDict[msId] = dict()
+            if True:
+                xmlElem = lxml.etree.fromstring(self._mirrorSiteDict[msId]["config-xml"])
+                tl = xmlElem.xpath(".//database-schema")
+                if len(tl) > 0:
+                    dbSchemaFile = os.path.join(self._mirrorSiteDict[msId]["plugin-directory"], tl[0].text)
+                    for sql in sqlparse.split(_Util.readFile(dbSchemaFile)):
+                        m = re.match("^CREATE +TABLE +(\\S+)", sql)
+                        if m is None:
+                            raise Exception("mirror site %s: invalid mariadb database schema" % (msId))
+                        self._tableInfoDict[msId][m.group(1)] = (-1, sql)
 
-        self._mirrorSiteDict = dict()
+        self._mariadbServer = None
+        try:
+            self._mariadbServer = _MultiInstanceMariadbServer(self._listenIp, self._tmpDir, self._logDir)
+            self._mariadbServer.start()
+            for msId in self._mirrorSiteDict:
+                self._mariadbServer.addDatabaseDir(msId, self._dataDir(msId), self._tableInfoDict[msId], None, None)
+        except Exception:
+            self.dispose()
+            raise
 
-    def addMirrorSite(self, mirrorSiteId, masterDir, xmlElem):
-        assert not self._bStart
-
-        msParam = _Param()
-        msParam.masterDir = masterDir
-        msParam.dataDir = os.path.join(masterDir, "storage-mariadb")
-
-        tl = xmlElem.xpathEval(".//database-schema")
-        if len(tl) > 0:
-            databaseSchemaFile = os.path.join(pluginDir, tl[0].getContent())
-            for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
-                m = re.match("^CREATE +TABLE +(\\S+)", sql)
-                if m is None:
-                    raise Exception("mirror site %s: invalid database schema for storage type %s" % (self.id, st))
-                msParam.tableInfo[m.group(1)] = (-1, sql)
-
-    def start(self):
-        assert not self._bStart
-
-        for msId, msParam in self._mirrorSiteDict.items():
-            _Util.ensureDir(self._mirrorSiteDict[msId].dataDir)
-            if self._mariadbServer is None:
-                self._mariadbServer = _MultiInstanceMariadbServer(self._listenIp, self._tmpDir, self._logDir)
-                self._mariadbServer.start()
-        self._bStart = True
-
-    def stop(self):
-        assert self._bStart
-
-        self._bStart = False
+    def dispose(self):
         if self._mariadbServer is not None:
             self._mariadbServer.stop()
             self._mariadbServer = None
 
-    def getPluginParam(self, mirrorSiteId):
-        assert self._bStart
-
+    def get_param(self, mirror_site_id):
         return {
-            "data-directory": self._mirrorSiteDict[mirrorSiteId].dataDir,
+            "port": self._mariadbServer.port,
+            "database": mirror_site_id,
         }
 
-    def advertiseMirrorSite(self, mirrorSiteId):
-        assert self._bStart
-        self._mariadbServer.exportDatabase(mirrorSiteId)
+    def advertise_mirror_site(self, mirror_site_id):
+        self._mariadbServer.exportDatabase(mirror_site_id)
 
-
-class _Param:
-
-    def __init__(self):
-        self.masterDir = None
-        self.dataDir = None
-        self.tableInfo = OrderedDict()
+    def _dataDir(self, mirrorSiteId):
+        return os.path.join(self._mirrorSiteDict[mirrorSiteId]["master-directory"], "storage-file")
 
 
 class _MultiInstanceMariadbServer:
@@ -114,7 +99,6 @@ class _MultiInstanceMariadbServer:
     def addDatabaseDir(self, databaseName, dataDir, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile):
         # tableInfo is OrderedDict, content format: { "table-name": ( block-size, "table-schema" ) }
         assert self._bStarted
-        assert _checkNameAndRealPath(self._dirDict, databaseName, dataDir)
 
         cfgFile = os.path.join(McConst.tmpDir, "mariadb-%s.cnf" % (databaseName))
         socketFile = os.path.join(McConst.tmpDir, "mariadb-%s.socket" % (databaseName))

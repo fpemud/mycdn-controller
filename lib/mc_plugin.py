@@ -5,8 +5,8 @@ import os
 import re
 import glob
 import json
-import libxml2
 import sqlparse
+import lxml.etree
 from datetime import timedelta
 from collections import OrderedDict
 from mc_util import McUtil
@@ -45,7 +45,7 @@ class McPluginManager:
 
         # check metadata.xml file content
         # FIXME
-        tree = libxml2.parseFile(metadata_file)
+        rootElem = lxml.etree.parse(metadata_file)
         # if True:
         #     dtd = libxml2.parseDTD(None, constants.PATH_PLUGIN_DTD_FILE)
         #     ctxt = libxml2.newValidCtxt()
@@ -57,23 +57,20 @@ class McPluginManager:
         #             msg += i
         #         raise exceptions.IncorrectPluginMetaFile(metadata_file, msg)
 
-        # get data from metadata.xml file
-        root = tree.getRootElement()
-
         # create McMirrorSite objects
-        for child in root.xpathEval(".//mirror-site"):
+        for child in rootElem.xpath(".//mirror-site"):
             obj = McMirrorSite(self.param, path, child, cfgDict)
             assert obj.id not in self.param.mirrorSiteDict
             self.param.mirrorSiteDict[obj.id] = obj
 
         # record plugin id
-        self.param.pluginList.append(root.prop("id"))
+        self.param.pluginList.append(rootElem.get("id"))
 
 
 class McMirrorSite:
 
     def __init__(self, param, pluginDir, rootElem, cfgDict):
-        self.id = rootElem.prop("id")
+        self.id = rootElem.get("id")
         self.cfgDict = cfgDict
 
         # persist mode
@@ -92,8 +89,8 @@ class McMirrorSite:
 
         # storage
         self.storageDict = dict()
-        for child in rootElem.xpathEval(".//storage"):
-            st = child.prop("type")
+        for child in rootElem.xpath(".//storage"):
+            st = child.get("type")
             if st not in ["file", "git", "mariadb"]:
                 raise Exception("mirror site %s: invalid storage type %s" % (self.id, st))
 
@@ -104,9 +101,9 @@ class McMirrorSite:
 
             if st == "mariadb":
                 self.storageDict[st].tableInfo = OrderedDict()
-                tl = child.xpathEval(".//database-schema")
+                tl = child.xpath(".//database-schema")
                 if len(tl) > 0:
-                    databaseSchemaFile = os.path.join(pluginDir, tl[0].getContent())
+                    databaseSchemaFile = os.path.join(pluginDir, tl[0].text)
                     for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
                         m = re.match("^CREATE +TABLE +(\\S+)", sql)
                         if m is None:
@@ -115,11 +112,11 @@ class McMirrorSite:
 
         # advertiser
         self.advertiseDict = dict()
-        for child in rootElem.xpathEval(".//advertiser")[0].xpathEval(".//interface"):
-            if ":" in child.getContent():
-                advertiserName, interface = McUtil.splitToTuple(child.getContent(), ":")
+        for child in rootElem.xpath(".//advertiser")[0].xpath(".//interface"):
+            if ":" in child.text:
+                advertiserName, interface = McUtil.splitToTuple(child.text, ":")
             else:
-                advertiserName, interface = child.getContent(), child.getContent()
+                advertiserName, interface = child.text, child.text
             if not all(x in self.storageDict.keys() for x in McAdvertiser.storageDependencyOfAdvertiser(advertiserName)):
                 raise Exception("mirror site %s: lack storage for advertiser %s" % (self.id, advertiserName))
             if advertiserName not in self.advertiseDict:
@@ -129,9 +126,9 @@ class McMirrorSite:
         # initializer
         self.initializerExe = None
         if True:
-            slist = rootElem.xpathEval(".//initializer")
+            slist = rootElem.xpath(".//initializer")
             if len(slist) > 0:
-                self.initializerExe = slist[0].xpathEval(".//executable")[0].getContent()
+                self.initializerExe = slist[0].xpath(".//executable")[0].text
                 self.initializerExe = os.path.join(pluginDir, self.initializerExe)
 
         # updater
@@ -143,38 +140,38 @@ class McMirrorSite:
         self.updateRetryInterval = None    # timedelta
         self.updateRetryCronExpr = None    # string
         if True:
-            slist = rootElem.xpathEval(".//updater")
+            slist = rootElem.xpath(".//updater")
             if len(slist) > 0:
-                self.updaterExe = slist[0].xpathEval(".//executable")[0].getContent()
+                self.updaterExe = slist[0].xpath(".//executable")[0].text
                 self.updaterExe = os.path.join(pluginDir, self.updaterExe)
 
-                tag = slist[0].xpathEval(".//schedule")[0]
-                self.schedType = tag.prop("type")
+                tag = slist[0].xpath(".//schedule")[0]
+                self.schedType = tag.get("type")
                 if self.schedType == "interval":
-                    self.schedInterval = self._parseInterval(tag.getContent())
+                    self.schedInterval = self._parseInterval(tag.text)
                 elif self.schedType == "cronexpr":
-                    self.schedCronExpr = self._parseCronExpr(tag.getContent())
+                    self.schedCronExpr = self._parseCronExpr(tag.text)
                 else:
                     raise Exception("mirror site %s: invalid schedule type %s" % (self.id, self.schedType))
 
-                if len(slist[0].xpathEval(".//retry-after-failure")) > 0:
-                    tag = slist[0].xpathEval(".//retry-after-failure")[0]
-                    self.updateRetryType = tag.prop("type")
+                if len(slist[0].xpath(".//retry-after-failure")) > 0:
+                    tag = slist[0].xpath(".//retry-after-failure")[0]
+                    self.updateRetryType = tag.get("type")
                     if self.updateRetryType == "interval":
-                        self.updateRetryInterval = self._parseInterval(tag.getContent())
+                        self.updateRetryInterval = self._parseInterval(tag.text)
                     elif self.updateRetryType == "cronexpr":
                         if self.schedType == "interval":
                             raise Exception("mirror site %s: invalid retry-after-update type %s" % (self.id, self.updateRetryType))
-                        self.updateRetryCronExpr = self._parseCronExpr(tag.getContent())
+                        self.updateRetryCronExpr = self._parseCronExpr(tag.text)
                     else:
                         raise Exception("mirror site %s: invalid retry-after-update type %s" % (self.id, self.updateRetryType))
 
         # maintainer
         self.maintainerExe = None
         if True:
-            slist = rootElem.xpathEval(".//maintainer")
+            slist = rootElem.xpath(".//maintainer")
             if len(slist) > 0:
-                self.maintainerExe = slist[0].xpathEval(".//executable")[0].getContent()
+                self.maintainerExe = slist[0].xpath(".//executable")[0].text
                 self.maintainerExe = os.path.join(pluginDir, self.maintainerExe)
 
     def _parseInterval(self, intervalStr):
