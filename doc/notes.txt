@@ -22,8 +22,10 @@ updater arguments:
 advertiser arguments:
 {
     "listen-ip": ""
-    "tmp-directory": ""
+    "temp-directory": ""
     "log-directory": ""
+    "log-file-size": -1
+    "log-file-count": -1
     "mirror-sites": {
         MIRROR-SITE-ID: {
             "config-xml": "",
@@ -55,8 +57,10 @@ storage arguments:
 storage-with-integrated-advertiser arguments:
 {
     "listen-ip": ""
-    "tmp-directory": ""
+    "temp-directory": ""
     "log-directory": ""
+    "log-file-size": -1
+    "log-file-count": -1
     "mirror-sites": {
         MIRROR-SITE-ID: {
             "plugin-directory": "",

@@ -38,10 +38,10 @@ class McPluginManager:
     def loadStorageObjects(self):
         nameDict = dict()
         for msId, msObj in self.param.mirrorSiteDict.items():
-            for st in msObj.storageXmlDict.keys():
+            for st in msObj.storageDict:
                 if st not in nameDict:
                     nameDict[st] = []
-                nameDict[st].add(msId)
+                nameDict[st].append(msId)
 
         nameList = sorted(list(nameDict.keys()))
         if "file" in nameList:
@@ -59,10 +59,10 @@ class McPluginManager:
     def loadAdvertiserObjects(self):
         nameDict = dict()
         for msId, msObj in self.param.mirrorSiteDict.items():
-            for st in msObj.advertiserXmlDict.keys():
+            for st in msObj.advertiserDict:
                 if st not in nameDict:
                     nameDict[st] = []
-                nameDict[st].add(msId)
+                nameDict[st].append(msId)
 
         for name in sorted(list(nameDict.keys())):
             obj = self._loadOneAdvertiserObject(st, os.path.join(McConst.advertiserDir, name), nameDict[name])
@@ -111,8 +111,8 @@ class McPluginManager:
         # check metadata.xml file content
         # FIXME
         rootElem = lxml.etree.parse(metadata_file)
-        fn = rootElem.xpath(".//file")[0]
-        klass = rootElem.xpath(".//class")[0]
+        fn = rootElem.xpath(".//file")[0].text
+        klass = rootElem.xpath(".//class")[0].text
         bAdvertiser = (len(rootElem.xpath(".//with-integrated-advertiser")) > 0)
 
         # prepare storage initialization parameter
@@ -122,21 +122,23 @@ class McPluginManager:
         if bAdvertiser:
             param.update({
                 "listen-ip": "",            # FIXME
-                "tmp-directory": "",        # FIXME
+                "temp-directory": "",       # FIXME
                 "log-directory": "",        # FIXME
+                "log-file-size": -1,
+                "log-file-count": -1,
             })
         for msId in mirrorSiteIdList:
             param["mirror-sites"][msId] = {
                 "plugin-directory": "",
                 "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
                 "data-directory": self.param.mirrorSiteDict[msId].getDataDirForStorage(name),
-                "config-xml": self.param.mirrorSiteDict[msId].storageXmlDict[name],
+                "config-xml": self.param.mirrorSiteDict[msId].storageDict[name][0],
             }
 
         # create object
-        fn = os.path.join(path, fn)
-        return exec("McUtil.loadPythonFile(fn).%s(param)" % (klass))
-
+        modname, mod = McUtil.loadPythonFile(os.path.join(path, fn))
+        return eval("mod.%s(param)" % (klass))
+        
     def _loadOneAdvertiserObject(self, name, path, mirrorSiteIdList):
         # get metadata.xml file
         metadata_file = os.path.join(path, "metadata.xml")
@@ -150,33 +152,37 @@ class McPluginManager:
         # check metadata.xml file content
         # FIXME
         rootElem = lxml.etree.parse(metadata_file)
-        fn = rootElem.xpath(".//file")[0]
-        klass = rootElem.xpath(".//class")[0]
+        fn = rootElem.xpath(".//file")[0].text
+        klass = rootElem.xpath(".//class")[0].text
 
         # prepare advertiser initialization parameter
         param = {
             "listen-ip": "",            # FIXME
-            "tmp-directory": "",        # FIXME
+            "temp-directory": "",        # FIXME
             "log-directory": "",        # FIXME
+            "log-file-size": -1,
+            "log-file-count": -1,
             "mirror-sites": dict(),
         }
         for msId in mirrorSiteIdList:
             param["mirror-sites"][msId] = {
                 "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
-                "config-xml": self.param.mirrorSiteDict[msId].storageXmlDict[name],
+                "config-xml": self.param.mirrorSiteDict[msId].advertiserDict[name][0],
                 "storage-param": dict()
             }
-            for st in self.param.mirrorSiteDict[msId].storageXmlDict.keys():
-                param["mirror-sites"]["storage-param"][st] = self.param.storageDict[st].get_param(msId)
+            for st in self.param.mirrorSiteDict[msId].storageDict:
+                param["mirror-sites"][msId]["storage-param"][st] = self.param.storageDict[st].get_param(msId)
 
         # create object
-        fn = os.path.join(path, fn)
-        return exec("McUtil.loadPythonFile(fn).%s(param)" % (klass))
+        modname, mod = McUtil.loadPythonFile(os.path.join(path, fn))
+        print(name)
+        return eval("mod.%s(param)" % (klass))
 
 
 class McMirrorSite:
 
     def __init__(self, param, pluginDir, rootElem, cfgDict):
+        self.param = param
         self.id = rootElem.get("id")
         self.cfgDict = cfgDict
 
@@ -195,24 +201,24 @@ class McMirrorSite:
         McUtil.ensureDir(self.pluginStateDir)
 
         # storage
-        self.storageXmlDict = dict()
+        self.storageDict = dict()                       # {name:(config-xml,data-directory)}
         for child in rootElem.xpath(".//storage"):
             st = child.get("type")
             if st not in self.param.pluginManager.getStorageNameList():
                 raise Exception("mirror site %s: invalid storage type %s" % (self.id, st))
-            # record inner xml
-            self.storageXmlDict[st] = child.text + ''.join(lxml.etree.tostring(x) for x in child)
+            # record outer xml
+            self.storageDict[st] = (lxml.etree.tostring(child, encoding="unicode"), self.getDataDirForStorage(st))
             # create data directory
             McUtil.ensureDir(self.getDataDirForStorage(st))
 
         # advertiser
-        self.advertiserXmlDict = dict()
+        self.advertiserDict = dict()                 # {name:(config-xml)}
         for child in rootElem.xpath(".//advertiser"):
             st = child.get("type")
             if st not in self.param.pluginManager.getAdvertiserNameList():
                 raise Exception("mirror site %s: invalid advertiser type %s" % (self.id, st))
-            # record inner xml
-            self.advertiserXmlDict[st] = child.text + ''.join(lxml.etree.tostring(x) for x in child)
+            # record outer xml
+            self.advertiserDict[st] = (lxml.etree.tostring(child, encoding="unicode"))
 
         # initializer
         self.initializerExe = None

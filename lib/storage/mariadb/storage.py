@@ -13,7 +13,7 @@ class StorageWithIntegratedAdvertiser:
 
     def __init__(self, param):
         self._listenIp = param["listen-ip"]
-        self._tmpDir = param["tmp-directory"]
+        self._tmpDir = param["temp-directory"]
         self._logDir = param["log-directory"]
         self._mirrorSiteDict = param["mirror-sites"]
         self._tableInfoDict = dict()

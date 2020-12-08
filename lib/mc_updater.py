@@ -360,8 +360,8 @@ class _OneMirrorSiteUpdater:
                 "country": self.param.mainCfg["country"],
                 "location": self.param.mainCfg["location"],
             }
-            for storageName, storageObj in self.mirrorSite.storageDict.items():
-                args["storage-" + storageName] = storageObj.pluginParam
+            for storageName in self.mirrorSite.storageDict:
+                args["storage-" + storageName] = self.param.storageDict[storageName].get_param(self.mirrorSite.id)
 
             if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
                 args["run-mode"] = "init"
@@ -388,7 +388,7 @@ class _OneMirrorSiteUpdater:
         return False
 
     def _postInit(self, finishDatetime):
-        for name in self.mirrorSite.advertiserXmlDict.keys():
+        for name in self.mirrorSite.advertiserDict:
             self.invoker.add(lambda: self.param.advertiserDict[name].advertise_mirror_site(self.mirrorSite.id))
         if self.mirrorSite.updaterExe is not None:
             if self.mirrorSite.schedType == "interval":

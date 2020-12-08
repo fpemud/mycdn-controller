@@ -118,7 +118,7 @@ class _Util:
             shutil.rmtree(filename)
 
     @staticmethod
-    def getFreeTcpPort(portType):
+    def getFreeTcpPort():
         for port in range(10000, 65536):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
