@@ -5,7 +5,7 @@
 class Storage:
 
     @staticmethod
-    def getStorageProprites():
+    def get_proprites():
         return {}
 
     def __init__(self, param):

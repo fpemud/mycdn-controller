@@ -102,7 +102,7 @@ class McPluginManager:
 
     def _loadOneStorageObject(self, name, mirrorSiteIdList):
         exec("from storage.%s import Storage" % (name))
-        propDict = eval("Storage.getStorageProprites()")
+        propDict = eval("Storage.get_proprites()")
 
         # prepare storage initialization parameter
         param = {
@@ -125,23 +125,11 @@ class McPluginManager:
             }
 
         # create object
-        return eval("Storage(param")
+        return eval("Storage(param)")
 
     def _loadOneAdvertiserObject(self, name, path, mirrorSiteIdList):
-        # get metadata.xml file
-        metadata_file = os.path.join(path, "metadata.xml")
-        if not os.path.exists(metadata_file):
-            raise Exception("advertiser %s has no metadata.xml" % (name))
-        if not os.path.isfile(metadata_file):
-            raise Exception("metadata.xml for advertiser %s is not a file" % (name))
-        if not os.access(metadata_file, os.R_OK):
-            raise Exception("metadata.xml for advertiser %s is invalid" % (name))
-
-        # check metadata.xml file content
-        # FIXME
-        rootElem = lxml.etree.parse(metadata_file)
-        fn = rootElem.xpath(".//file")[0].text
-        klass = rootElem.xpath(".//class")[0].text
+        exec("from advertiser.%s import Advertiser" % (name))
+        propDict = eval("Advertiser.get_proprites()")
 
         # prepare advertiser initialization parameter
         param = {
@@ -159,11 +147,11 @@ class McPluginManager:
                 "storage-param": dict()
             }
             for st in self.param.mirrorSiteDict[msId].storageDict:
-                param["mirror-sites"][msId]["storage-param"][st] = self.param.storageDict[st].get_param(msId)
+                if st in propDict.get("storage-dependencies", []):
+                    param["mirror-sites"][msId]["storage-param"][st] = self.param.storageDict[st].get_param(msId)
 
         # create object
-        modname, mod = McUtil.loadPythonFile(os.path.join(path, fn))
-        return eval("mod.%s(param)" % (klass))
+        return eval("Advertiser(param)")
 
 
 class McMirrorSite:

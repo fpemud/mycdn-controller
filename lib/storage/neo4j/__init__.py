@@ -5,7 +5,7 @@
 class Storage:
 
     @staticmethod
-    def getStorageProprites():
+    def get_proprites():
         return {
             "with-integrated-advertiser": True,
         }
