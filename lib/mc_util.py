@@ -56,7 +56,9 @@ class McUtil:
         return '*' + r
 
     @staticmethod
-    def readFile(filename):
+    def readFile(filename, defaultContent=None):
+        if not os.path.exists(filename) and defaultContent is not None:
+            return defaultContent
         with open(filename) as f:
             return f.read()
 

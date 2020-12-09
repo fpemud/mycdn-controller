@@ -697,20 +697,30 @@ class _UpdateHistory:
         self._saveToFile()
 
     def _readFromFile(self):
-        if not os.path.exists(self._updateFn):
-            return
-
-        for line in McUtil.readFile(self._updateFn).split("\n"):
+        for line in McUtil.readFile(self._updateFn, defaultContent="").split("\n"):
             m = re.fullmatch(line, " *(\\S+) +(\\S+) +(\\S+) *")
             if m is not None:
                 try:
                     obj = DynObject()
-                    obj.bSuccess = bool(m.group(1))
+
+                    # column 1
+                    if m.group(1) == "true":
+                        obj.bSuccess = True
+                    elif m.group(1) == "false":
+                        obj.bSuccess = False
+                    else:
+                        raise ValueError()
+
+                    # column 2
                     if m.group(2) == "none":
                         obj.startTime = None
                     else:
                         obj.startTime = datetime.strptime(m.group(2), McUtil.stdTmFmt())
+
+                    # column 3
                     obj.endTime = datetime.strptime(m.group(3), McUtil.stdTmFmt())
+
+                    # record data
                     self._updateInfoList.append(obj)
                 except ValueError:
                     pass
