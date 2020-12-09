@@ -1,3 +1,4 @@
 run updater in sandbox
 remove redundant code in storage and advertiser
 support user controlled content deletion
+maintainer notify updating/update-failed status

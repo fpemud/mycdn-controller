@@ -52,7 +52,7 @@ class McPluginManager:
             nameList.insert(0, "file")
 
         for st in nameList:
-            obj = self._loadOneStorageObject(st, os.path.join(McConst.storageDir, st), nameDict[st])
+            obj = self._loadOneStorageObject(st, nameDict[st])
             self.param.storageDict[st] = obj
 
     def getAdvertiserNameList(self):
@@ -67,7 +67,7 @@ class McPluginManager:
                 nameDict[st].append(msId)
 
         for name in sorted(list(nameDict.keys())):
-            obj = self._loadOneAdvertiserObject(st, os.path.join(McConst.advertiserDir, name), nameDict[name])
+            obj = self._loadOneAdvertiserObject(st, nameDict[name])
             self.param.advertiserDict[st] = obj
 
     def _loadOnePlugin(self, name, path, cfgDict):
@@ -128,7 +128,7 @@ class McPluginManager:
         # create object
         return klass(param)
 
-    def _loadOneAdvertiserObject(self, name, path, mirrorSiteIdList):
+    def _loadOneAdvertiserObject(self, name, mirrorSiteIdList):
         module = __import__("advertiser.%s" % (name))
         klass = getattr(module, "Advertiser")
         propDict = klass.get_proprites()
