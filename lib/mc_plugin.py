@@ -32,6 +32,8 @@ class McPluginManager:
                 buf = f.read()
                 if buf != "":
                     pluginCfg = json.loads(buf)
+                else:
+                    pluginCfg = dict()
             self._loadOnePlugin(pluginName, os.path.join(McConst.pluginsDir, pluginName), pluginCfg)
 
     def getStorageNameList(self):
