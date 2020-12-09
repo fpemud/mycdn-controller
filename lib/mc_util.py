@@ -344,14 +344,14 @@ class McUtil:
             out = McUtil.cmdCall("/bin/netstat", "-lant")
             if ":" not in ip:
                 # ipv4
-                if re.search("tcp +[0-9]+ +[0-9]+ +(%s:%d) +.*" % (ipPattern, port), out) is not None:
+                if re.fullmatch("tcp +[0-9]+ +[0-9]+ +(%s\\:%d) +.*" % (ipPattern, port), out):
                     return
                 if ip == "0.0.0.0":
-                    if re.search("tcp6 +[0-9]+ +[0-9]+ +(\\:\\:\\:%d) +.*" % (port), out) is not None:
+                    if re.fullmatch("tcp6 +[0-9]+ +[0-9]+ +(\\:\\:\\:%d) +.*" % (port), out):
                         return
             else:
                 # ipv6
-                if re.search("tcp6 +[0-9]+ +[0-9]+ +(%s\\:%d) +.*" % (ipPattern, port), out) is not None:
+                if re.fullmatch("tcp6 +[0-9]+ +[0-9]+ +(%s\\:%d) +.*" % (ipPattern, port), out):
                     return
         raise Exception("process terminated")
 
