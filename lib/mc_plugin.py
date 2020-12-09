@@ -101,8 +101,9 @@ class McPluginManager:
             self.param.mirrorSiteDict[obj.id] = obj
 
     def _loadOneStorageObject(self, name, mirrorSiteIdList):
-        exec("from storage.%s import Storage" % (name))
-        propDict = eval("Storage.get_proprites()")
+        module = __import__("storage.%s" % (name))
+        klass = getattr(module, "Storage")
+        propDict = klass.get_proprites()
 
         # prepare storage initialization parameter
         param = {
@@ -125,11 +126,12 @@ class McPluginManager:
             }
 
         # create object
-        return eval("Storage(param)")
+        return klass(param)
 
     def _loadOneAdvertiserObject(self, name, path, mirrorSiteIdList):
-        exec("from advertiser.%s import Advertiser" % (name))
-        propDict = eval("Advertiser.get_proprites()")
+        module = __import__("advertiser.%s" % (name))
+        klass = getattr(module, "Advertiser")
+        propDict = klass.get_proprites()
 
         # prepare advertiser initialization parameter
         param = {
@@ -151,7 +153,7 @@ class McPluginManager:
                     param["mirror-sites"][msId]["storage-param"][st] = self.param.storageDict[st].get_param(msId)
 
         # create object
-        return eval("Advertiser(param)")
+        return klass(param)
 
 
 class McMirrorSite:
