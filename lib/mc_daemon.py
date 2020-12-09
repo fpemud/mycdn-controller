@@ -55,8 +55,8 @@ class McDaemon:
 
                     # load plugin, storage, advertiser
                     self.param.pluginManager = McPluginManager(self.param)
-                    self.param.pluginManager.loadMirrorSitePlugins()
-                    logging.info("Mirror site plugins loaded: %s" % (",".join(sorted(self.param.pluginManager.getMirrorSitePluginNameList()))))
+                    self.param.pluginManager.loadEnabledPlugins()
+                    logging.info("Mirror site plugins loaded: %s" % (",".join(sorted(self.param.pluginManager.getEnabledPluginNameList()))))
                     self.param.pluginManager.loadStorageObjects()           # log by itself
                     self.param.pluginManager.loadAdvertiserObjects()        # log by itself
 

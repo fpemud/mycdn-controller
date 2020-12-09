@@ -16,21 +16,23 @@ class McPluginManager:
     def __init__(self, param):
         self.param = param
 
-    def getMirrorSitePluginNameList(self):
-        return os.listdir(McConst.pluginsDir)
-
-    def loadMirrorSitePlugins(self):
+    def getEnabledPluginNameList(self):
+        ret = []
         for fn in glob.glob(McConst.pluginCfgFileGlobPattern):
             pluginName = McUtil.rreplace(os.path.basename(fn).replace("plugin-", "", 1), ".conf", "", 1)
             pluginPath = os.path.join(McConst.pluginsDir, pluginName)
             if not os.path.isdir(pluginPath):
                 continue
-            pluginCfg = dict()
-            with open(os.path.join(McConst.etcDir, fn), "r") as f:
+            ret.append(pluginName)
+        return ret
+
+    def loadEnabledPlugins(self):
+        for pluginName in self.getEnabledPluginNameList():
+            with open(os.path.join(McConst.etcDir, "plugin-%s.conf" % (pluginName)), "r") as f:
                 buf = f.read()
                 if buf != "":
                     pluginCfg = json.loads(buf)
-            self._loadOnePlugin(pluginName, pluginPath, pluginCfg)
+            self._loadOnePlugin(pluginName, os.path.join(McConst.pluginsDir, pluginName), pluginCfg)
 
     def getStorageNameList(self):
         ret = os.listdir(McConst.storageDir)
