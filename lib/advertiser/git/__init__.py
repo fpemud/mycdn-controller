@@ -55,4 +55,4 @@ class Advertiser:
     def advertise_mirror_site(self, mirror_site_id):
         assert mirror_site_id in self._mirrorSiteDict
         realPath = self._mirrorSiteDict[mirror_site_id]["storage-param"]["file"]["data-directory"]
-        os.symlink(realPath, os.path.join(self._virtRootDirFile, mirror_site_id))
+        os.symlink(realPath, os.path.join(self._virtRootDir, mirror_site_id))
