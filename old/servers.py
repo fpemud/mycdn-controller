@@ -96,7 +96,7 @@ class _HttpServer:
             self._proc = None
         if self._port is not None:
             self._port = None
-        _Util.forceDelete(self._virtRootDir)
+        McUtil.forceDelete(self._virtRootDir)
 
     def addDir(self, name, realPath):
         assert self._proc is not None

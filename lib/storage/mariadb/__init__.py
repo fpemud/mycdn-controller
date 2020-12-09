@@ -7,12 +7,13 @@ import logging
 import sqlparse
 import lxml.etree
 import subprocess
+from mc_util import McUtil
 
 
 class Storage:
 
     @staticmethod
-    def get_proprites():
+    def get_properties():
         return {
             "with-integrated-advertiser": True,
         }
@@ -33,7 +34,7 @@ class Storage:
                 tl = xmlElem.xpath(".//database-schema")
                 if len(tl) > 0:
                     dbSchemaFile = os.path.join(self._mirrorSiteDict[msId]["plugin-directory"], tl[0].text)
-                    for sql in sqlparse.split(_Util.readFile(dbSchemaFile)):
+                    for sql in sqlparse.split(McUtil.readFile(dbSchemaFile)):
                         m = re.match("^CREATE +TABLE +(\\S+)", sql)
                         if m is None:
                             raise Exception("mirror site %s: invalid mariadb database schema" % (msId))

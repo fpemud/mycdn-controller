@@ -108,7 +108,7 @@ class McPluginManager:
         param = {
             "mirror-sites": dict(),
         }
-        if mod.Storage.get_proprites().get("with-integrated-advertiser", False):
+        if mod.Storage.get_properties().get("with-integrated-advertiser", False):
             param.update({
                 "listen-ip": self.param.listenIp,
                 "temp-directory": McConst.tmpDir,
@@ -125,7 +125,7 @@ class McPluginManager:
             }
 
         # create object
-        return mod.Storage.get_proprites()(param)
+        return mod.Storage(param)
 
     def _loadOneAdvertiserObject(self, name, mirrorSiteIdList):
         mod = __import__("advertiser.%s" % (name))
@@ -147,7 +147,7 @@ class McPluginManager:
                 "storage-param": dict()
             }
             for st in self.param.mirrorSiteDict[msId].storageDict:
-                if st in mod.Advertiser.get_proprites().get("storage-dependencies", []):
+                if st in mod.Advertiser.get_properties().get("storage-dependencies", []):
                     param["mirror-sites"][msId]["storage-param"][st] = self.param.storageDict[st].get_param(msId)
 
         # create object
