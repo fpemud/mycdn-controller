@@ -13,6 +13,7 @@ install:
 	cp -r lib/* "$(DESTDIR)/$(prefix)/lib64/mirrors"
 	find "$(DESTDIR)/$(prefix)/lib64/mirrors" -type f -maxdepth 1 | xargs chmod 644
 	find "$(DESTDIR)/$(prefix)/lib64/mirrors" -type d -maxdepth 1 | xargs chmod 755
+	[ -e "$(DESTDIR)/$(prefix)/lib64/mirrors/advertiser/ftp/ftpd.py" ] && chmod 755 "$(DESTDIR)/$(prefix)/lib64/mirrors/advertiser/ftp/ftpd.py"
 
 	# install -d -m 0755 "$(DESTDIR)/$(prefix)/share/mirrors"
 	# cp -r share/* "$(DESTDIR)/$(prefix)/share/mirrors"
