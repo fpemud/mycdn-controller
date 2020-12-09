@@ -34,7 +34,7 @@ class Advertiser:
             self._port = McUtil.getFreeSocketPort("tcp")
             self._generateVirtualRootDir()
             self._generateCfgFn()
-            self._proc = subprocess.Popen(["/usr/sbin/apache2", "-f", self._cfgFn, "-DFOREGROUND"])
+            self._proc = subprocess.Popen(["/usr/sbin/apache2", "-f", self._cfgFn, "-DFOREGROUND"], cwd=self._virtRootDir)
             McUtil.waitTcpServiceForProc(self._listenIp, self._port, self._proc)
             logging.info("Advertiser (httpdir) started, listening on port %d." % (self._port))
         except Exception:
