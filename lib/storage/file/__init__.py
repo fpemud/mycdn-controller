@@ -4,6 +4,10 @@
 
 class Storage:
 
+    @staticmethod
+    def getStorageProprites():
+        return {}
+
     def __init__(self, param):
         self._mirrorSiteDict = param["mirror-sites"]
 

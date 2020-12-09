@@ -33,7 +33,9 @@ class McPluginManager:
             self._loadOnePlugin(pluginName, pluginPath, pluginCfg)
 
     def getStorageNameList(self):
-        return os.listdir(McConst.storageDir)
+        ret = os.listdir(McConst.storageDir)
+        ret = [x for x in ret if os.path.isdir(os.path.join(McConst.storageDir, x))]
+        return ret
 
     def loadStorageObjects(self):
         nameDict = dict()
@@ -45,7 +47,7 @@ class McPluginManager:
 
         nameList = sorted(list(nameDict.keys()))
         if "file" in nameList:
-            # always load built-in storage object first
+            # always load the simplest file storage object first
             nameList.remove("file")
             nameList.insert(0, "file")
 
@@ -98,28 +100,15 @@ class McPluginManager:
             assert obj.id not in self.param.mirrorSiteDict
             self.param.mirrorSiteDict[obj.id] = obj
 
-    def _loadOneStorageObject(self, name, path, mirrorSiteIdList):
-        # get metadata.xml file
-        metadata_file = os.path.join(path, "metadata.xml")
-        if not os.path.exists(metadata_file):
-            raise Exception("storage %s has no metadata.xml" % (name))
-        if not os.path.isfile(metadata_file):
-            raise Exception("metadata.xml for storage %s is not a file" % (name))
-        if not os.access(metadata_file, os.R_OK):
-            raise Exception("metadata.xml for storage %s is invalid" % (name))
-
-        # check metadata.xml file content
-        # FIXME
-        rootElem = lxml.etree.parse(metadata_file)
-        fn = rootElem.xpath(".//file")[0].text
-        klass = rootElem.xpath(".//class")[0].text
-        bAdvertiser = (len(rootElem.xpath(".//with-integrated-advertiser")) > 0)
+    def _loadOneStorageObject(self, name, mirrorSiteIdList):
+        exec("from storage.%s import Storage" % (name))
+        propDict = eval("Storage.getStorageProprites()")
 
         # prepare storage initialization parameter
         param = {
             "mirror-sites": dict(),
         }
-        if bAdvertiser:
+        if propDict.get("with-integrated-advertiser", False):
             param.update({
                 "listen-ip": self.param.listenIp,
                 "temp-directory": McConst.tmpDir,
@@ -136,9 +125,8 @@ class McPluginManager:
             }
 
         # create object
-        modname, mod = McUtil.loadPythonFile(os.path.join(path, fn))
-        return eval("mod.%s(param)" % (klass))
-        
+        return eval("Storage(param")
+
     def _loadOneAdvertiserObject(self, name, path, mirrorSiteIdList):
         # get metadata.xml file
         metadata_file = os.path.join(path, "metadata.xml")
