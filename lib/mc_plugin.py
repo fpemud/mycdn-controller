@@ -42,37 +42,35 @@ class McPluginManager:
         return ret
 
     def loadStorageObjects(self):
-        nameDict = dict()
+        tDict = dict()                                          # {storage-name: [mirror-site-id]}
         for msId, msObj in self.param.mirrorSiteDict.items():
             for st in msObj.storageDict:
-                if st not in nameDict:
-                    nameDict[st] = []
-                nameDict[st].append(msId)
+                if st not in tDict:
+                    tDict[st] = []
+                tDict[st].append(msId)
 
-        nameList = sorted(list(nameDict.keys()))
-        if "file" in nameList:
+        storageNameList = sorted(list(tDict.keys()))            # [storage-name]
+        if "file" in storageNameList:
             # always load the simplest file storage object first
-            nameList.remove("file")
-            nameList.insert(0, "file")
+            storageNameList.remove("file")
+            storageNameList.insert(0, "file")
 
-        for st in nameList:
-            obj = self._loadOneStorageObject(st, nameDict[st])
-            self.param.storageDict[st] = obj
+        for st in storageNameList:
+            self.param.storageDict[st] = self._loadOneStorageObject(st, tDict[st])
 
     def getAdvertiserNameList(self):
         return os.listdir(McConst.advertiserDir)
 
     def loadAdvertiserObjects(self):
-        nameDict = dict()
+        tDict = dict()                                          # {advertiser-name: [mirror-site-id]}
         for msId, msObj in self.param.mirrorSiteDict.items():
-            for st in msObj.advertiserDict:
-                if st not in nameDict:
-                    nameDict[st] = []
-                nameDict[st].append(msId)
+            for name in msObj.advertiserDict:
+                if name not in tDict:
+                    tDict[name] = []
+                tDict[name].append(msId)
 
-        for name in sorted(list(nameDict.keys())):
-            obj = self._loadOneAdvertiserObject(st, nameDict[name])
-            self.param.advertiserDict[st] = obj
+        for name in sorted(list(tDict.keys())):
+            self.param.advertiserDict[name] = self._loadOneAdvertiserObject(name, tDict[name])
 
     def _loadOnePlugin(self, name, path, cfgDict):
         # get metadata.xml file
