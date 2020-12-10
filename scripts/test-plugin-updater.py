@@ -4,15 +4,12 @@
 import os
 import sys
 import json
-import struct
-import socket
 import shutil
-import libxml2
 import subprocess
+import lxml.etree
 from datetime import datetime
 from gi.repository import GLib
 sys.path.append("/usr/lib64/mirrors")
-from mc_util import DynObject
 from mc_util import McUtil
 from mc_util import UnixDomainSocketApiServer
 from mc_param import McConst
@@ -22,15 +19,14 @@ class MirrorSite:
 
     def __init__(self, pluginId, path, mirrorSiteId):
         metadata_file = os.path.join(path, "metadata.xml")
-        root = libxml2.parseFile(metadata_file).getRootElement()
-        rootElem = None
+        root = lxml.etree.parse(metadata_file)
 
         # find mirror site
-        if rootElem is None:
-            for child in root.xpathEval(".//mirror-site"):
-                if child.prop("id") == mirrorSiteId:
-                    rootElem = child
-                    break
+        rootElem = None
+        for child in root.xpath(".//mirror-site"):
+            if child.get("id") == mirrorSiteId:
+                rootElem = child
+                break
         assert rootElem is not None
 
         # read config from current directory
@@ -45,31 +41,45 @@ class MirrorSite:
         self.cfgDict = cfg
         self.masterDir = os.path.join(McConst.cacheDir, mirrorSiteId)
         self.pluginStateDir = os.path.join(self.masterDir, "state")
-        self.initExec = os.path.join(path, rootElem.xpathEval(".//initializer")[0].xpathEval(".//executable")[0].getContent())
-        self.updateExec = os.path.join(path, rootElem.xpathEval(".//updater")[0].xpathEval(".//executable")[0].getContent())
+        self.initExec = os.path.join(path, rootElem.xpath(".//initializer[0]//executable[0]").text)
+        self.updateExec = os.path.join(path, rootElem.xpath(".//updater[0]//executable[0]").text)
 
         # storage
-        self.storageDict = dict()
-        for child in rootElem.xpathEval(".//storage"):
-            st = child.prop("type")
-            if st not in ["file", "git", "mariadb"]:
+        self.storageDict = dict()                       # {name:storage-object}
+        for child in rootElem.xpath(".//storage"):
+            st = child.get("type")
+            if st not in self.param.pluginManager.getStorageNameList():
                 raise Exception("mirror site %s: invalid storage type %s" % (self.id, st))
+            configXml = lxml.etree.tostring(child, encoding="unicode")
+            dataDir = os.path.join(self.masterDir, "storage-%s" % (st))
+            self.storageDict[st] = self._loadOneStorageObject(st, self.id, configXml, dataDir)
+            McUtil.ensureDir(dataDir)
 
-            self.storageDict[st] = DynObject()
-            self.storageDict[st].dataDir = os.path.join(self.masterDir, "storage-" + st)
-            self.storageDict[st].pluginParam = {"data-directory": self.storageDict[st].dataDir}
-            McUtil.ensureDir(self.storageDict[st].dataDir)
+    def _loadOneStorageObject(self, name, msId, configXml, dataDir):
+        mod = __import__("storage.%s" % (name))
+        mod = getattr(mod, name)
 
-            if st == "mariadb":
-                self.storageDict[st].tableInfo = OrderedDict()
-                tl = child.xpathEval(".//database-schema")
-                if len(tl) > 0:
-                    databaseSchemaFile = os.path.join(pluginDir, tl[0].getContent())
-                    for sql in sqlparse.split(McUtil.readFile(databaseSchemaFile)):
-                        m = re.match("^CREATE +TABLE +(\\S+)", sql)
-                        if m is None:
-                            raise Exception("mirror site %s: invalid database schema for storage type %s" % (self.id, st))
-                        self.storageDict[st].tableInfo[m.group(1)] = (-1, sql)
+        # prepare storage initialization parameter
+        param = {
+            "mirror-sites": dict(),
+        }
+        if mod.Storage.get_properties().get("with-integrated-advertiser", False):
+            param.update({
+                "listen-ip": "0.0.0.0",
+                "temp-directory": McConst.tmpDir,
+                "log-directory": McConst.logDir,
+                "log-file-size": 100000,                # FIXME
+                "log-file-count": 3,                    # FIXME
+            })
+        param["mirror-sites"][msId] = {
+            "plugin-directory": "",
+            "state-directory": self.pluginStateDir,
+            "data-directory": dataDir,
+            "config-xml": configXml,
+        }
+
+        # create object
+        return mod.Storage(param)
 
 
 class InitOrUpdateProc:
@@ -94,7 +104,7 @@ class InitOrUpdateProc:
             "location": "",
         }
         for storageName, storageObj in msObj.storageDict.items():
-            args["storage-" + storageName] = storageObj.pluginParam
+            args["storage-" + storageName] = storageObj.get_param(msObj.id)
         if bInitOrUpdate:
             args["run-mode"] = "init"
         else:
