@@ -1,3 +1,5 @@
 run updater in sandbox
 support user controlled content deletion
-maintainer notify updating/update-failed status
+maintainer notify updating/update-failed stack
+show total network usage, plugin network usage
+show total disk usage, plugin disk usage
