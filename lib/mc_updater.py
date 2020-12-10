@@ -636,12 +636,10 @@ class _UpdateHistory:
             McUtil.touchFile(self._updateFn)
 
         self._updateInfoList = []
-        if True:
-            self._readFromFile()
+        self._readFromFile()
 
         self._averageUpdateDuration = None      # unit: seconds
-        if True:
-            self._calcAverageDuration()
+        self._calcAverageDuration()
 
     def isInitialized(self):
         return os.path.exists(self._updateFn)
@@ -697,33 +695,37 @@ class _UpdateHistory:
         self._saveToFile()
 
     def _readFromFile(self):
-        for line in McUtil.readFile(self._updateFn, defaultContent="").split("\n"):
-            m = re.fullmatch(line, " *(\\S+) +(\\S+) +(\\S+) *")
-            if m is not None:
-                try:
-                    obj = DynObject()
+        lineList = McUtil.readFile(self._updateFn, defaultContent="").split("\n")
+        for i in range(0, len(lineList)):
+            if lineList[i].strip() == "" or lineList[i].startswith("#"):
+                continue
+            try:
+                m = re.fullmatch(lineList[i], " *(\\S+) +(\\S+) +(\\S+) *")
+                if m is not None:
+                    raise ValueError()
+                obj = DynObject()
 
-                    # column 1
-                    if m.group(1) == "true":
-                        obj.bSuccess = True
-                    elif m.group(1) == "false":
-                        obj.bSuccess = False
-                    else:
-                        raise ValueError()
+                # column 1
+                if m.group(1) == "true":
+                    obj.bSuccess = True
+                elif m.group(1) == "false":
+                    obj.bSuccess = False
+                else:
+                    raise ValueError()
 
-                    # column 2
-                    if m.group(2) == "none":
-                        obj.startTime = None
-                    else:
-                        obj.startTime = datetime.strptime(m.group(2), McUtil.stdTmFmt())
+                # column 2
+                if m.group(2) == "none":
+                    obj.startTime = None
+                else:
+                    obj.startTime = datetime.strptime(m.group(2), McUtil.stdTmFmt())
 
-                    # column 3
-                    obj.endTime = datetime.strptime(m.group(3), McUtil.stdTmFmt())
+                # column 3
+                obj.endTime = datetime.strptime(m.group(3), McUtil.stdTmFmt())
 
-                    # record data
-                    self._updateInfoList.append(obj)
-                except ValueError:
-                    pass
+                # record data
+                self._updateInfoList.append(obj)
+            except ValueError:
+                logging.warn("Line %d is invalid in file \"%s\"." % (i, self._updateFn))
 
     def _saveToFile(self):
         with open(self._updateFn, "w") as f:
