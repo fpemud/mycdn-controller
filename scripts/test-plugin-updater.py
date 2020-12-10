@@ -13,6 +13,7 @@ sys.path.append("/usr/lib64/mirrors")
 from mc_util import McUtil
 from mc_util import UnixDomainSocketApiServer
 from mc_param import McConst
+from mc_updater import _UpdateHistory
 
 
 class MirrorSite:
@@ -41,15 +42,21 @@ class MirrorSite:
         self.cfgDict = cfg
         self.masterDir = os.path.join(McConst.cacheDir, mirrorSiteId)
         self.pluginStateDir = os.path.join(self.masterDir, "state")
-        self.initExec = os.path.join(path, rootElem.xpath(".//initializer[0]//executable[0]").text)
-        self.updateExec = os.path.join(path, rootElem.xpath(".//updater[0]//executable[0]").text)
+
+        # executables
+        if len(rootElem.xpath(".//initializer")) > 0:
+            self.initExec = os.path.join(path, rootElem.xpath(".//initializer")[0].xpath(".//executable")[0].text)
+        else:
+            self.initExec = None
+        if len(rootElem.xpath(".//updater")) > 0:
+            self.updateExec = os.path.join(path, rootElem.xpath(".//updater")[0].xpath(".//executable")[0].text)
+        else:
+            self.updateExec = None
 
         # storage
         self.storageDict = dict()                       # {name:storage-object}
         for child in rootElem.xpath(".//storage"):
             st = child.get("type")
-            if st not in self.param.pluginManager.getStorageNameList():
-                raise Exception("mirror site %s: invalid storage type %s" % (self.id, st))
             configXml = lxml.etree.tostring(child, encoding="unicode")
             dataDir = os.path.join(self.masterDir, "storage-%s" % (st))
             self.storageDict[st] = self._loadOneStorageObject(st, self.id, configXml, dataDir)
@@ -169,26 +176,25 @@ apiServer = None
 proc = None
 mainloop = GLib.MainLoop()
 msObj = MirrorSite(pluginId, pluginDir, mirrorSiteId)
-initFlagFile = msObj.masterDir + ".uninitialized"
 
 # directories
 McUtil.mkDirAndClear(McConst.runDir)
 if not os.path.exists(msObj.masterDir):
     os.makedirs(msObj.masterDir)
-    McUtil.touchFile(initFlagFile)
 
 # do test
+updateHistory = _UpdateHistory(os.path.join(msObj.masterDir, "UPDATE_HISTORY"), msObj.initExec is not None)
 apiServer = ApiServer(mirrorSiteId)
-if os.path.exists(initFlagFile):
+if not updateHistory.isInitialized():
     print("init start begin")
     proc = InitOrUpdateProc(pluginId, msObj, debugFlag, True)
     mainloop.run()
-    print("init start end, we don't delete the init-flag-file")
+    print("init start end (we don't save to UPDATE_HISTORY file)")
 else:
     print("update start begin")
     proc = InitOrUpdateProc(pluginId, msObj, debugFlag, False)
     mainloop.run()
-    print("update start end")
+    print("update start end (we don't save to UPDATE_HISTORY file)")
 
 # dispose
 proc.dispose()
