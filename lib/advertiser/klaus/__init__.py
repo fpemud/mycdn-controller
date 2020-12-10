@@ -89,7 +89,7 @@ class Advertiser:
         buf += "LoadModule log_config_module      %s/mod_log_config.so\n" % (modulesDir)
         buf += "LoadModule unixd_module           %s/mod_unixd.so\n" % (modulesDir)
         buf += "LoadModule alias_module           %s/mod_alias.so\n" % (modulesDir)
-        # buf += "LoadModule authz_core_module      %s/mod_authz_core.so\n" % (modulesDir)            # it's strange why we need this module and Require directive since we have no auth at all
+        buf += "LoadModule authz_core_module      %s/mod_authz_core.so\n" % (modulesDir)            # it's strange why we need this module and Require directive when we have no auth at all
         buf += "LoadModule autoindex_module       %s/mod_autoindex.so\n" % (modulesDir)
         buf += "LoadModule wsgi_module            %s/mod_wsgi.so\n" % (modulesDir)
         buf += "\n"
