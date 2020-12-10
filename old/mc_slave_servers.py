@@ -136,7 +136,7 @@ class _HttpServer:
         self._generateVirtualRootDirGit()
         self._generateCfgFn()
         self._proc = subprocess.Popen(["/usr/sbin/apache2", "-f", self._cfgFn, "-DFOREGROUND"])
-        McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
+        McUtil.waitSocketPortForProc("tcp", self.param.listenIp, self._port, self._proc)
         logging.info("Slave server (http) started, listening on port %d." % (self._port))
 
     def stop(self):
@@ -281,7 +281,7 @@ class _FtpServer:
         self._port = McUtil.getFreeSocketPort("tcp")
         self._generateCfgFile()
         self._proc = subprocess.Popen([self._execFile, self._cfgFile], cwd=McConst.cacheDir)
-        McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
+        McUtil.waitSocketPortForProc("tcp", self.param.listenIp, self._port, self._proc)
         logging.info("Slave server (ftp) started, listening on port %d." % (self._port))
 
     def stop(self):
@@ -338,7 +338,7 @@ class _RsyncServer:
         self._port = McUtil.getFreeSocketPort("tcp")
         self._generateCfgFile()
         self._proc = subprocess.Popen(["/usr/bin/rsync", "-v", "--daemon", "--no-detach", "--config=%s" % (self._cfgFile)])
-        McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
+        McUtil.waitSocketPortForProc("tcp", self.param.listenIp, self._port, self._proc)
         logging.info("Slave server (rsync) started, listening on port %d." % (self._port))
 
     def stop(self):
@@ -402,7 +402,7 @@ class _GitServer:
             "--port=%d" % (self._port),
             "--base-path=%s" % (self._virtRootDir),
         ])
-        McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, self._proc)
+        McUtil.waitSocketPortForProc("tcp", self.param.listenIp, self._port, self._proc)
         logging.info("Slave server (git) started, listening on port %d." % (self._port))
 
     def stop(self):
@@ -493,7 +493,7 @@ class _MultiInstanceMariadbServer:
                 "--port=%d" % (port),
             ]
             proc = subprocess.Popen(cmd)
-            McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
+            McUtil.waitSocketPortForProc("tcp", self.param.listenIp, port, proc)
 
             # post-initialize if needed
             if bJustInitialized:
@@ -831,7 +831,7 @@ class _MultiInstanceNeo4jServer:
                 "NEO4J_PIDFILE": pidFile,
             }
             proc = subprocess.Popen(["/opt/bin/neo4j", "console"], env=envDict)
-            McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
+            McUtil.waitSocketPortForProc("tcp", self.param.listenIp, port, proc)
 
             # post-initialize if needed
             if bJustInitialized:

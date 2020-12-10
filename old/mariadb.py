@@ -196,7 +196,7 @@ class _MariadbServer:
 # child = None
 # try:
 #     proc = subprocess.Popen(["/usr/sbin/mysqld"] + self.__commonOptions())
-#     McUtil.waitTcpServiceForProc(self.param.listenIp, self._port, proc)
+#     McUtil.waitSocketPortForProc("tcp", self.param.listenIp, self._port, proc)
 #     with open(logFile, "ab") as f:
 #         child = pexpect.spawn("/usr/bin/mysql_secure_installation --no-defaults --socket=%s" % (self._socketFile), logfile=f)
 #         child.expect('Enter current password for root \\(enter for none\\): ')

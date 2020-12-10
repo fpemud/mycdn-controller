@@ -33,7 +33,7 @@ class Advertiser:
                 "--port=%d" % (self._port),
                 "--base-path=%s" % (self._virtRootDir),
             ], cwd=self._tmpDir)
-            McUtil.waitTcpServiceForProc(self._listenIp, self._port, self._proc)
+            McUtil.waitSocketPortForProc("tcp", self._listenIp, self._port, self._proc)
             logging.info("Advertiser (git) started, listening on port %d." % (self._port))
         except Exception:
             self.dispose()

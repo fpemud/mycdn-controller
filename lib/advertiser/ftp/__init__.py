@@ -34,7 +34,7 @@ class Advertiser:
             self._port = McUtil.getFreeSocketPort("tcp")
             self._generateCfgFile()
             self._proc = subprocess.Popen([self._execFile, self._cfgFile], cwd=self._tmpDir)
-            McUtil.waitTcpServiceForProc(self._listenIp, self._port, self._proc)
+            McUtil.waitSocketPortForProc("tcp", self._listenIp, self._port, self._proc)
             logging.info("Advertiser (ftp) started, listening on port %d." % (self._port))
         except Exception:
             self.dispose()

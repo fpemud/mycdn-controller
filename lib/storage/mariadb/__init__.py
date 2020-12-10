@@ -138,7 +138,7 @@ class _MultiInstanceMariadbServer:
                 "--port=%d" % (port),
             ]
             proc = subprocess.Popen(cmd)
-            McUtil.waitTcpServiceForProc(self.param.listenIp, port, proc)
+            McUtil.waitSocketPortForProc("tcp", self.param.listenIp, port, proc)
 
             # post-initialize if needed
             if bJustInitialized:

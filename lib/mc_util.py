@@ -2,7 +2,6 @@
 # -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
 
 import os
-import re
 import sys
 import imp
 import time
@@ -14,6 +13,7 @@ import ctypes
 import struct
 import shutil
 import random
+import psutil
 import socket
 import hashlib
 import logging
@@ -339,23 +339,19 @@ class McUtil:
         raise Exception("no valid port")
 
     @staticmethod
-    def waitTcpServiceForProc(ip, port, proc):
-        ipPattern = ip.replace(".", "\\.").replace(":", "\\:")
-        while proc.poll() is None:
+    def waitSocketPortForProc(portType, ip, port, proc, timeout=10):
+        assert portType in ["tcp", "udp"]
+        for i in range(0, timeout*10):
+            if proc.poll() is not None:
+                raise Exception("process terminated")
             time.sleep(0.1)
-            out = McUtil.cmdCall("/bin/netstat", "-lant")
-            if ":" not in ip:
-                # ipv4
-                if re.search("^tcp +[0-9]+ +[0-9]+ +(%s\\:%d) +(.*) +LISTEN *$" % (ipPattern, port), out, re.M):
-                    return
-                if ip == "0.0.0.0":
-                    if re.search("^tcp6 +[0-9]+ +[0-9]+ +(\\:\\:\\:%d) +(.*) +LISTEN *$" % (port), out, re.M):
+            for c in psutil.net_connections(kind=portType):
+                if c.pid == proc.pid and c.status == "LISTEN":
+                    if c.family == socket.AF_INET and c.laddr[0] == ip and c.laddr[1] == port:
                         return
-            else:
-                # ipv6
-                if re.search("^tcp6 +[0-9]+ +[0-9]+ +(%s\\:%d) +(.*) +LISTEN *$" % (ipPattern, port), out, re.M):
-                    return
-        raise Exception("process terminated")
+                    if ip == "0.0.0.0" and c.family == socket.AF_INET6 and c.laddr[0] == "::" and c.laddr[1] == port:
+                        return
+        raise Exception("timeout")
 
     @staticmethod
     def touchFile(filename):
