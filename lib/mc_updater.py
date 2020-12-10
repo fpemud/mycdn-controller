@@ -700,7 +700,7 @@ class _UpdateHistory:
             if lineList[i].strip() == "" or lineList[i].startswith("#"):
                 continue
             try:
-                m = re.fullmatch(lineList[i], " *(\\S+) +(\\S+) +(\\S+) *")
+                m = re.fullmatch(lineList[i], " *(\\S+) +(\\S+ \\S+) +(\\S+ \\S+) *")
                 if m is not None:
                     raise ValueError()
 
@@ -726,7 +726,7 @@ class _UpdateHistory:
                 # record data
                 self._updateInfoList.append(obj)
             except ValueError:
-                logging.warn("Line %d is invalid in file \"%s\"." % (i, self._updateFn))
+                logging.warning("Line %d is invalid in file \"%s\"." % (i, self._updateFn))
 
     def _saveToFile(self):
         with open(self._updateFn, "w") as f:
