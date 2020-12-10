@@ -405,8 +405,11 @@ class GLibIdleInvoker:
         # the source list should be released when disposing
         pass
 
-    def add(self, func, *args):
+    def addIdleCallback(self, func, *args):
         GLib.idle_add(self._idleCallback, func, *args)
+
+    def addDelayedIdleCallback(self, func, *args):
+        GLib.timeout_add_seconds(1, self._idleCallback, func, *args)
 
     def _idleCallback(self, func, *args):
         func(*args)

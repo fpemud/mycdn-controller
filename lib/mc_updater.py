@@ -92,7 +92,7 @@ class _OneMirrorSiteUpdater:
 
         if not self.updateHistory.isInitialized():
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
-            self.invoker.add(self.initStart)
+            self.invoker.addIdleCallback(self.initStart)
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             obj = self.updateHistory.getLastUpdateInfo()
@@ -146,6 +146,10 @@ class _OneMirrorSiteUpdater:
 
     def initExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
+
+        if self.apiServer.hasClient(self.mirrorSite.id):
+            self.invoker.addDelayedIdleCallback(self.initExitCallback, pid, status)
+            return
 
         curDt = datetime.now()
         try:
@@ -222,6 +226,10 @@ class _OneMirrorSiteUpdater:
     def updateExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
 
+        if self.apiServer.hasClient(self.mirrorSite.id):
+            self.invoker.addDelayedIdleCallback(self.updateExitCallback, pid, status)
+            return
+
         curDt = datetime.now()
         try:
             GLib.spawn_check_exit_status(status)
@@ -268,6 +276,10 @@ class _OneMirrorSiteUpdater:
 
     def maintainExitCallback(self, pid, status):
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING
+
+        if self.apiServer.hasClient(self.mirrorSite.id):
+            self.invoker.addDelayedIdleCallback(self.maintainExitCallback, pid, status)
+            return
 
         bStop = self.bStop
         code = self.proc.poll()
@@ -389,7 +401,7 @@ class _OneMirrorSiteUpdater:
 
     def _postInit(self, finishDatetime):
         for name in self.mirrorSite.advertiserDict:
-            self.invoker.add(lambda: self.param.advertiserDict[name].advertise_mirror_site(self.mirrorSite.id))
+            self.invoker.addIdleCallback(lambda: self.param.advertiserDict[name].advertise_mirror_site(self.mirrorSite.id))
         if self.mirrorSite.updaterExe is not None:
             if self.mirrorSite.schedType == "interval":
                 self.scheduler.addIntervalJob(self.mirrorSite.id, finishDatetime, self.mirrorSite.schedInterval, self.updateStart)
@@ -398,7 +410,7 @@ class _OneMirrorSiteUpdater:
             else:
                 assert False
         elif self.mirrorSite.maintainerExe is not None:
-            self.invoker.add(self.maintainStart)
+            self.invoker.addIdleCallback(self.maintainStart)
 
     def _retryUpdate(self, finishDatetime):
         if self.mirrorSite.updateRetryType == "interval":
@@ -436,6 +448,9 @@ class _ApiServer(UnixDomainSocketApiServer):
 
         del self._mirrorSiteUpdaterDict[mirrorId]
         del self._clientPidDict[pid]
+
+    def hasClient(self, mirrorId):
+        return mirrorId in self._sockDict
 
     def _clientAppearFunc(self, sock):
         pid = McUtil.getUnixDomainSocketPeerInfo(sock)[0]
@@ -700,12 +715,10 @@ class _UpdateHistory:
             if lineList[i].strip() == "" or lineList[i].startswith("#"):
                 continue
             try:
-                m = re.fullmatch(lineList[i], " *(\\S+) +(\\S+ \\S+) +(\\S+ \\S+) *")
+                m = re.fullmatch(" *(\\S+) +(\\S+ \\S+) +(\\S+ \\S+) *", lineList[i])
                 if m is not None:
                     raise ValueError()
-
                 obj = DynObject()
-
                 # column 1
                 if m.group(1) == "true":
                     obj.bSuccess = True
@@ -713,20 +726,17 @@ class _UpdateHistory:
                     obj.bSuccess = False
                 else:
                     raise ValueError()
-
                 # column 2
                 if m.group(2) == "none":
                     obj.startTime = None
                 else:
                     obj.startTime = datetime.strptime(m.group(2), McUtil.stdTmFmt())
-
                 # column 3
                 obj.endTime = datetime.strptime(m.group(3), McUtil.stdTmFmt())
-
                 # record data
                 self._updateInfoList.append(obj)
             except ValueError:
-                logging.warning("Line %d is invalid in file \"%s\"." % (i, self._updateFn))
+                logging.warning("Line %d is invalid in file \"%s\"." % (i + 1, self._updateFn))
 
     def _saveToFile(self):
         with open(self._updateFn, "w") as f:
