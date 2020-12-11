@@ -105,22 +105,19 @@ class McGlobalAdvertiser:
                 updateState["next_update_time"] = updateState["next_update_time"].strftime("%Y-%m-%d %H:%M")
 
             ret[msId] = {
-                "update_status": updateState["update_status"],
-                "last_update_time": updateState["last_update_time"],
-                "next_update_time": updateState["next_update_time"],
-                "update_progress": updateState.get("update_progress", -1),
+                "update-status": updateState["update_status"],
+                "last-update-time": updateState["last_update_time"],
+                "next-update-time": updateState["next_update_time"],
+                "update-progress": updateState.get("update_progress", -1),
                 "help": {
                     "title": "",
                     "filename": "",
                 },
             }
             if self.param.updater.isMirrorSiteInitialized(msId):
-                ret[msId]["available"] = dict()
+                ret[msId]["access"] = dict()
                 for key in msObj.advertiserDict:
-                    infoDict = self.param.advertiseDict[key].get_access_info(msId)
-                    assert "url" in infoDict
-                    assert "description" in infoDict
-                    ret[msId]["available"][key] = infoDict
+                    ret[msId]["access"][key] = self.param.advertiseDict[key].get_access_info(msId)
         return ret
 
 

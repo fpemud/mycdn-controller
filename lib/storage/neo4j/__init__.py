@@ -17,9 +17,17 @@ class Storage:
         pass
 
     def get_param(self, mirror_site_id):
+        assert mirror_site_id in self._mirrorSiteDict
         return {
             "port": -1,
             "database": mirror_site_id,
+        }
+
+    def get_access_info(self, mirror_site_id):
+        assert mirror_site_id in self._mirrorSiteDict
+        return {
+            "url": "bolt://{IP}:%d/%s" % (-1, mirror_site_id),
+            "description": "",
         }
 
     def advertise_mirror_site(self, mirror_site_id):
