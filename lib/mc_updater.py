@@ -16,7 +16,6 @@ from gi.repository import GLib
 from mc_util import McUtil
 from mc_util import DynObject
 from mc_util import RotatingFile
-from mc_util import GLibIdleInvoker
 from mc_util import UnixDomainSocketApiServer
 from mc_param import McConst
 
@@ -35,7 +34,7 @@ class McMirrorSiteUpdater:
 
     def __init__(self, param):
         self.param = param
-        self.invoker = GLibIdleInvoker()
+        self.invoker = _IdleInvoker()
         self.scheduler = _Scheduler()
         self.apiServer = _ApiServer()
 
@@ -530,6 +529,27 @@ class _ApiServer(UnixDomainSocketApiServer):
             return
 
         raise Exception("message type \"%s\" is not supported" % (data["message"]))
+
+
+class _IdleInvoker:
+
+    def __init__(self):
+        pass
+
+    def dispose(self):
+        # there's should be a source list tracking all the idle sources
+        # the source list should be released when disposing
+        pass
+
+    def addCallback(self, func):
+        GLib.idle_add(self._idleCallback, func)
+
+    def addDelayedCallback(self, func):
+        GLib.timeout_add_seconds(1, self._idleCallback, func)
+
+    def _idleCallback(self, func):
+        func()
+        return False
 
 
 class _Scheduler:

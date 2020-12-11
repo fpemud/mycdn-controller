@@ -395,27 +395,6 @@ class DynObject:
     pass
 
 
-class GLibIdleInvoker:
-
-    def __init__(self):
-        pass
-
-    def dispose(self):
-        # there's should be a source list tracking all the idle sources
-        # the source list should be released when disposing
-        pass
-
-    def addCallback(self, func):
-        GLib.idle_add(self._idleCallback, func)
-
-    def addDelayedCallback(self, func):
-        GLib.timeout_add_seconds(1, self._idleCallback, func)
-
-    def _idleCallback(self, func):
-        func(*args)
-        return False
-
-
 class UnixDomainSocketApiServer:
 
     def __init__(self, serverFile, clientAppearFunc, clientDisappearFunc, notifyFunc):
