@@ -36,10 +36,6 @@ class Advertiser:
             self.dispose()
             raise
 
-    @property
-    def port(self):
-        return self._port
-
     def dispose(self):
         if self._proc is not None:
             self._proc.terminate()
@@ -47,6 +43,13 @@ class Advertiser:
             self._proc = None
         if self._port is not None:
             self._port = None
+
+    def get_access_info(self, mirror_site_id):
+        assert mirror_site_id in self._mirrorSiteDict
+        return {
+            "url": "rsync://{IP}:%d/%s" % (self._port, mirror_site_id),
+            "description": "",
+        }
 
     def advertise_mirror_site(self, mirror_site_id):
         assert mirror_site_id in self._mirrorSiteDict

@@ -11,19 +11,7 @@ from mc_param import McConst
 from mc_updater import McMirrorSiteUpdater
 
 
-class McAdvertiser:
-
-    @staticmethod
-    def storageDependencyOfAdvertiser(advertiserName):
-        if advertiserName == "file":
-            return ["file"]
-        if advertiserName == "git":
-            return ["git"]
-        if advertiserName == "mariadb":
-            return ["mariadb"]
-        if advertiserName == "mediawiki":
-            return ["file", "mariadb"]
-        assert False
+class McGlobalAdvertiser:
 
     def __init__(self, param):
         self.param = param
@@ -32,31 +20,6 @@ class McAdvertiser:
     def dispose(self):
         if self._runner is not None:
             self.param.mainloop.run_until_complete(self._stop())
-
-    def advertiseMirrorSite(self, mirrorSiteId):
-        msObj = self.param.mirrorSiteDict[mirrorSiteId]
-        if "file" in msObj.advertiseDict:
-            if "http" in msObj.advertiseDict["file"]:
-                self.param.slaveServers.httpServer.addFileDir(msObj.id, msObj.storageDict["file"].dataDir)
-            if "ftp" in msObj.advertiseDict["file"]:
-                self.param.slaveServers.ftpServer.addFileDir(msObj.id, msObj.storageDict["file"].dataDir)
-            if "rsync" in msObj.advertiseDict["file"]:
-                self.param.slaveServers.rsyncServer.addFileDir(msObj.id, msObj.storageDict["file"].dataDir)
-        if "git" in msObj.advertiseDict:
-            if "git" in msObj.advertiseDict["git"]:
-                self.param.slaveServers.gitServer.addGitDir(msObj.id, msObj.storageDict["git"].dataDir)
-            if "http" in msObj.advertiseDict["git"]:
-                pass                # FIXME
-        if "mediawiki" in msObj.advertiseDict:
-            if "database" in msObj.advertiseDict["mediawiki"]:
-                self.param.slaveServers.mariadbServer.exportDatabase(msObj.id)
-            if "web" in msObj.advertiseDict["mediawiki"]:
-                pass                # FIXME
-        if "mariadb" in msObj.advertiseDict:
-            if "database" in msObj.advertiseDict["mariadb"]:
-                self.param.slaveServers.mariadbServer.exportDatabase(msObj.id)
-            if "http" in msObj.advertiseDict["mariadb"]:
-                pass                # FIXME
 
     async def _start(self):
         try:
@@ -142,7 +105,6 @@ class McAdvertiser:
                 updateState["next_update_time"] = updateState["next_update_time"].strftime("%Y-%m-%d %H:%M")
 
             ret[msId] = {
-                "available": self.param.updater.isMirrorSiteInitialized(msId),
                 "update_status": updateState["update_status"],
                 "last_update_time": updateState["last_update_time"],
                 "next_update_time": updateState["next_update_time"],
@@ -152,44 +114,13 @@ class McAdvertiser:
                     "filename": "",
                 },
             }
-
-            if "file" in msObj.advertiseDict:
-                ret[msId]["interface-file"] = dict()
-                for proto in msObj.advertiseDict["file"]:
-                    if proto == "http":
-                        port = self.param.slaveServers.httpServer.port
-                        ret[msId]["interface-file"]["http"] = {
-                            "url": "http://{IP}%s/file/%s" % (":%d" % (port) if port != 80 else "", msId)
-                        }
-                        continue
-                    if proto == "ftp":
-                        port = self.param.slaveServers.ftpServer.port
-                        ret[msId]["interface-file"]["ftp"] = {
-                            "url": "ftp://{IP}%s/%s" % (":%d" % (port) if port != 21 else "", msId)
-                        }
-                        continue
-                    if proto == "rsync":
-                        port = self.param.slaveServers.rsyncServer.port
-                        ret[msId]["interface-file"]["rsync"] = {
-                            "url": "rsync://{IP}%s/%s" % (":%d" % (port) if port != 873 else "", msId)
-                        }
-                        continue
-
-            if "git" in msObj.advertiseDict:
-                ret[msId]["interface-git"] = dict()
-                for proto in msObj.advertiseDict["git"]:
-                    if proto == "git":
-                        port = self.param.slaveServers.gitServer.port
-                        ret[msId]["interface-git"]["git"] = {
-                            "url": "git://{IP}%s/%s" % (":%d" % (port) if port != 9418 else "", msId)
-                        }
-                    if proto == "http":
-                        port = self.param.slaveServers.httpServer.port
-                        ret[msId]["interface-git"]["http"] = {
-                            "url": "http://{IP}%s/git/%s" % (":%d" % (port) if port != 80 else "", msId)
-                        }
-                        continue
-
+            if self.param.updater.isMirrorSiteInitialized(msId):
+                ret[msId]["available"] = dict()
+                for key in msObj.advertiserDict:
+                    infoDict = self.param.advertiseDict[key].get_access_info(msId)
+                    assert "url" in infoDict
+                    assert "description" in infoDict
+                    ret[msId]["available"][key] = infoDict
         return ret
 
 

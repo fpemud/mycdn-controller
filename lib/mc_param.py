@@ -58,3 +58,4 @@ class McParam:
         self.advertiserDict = dict()
         self.avahiObj = None
         self.updater = None
+        self.globalAdvertiser = None

@@ -543,21 +543,6 @@ class DropPriviledge:
             _prctl(McUtil.getSyscallNumber("SYS_prctl"), _PR_CAP_AMBIENT, _PR_CAP_AMBIENT_RAISE, cap, 0, 0)
 
 
-class AsyncIteratorExecuter:
-
-    def __init__(self, iter):
-        self.iter = iter
-
-    def __aiter__(self):
-        return self
-
-    async def __anext__(self):
-        try:
-            return next(self.iter)
-        except StopIteration:
-            raise StopAsyncIteration
-
-
 class AvahiServiceRegister:
 
     """

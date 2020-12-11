@@ -89,9 +89,11 @@ class Advertiser:
     def __init__(self, param):
         pass
 
-    @property                   FIXME
-    def port(self):
-        return self._port
+    def get_access_info(self, mirror_site_id):
+        return {
+            "url": XXXX,
+            "description": XXXX,
+        }
 
     def dispose(self):
         pass
