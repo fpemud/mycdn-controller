@@ -92,7 +92,7 @@ class _OneMirrorSiteUpdater:
 
         if not self.updateHistory.isInitialized():
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INIT
-            self.invoker.addIdleCallback(self.initStart)
+            self.invoker.addCallback(self.initStart)
         else:
             self.status = McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_IDLE
             obj = self.updateHistory.getLastUpdateInfo()
@@ -148,7 +148,7 @@ class _OneMirrorSiteUpdater:
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING
 
         if self.apiServer.hasClient(self.mirrorSite.id):
-            self.invoker.addDelayedIdleCallback(self.initExitCallback, pid, status)
+            self.apiServer.addClientDisappearOneshotCallback(self.mirrorSite.id, lambda: self.initExitCallback(pid, status))
             return
 
         curDt = datetime.now()
@@ -227,7 +227,7 @@ class _OneMirrorSiteUpdater:
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_UPDATING
 
         if self.apiServer.hasClient(self.mirrorSite.id):
-            self.invoker.addDelayedIdleCallback(self.updateExitCallback, pid, status)
+            self.apiServer.addClientDisappearOneshotCallback(self.mirrorSite.id, lambda: self.updateExitCallback(pid, status))
             return
 
         curDt = datetime.now()
@@ -278,7 +278,7 @@ class _OneMirrorSiteUpdater:
         assert self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_MAINTAINING
 
         if self.apiServer.hasClient(self.mirrorSite.id):
-            self.invoker.addDelayedIdleCallback(self.maintainExitCallback, pid, status)
+            self.apiServer.addClientDisappearOneshotCallback(self.mirrorSite.id, lambda: self.maintainExitCallback(pid, status))
             return
 
         bStop = self.bStop
@@ -401,7 +401,7 @@ class _OneMirrorSiteUpdater:
 
     def _postInit(self, finishDatetime):
         for name in self.mirrorSite.advertiserDict:
-            self.invoker.addIdleCallback(lambda: self.param.advertiserDict[name].advertise_mirror_site(self.mirrorSite.id))
+            self.invoker.addCallback(lambda: self.param.advertiserDict[name].advertise_mirror_site(self.mirrorSite.id))
         if self.mirrorSite.updaterExe is not None:
             if self.mirrorSite.schedType == "interval":
                 self.scheduler.addIntervalJob(self.mirrorSite.id, finishDatetime, self.mirrorSite.schedInterval, self.updateStart)
@@ -410,7 +410,7 @@ class _OneMirrorSiteUpdater:
             else:
                 assert False
         elif self.mirrorSite.maintainerExe is not None:
-            self.invoker.addIdleCallback(self.maintainStart)
+            self.invoker.addCallback(self.maintainStart)
 
     def _retryUpdate(self, finishDatetime):
         if self.mirrorSite.updateRetryType == "interval":
@@ -432,6 +432,7 @@ class _ApiServer(UnixDomainSocketApiServer):
         self._clientPidDict = dict()                 # <pid,mirror-id>
         self._mirrorSiteUpdaterDict = dict()         # <mirror-id,mirror-site-updater>
         self._sockDict = dict()                      # <mirror-id,sock>
+        self._clientDisappearCbDict = dict()         # <mirror-id,callback-func>
         super().__init__(McConst.apiServerFile, self._clientAppearFunc, self._clientDisappearFunc, self._clientNoitfyFunc)
 
     def addMirrorSite(self, mirrorId, mirrorSiteUpdater, pid):
@@ -452,6 +453,11 @@ class _ApiServer(UnixDomainSocketApiServer):
     def hasClient(self, mirrorId):
         return mirrorId in self._sockDict
 
+    def addClientDisappearOneshotCallback(self, mirrorId, callbackFunc):
+        assert mirrorId in self._sockDict
+        assert mirrorId not in self._clientDisappearCbDict
+        self._clientDisappearCbDict[mirrorId] = callbackFunc
+
     def _clientAppearFunc(self, sock):
         pid = McUtil.getUnixDomainSocketPeerInfo(sock)[0]
         if pid not in self._clientPidDict:
@@ -461,6 +467,9 @@ class _ApiServer(UnixDomainSocketApiServer):
         return mirrorId
 
     def _clientDisappearFunc(self, mirrorId):
+        if mirrorId in self._clientDisappearCbDict:
+            self._clientDisappearCbDict[mirrorId]()
+            del self._clientDisappearCbDict[mirrorId]
         del self._sockDict[mirrorId]
 
     def _clientNoitfyFunc(self, mirrorId, data):
