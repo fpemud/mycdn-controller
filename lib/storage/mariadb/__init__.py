@@ -66,6 +66,13 @@ class Storage:
             "database": mirror_site_id,
         }
 
+    def get_access_info(self, mirror_site_id):
+        assert mirror_site_id in self._mirrorSiteDict
+        return {
+            "url": "mariadb://{IP}:%d/%s" % (self._mariadbServer.port, mirror_site_id),
+            "description": "",
+        }
+
     def advertise_mirror_site(self, mirror_site_id):
         self._mariadbServer.exportDatabase(mirror_site_id)
 

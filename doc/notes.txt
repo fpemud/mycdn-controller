@@ -89,14 +89,14 @@ class Advertiser:
     def __init__(self, param):
         pass
 
+    def dispose(self):
+        pass
+
     def get_access_info(self, mirror_site_id):
         return {
             "url": XXXX,
             "description": XXXX,
         }
-
-    def dispose(self):
-        pass
 
     def advertise_mirror_site(self, mirror_site_id):
         pass
@@ -125,7 +125,11 @@ class StorageWithIntegratedAdvertiser:
     def get_param(self, mirror_site_id):
         return dict()
 
+    def get_access_info(self, mirror_site_id):
+        return {
+            "url": XXXX,
+            "description": XXXX,
+        }
+
     def advertise_mirror_site(self, mirror_site_id):
         pass
-
-
