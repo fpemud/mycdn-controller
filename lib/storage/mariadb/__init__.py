@@ -23,14 +23,16 @@ class Storage:
         self._tmpDir = param["temp-directory"]
         self._logDir = param["log-directory"]
         self._mirrorSiteDict = param["mirror-sites"]
-        self._tableInfoDict = dict()
+        self._tableInfoDict = dict()                    # {mirror-site-id:{table-name:table-sql}}
+        self._bAdvertiseDict = dict()                   # {mirror-site-id:bAdvertise}
 
         # create data directory and table information structure
         for msId in self._mirrorSiteDict:
+            xmlElem = lxml.etree.fromstring(self._mirrorSiteDict[msId]["config-xml"])
+
             # create table information structure
             self._tableInfoDict[msId] = dict()
             if True:
-                xmlElem = lxml.etree.fromstring(self._mirrorSiteDict[msId]["config-xml"])
                 tl = xmlElem.xpath(".//database-schema")
                 if len(tl) > 0:
                     dbSchemaFile = os.path.join(self._mirrorSiteDict[msId]["plugin-directory"], tl[0].text)
@@ -39,6 +41,8 @@ class Storage:
                         if m is None:
                             raise Exception("mirror site %s: invalid mariadb database schema" % (msId))
                         self._tableInfoDict[msId][m.group(1)] = (-1, sql)
+            # get advertise flag
+            self._bAdvertiseDict[msId] = (len(xmlElem.xpath(".//advertise")) > 0)
 
         self._mariadbServer = None
         try:
