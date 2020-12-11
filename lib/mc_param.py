@@ -56,6 +56,6 @@ class McParam:
         self.mirrorSiteDict = dict()
         self.storageDict = dict()
         self.advertiserDict = dict()
+        self.globalAdvertiser = None
         self.avahiObj = None
         self.updater = None
-        self.globalAdvertiser = None
