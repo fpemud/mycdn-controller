@@ -4,6 +4,7 @@
 import os
 import re
 import logging
+import mariadb
 import sqlparse
 import lxml.etree
 import subprocess
@@ -19,14 +20,10 @@ class Storage:
         }
 
     def __init__(self, param):
-        self._listenIp = param["listen-ip"]
-        self._tmpDir = param["temp-directory"]
-        self._logDir = param["log-directory"]
         self._mirrorSiteDict = param["mirror-sites"]
         self._tableInfoDict = dict()                    # {mirror-site-id:{table-name:table-sql}}
         self._bAdvertiseDict = dict()                   # {mirror-site-id:bAdvertise}
 
-        # create data directory and table information structure
         for msId in self._mirrorSiteDict:
             xmlElem = lxml.etree.fromstring(self._mirrorSiteDict[msId]["config-xml"])
 
@@ -41,84 +38,66 @@ class Storage:
                         if m is None:
                             raise Exception("mirror site %s: invalid mariadb database schema" % (msId))
                         self._tableInfoDict[msId][m.group(1)] = (-1, sql)
+
             # get advertise flag
             self._bAdvertiseDict[msId] = (len(xmlElem.xpath(".//advertise")) > 0)
 
-        self._mariadbServer = None
+        self._serverDict = dict()                                   # {mirror-site-id:mariadb-server-object}
         try:
-            self._mariadbServer = _MultiInstanceMariadbServer(self._listenIp, self._tmpDir, self._logDir)
-            self._mariadbServer.start()
+            # create server objects
+            # The best solution would be using a one-instance-mariadb-server, and dynamically
+            # add table files stored in seperate directories as different databases.
+            # Although basically mariadb supports this kind of operation, but there're
+            # corner cases (for example when the server crashes).
             for msId in self._mirrorSiteDict:
-                self._mariadbServer.addDatabaseDir(msId, self._mirrorSiteDict[msId]["data-directory"], self._tableInfoDict[msId], None, None)
+                self._serverDict[msId] = _MariadbServer(param["listen-ip"], param["temp-directory"], param["log-directory"],
+                                                        msId, self._mirrorSiteDict[msId]["data-directory"],
+                                                        self._tableInfoDict[msId])
+            # show log
+            if any(self._bAdvertiseDict.values()):
+                logging.info("Advertiser (mariadb) started.")       # here we can not give out port information
         except Exception:
             self.dispose()
             raise
 
     def dispose(self):
-        if self._mariadbServer is not None:
-            self._mariadbServer.stop()
-            self._mariadbServer = None
+        for msObj in self._serverDict.values():
+            msObj.dispose()
+        self._serverDict = dict()
 
     def get_param(self, mirror_site_id):
         assert mirror_site_id in self._mirrorSiteDict
         return {
-            "port": self._mariadbServer.port,
+            "unix-socket-file": self._serverDict[mirror_site_id].dbSocketFile,
             "database": mirror_site_id,
         }
 
     def get_access_info(self, mirror_site_id):
         assert mirror_site_id in self._mirrorSiteDict
         return {
-            "url": "mariadb://{IP}:%d/%s" % (self._mariadbServer.port, mirror_site_id),
+            "url": "mariadb://{IP}:%d/%s" % (self._serverDict[mirror_site_id].dbPort, mirror_site_id),
             "description": "",
         }
 
     def advertise_mirror_site(self, mirror_site_id):
-        self._mariadbServer.exportDatabase(mirror_site_id)
+        self._serverDict[mirror_site_id].exportDatabase(mirror_site_id)
 
 
-class _MultiInstanceMariadbServer:
+class _MariadbServer:
 
-    """
-    The best solution would be using a one-instance-mariadb-server, and dynamically
-    add table files stored in seperate directories as different databases. Although
-    basically mariadb supports this kind of operation, but there're
-    corner cases (for example when the server crashes).
-    """
+    def __init__(self, listenIp, tmpDir, logDir, databaseName, dataDir, tableInfo):
+        self._cfgFile = os.path.join(tmpDir, "mariadb-%s.cnf" % (databaseName))
+        logFile = os.path.join(logDir, "mariadb-%s.log" % (databaseName))
+        tableInfoRecordFile = os.path.join(tmpDir, "mariadb-%s.table_record" % (databaseName))                      # FIXME
+        databaseTableSchemaRecordFile = os.path.join(tmpDir, "mariadb-%s.table_schema_record" % (databaseName))     # FIXME
 
-    def __init__(self, param):
-        self.param = param
-        self._dirDict = dict()              # <database-name,data-dir>
-        self._tableInfoDict = dict()        # <database-name,table-info>
-        self._procDict = dict()             # <database-name,(proc,port,cfg-file,log-ile)>
+        self._dbSocketFile = os.path.join(tmpDir, "mariadb-%s.socket" % (databaseName))
         self._dbWriteUser = "write"
         self._dbWritePasswd = "write"
         self._dbReadUser = "anonymous"
-        self._bStarted = False
 
-    def start(self):
-        assert not self._bStarted
-        self._bStarted = True
-        logging.info("Slave server (multi-instanced-mariadb) started.")
-
-    def stop(self):
-        for value in self._procDict.values():
-            proc = value[0]
-            proc.terminate()
-            proc.wait()
-        self._procDict.clear()
-        self._tableInfoDict.clear()
-        self._dirDict.clear()
-
-    def addDatabaseDir(self, databaseName, dataDir, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile):
-        # tableInfo is OrderedDict, content format: { "table-name": ( block-size, "table-schema" ) }
-        assert self._bStarted
-
-        cfgFile = os.path.join(McConst.tmpDir, "mariadb-%s.cnf" % (databaseName))
-        socketFile = os.path.join(McConst.tmpDir, "mariadb-%s.socket" % (databaseName))
-        logFile = os.path.join(McConst.logDir, "mariadb-%s.log" % (databaseName))
-        proc = None
-        port = None
+        self._port = None
+        self._proc = None
         try:
             # initialize if needed
             if not self._isInitialized(dataDir):
@@ -128,13 +107,13 @@ class _MultiInstanceMariadbServer:
                 bJustInitialized = False
 
             # generate mariadb config file
-            with open(cfgFile, "w") as f:
+            with open(self._cfgFile, "w") as f:
                 buf = ""
                 buf += "[mysqld]\n"
                 f.write(buf)
 
             # allocate listening port
-            port = McUtil.getFreeSocketPort("tcp")
+            self._port = McUtil.getFreeSocketPort("tcp")
 
             # start mariadb
             with open(logFile, "a") as f:
@@ -144,45 +123,56 @@ class _MultiInstanceMariadbServer:
                 "/usr/sbin/mysqld",
                 "--no-defaults",
                 "--datadir=%s" % (dataDir),
-                "--socket=%s" % (socketFile),
-                "--bind-address=%s" % (self.param.listenIp),
-                "--port=%d" % (port),
+                "--socket=%s" % (self._dbSocketFile),
+                "--bind-address=%s" % (listenIp),
+                "--port=%d" % (self._port),
             ]
-            proc = subprocess.Popen(cmd)
-            McUtil.waitSocketPortForProc("tcp", self.param.listenIp, port, proc)
+            self._proc = subprocess.Popen(cmd)
+            McUtil.waitSocketPortForProc("tcp", listenIp, self._port, self._proc)
 
             # post-initialize if needed
             if bJustInitialized:
-                self._initializePostStart(databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, socketFile)
+                self._initializePostStart(databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, self._dbSocketFile)
 
             # check
-            self._check(databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, socketFile)
-
-            # save
-            self._dirDict[databaseName] = dataDir
-            self._tableInfoDict[databaseName] = tableInfo
-            self._procDict[databaseName] = (proc, port, cfgFile, socketFile, logFile)
+            self._check(databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, self._dbSocketFile)
         except Exception:
-            if databaseName in self._procDict:
-                self._procDict[databaseName]
-            if databaseName in self._tableInfoDict:
-                self._tableInfoDict[databaseName]
-            if databaseName in self._dirDict:
-                del self._dirDict[databaseName]
-            if proc is not None:
-                proc.terminate()
-                proc.wait()
-            if os.path.exists(cfgFile):
-                os.unlink(cfgFile)
+            self.dispose()
             raise
+
+    def dispose(self):
+        if self._proc is not None:
+            self._proc.terminate()
+            self._proc.wait()
+            self._proc = None
+        if self._port is not None:
+            self._port = None
+        if os.path.exists(self._cfgFile):
+            os.unlink(self._cfgFile)
+
+    @property
+    def dbSocketFile(self):
+        return self._dbSocketFile
+
+    @property
+    def dbPort(self):
+        return self._port
+
+    @property
+    def dbReadUser(self):
+        return self._dbReadUser
+
+    @property
+    def dbWriteUser(self):
+        return self._dbWriteUser
+
+    @property
+    def dbWritePasword(self):
+        return self._dbWritePasswd
 
     def exportDatabaseDir(self, databaseName):
         # FIXME, currently addDatabaseDir does the export work which is obviously insecure
-        assert self._bStarted
-
-    def getDatabasePort(self, databaseName):
-        assert self._bStarted
-        return self._procDict[databaseName][1]
+        pass
 
     def _isInitialized(self, dataDir):
         if not os.path.exists(os.path.join(dataDir, "mysql", "user.frm")):

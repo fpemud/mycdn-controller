@@ -122,6 +122,7 @@ class McPluginManager:
             param["mirror-sites"][msId] = {
                 "plugin-directory": "",
                 "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
+                "log-directory": "",
                 "data-directory": self.param.mirrorSiteDict[msId].getDataDirForStorage(name),
                 "config-xml": self.param.mirrorSiteDict[msId].storageDict[name][0],
             }
@@ -145,6 +146,7 @@ class McPluginManager:
         for msId in mirrorSiteIdList:
             param["mirror-sites"][msId] = {
                 "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
+                "log-directory": "",
                 "config-xml": self.param.mirrorSiteDict[msId].advertiserDict[name][0],
                 "storage-param": dict()
             }
