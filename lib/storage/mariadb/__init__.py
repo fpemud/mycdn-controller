@@ -118,7 +118,7 @@ class _MariadbServer:
             # start mariadb
             with open(logFile, "a") as f:
                 f.write("\n\n")
-                f.write("## mariadb-db #######################\n")
+                f.write("## mariadb #######################\n")
             cmd = [
                 "/usr/sbin/mysqld",
                 "--no-defaults",
@@ -127,7 +127,7 @@ class _MariadbServer:
                 "--bind-address=%s" % (listenIp),
                 "--port=%d" % (self._port),
             ]
-            self._proc = subprocess.Popen(cmd)
+            self._proc = subprocess.Popen(cmd, cwd=self._tmpDir)
             McUtil.waitSocketPortForProc("tcp", listenIp, self._port, self._proc)
 
             # post-initialize if needed

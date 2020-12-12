@@ -95,8 +95,8 @@ class _MongodbServer:
             # start mongodb
             with open(self._logFile, "a") as f:
                 f.write("\n\n")
-                f.write("## mariadb-db #######################\n")
-            self._proc = subprocess.Popen(["/usr/bin/mongod", "--config", self._cfgFile])
+                f.write("## mongodb #######################\n")
+            self._proc = subprocess.Popen(["/usr/bin/mongod", "--config", self._cfgFile], cwd=self._tmpDir)
             McUtil.waitSocketPortForProc("tcp", listenIp, self._port, self._proc)
         except Exception:
             self.dispose()
