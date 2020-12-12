@@ -746,7 +746,6 @@ class _UpdateHistory:
             try:
                 m = re.fullmatch(" *(\\S+) +(\\S+ \\S+) +(\\S+ \\S+) *", lineList[i])
                 if m is not None:
-                    print(lineList[i])
                     raise ValueError()
                 obj = DynObject()
                 # column 1
@@ -767,6 +766,7 @@ class _UpdateHistory:
                 self._updateInfoList.append(obj)
             except ValueError:
                 logging.warning("Line %d is invalid in file \"%s\"." % (i + 1, self._updateFn))
+                logging.warning(lineList[i])
 
     def _saveToFile(self):
         with open(self._updateFn, "w") as f:
