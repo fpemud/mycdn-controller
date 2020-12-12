@@ -46,15 +46,16 @@ class Storage:
     def get_param(self, mirror_site_id):
         assert mirror_site_id in self._mirrorSiteDict
         return {
-            "unix-socket-file": self._serverDict[mirror_site_id].dbSocketFile,
+            "url": "bolt://{IP}:%d" % (self._serverDict[mirror_site_id].dbBoltPort),
             "database": mirror_site_id,
         }
 
     def get_access_info(self, mirror_site_id):
         assert mirror_site_id in self._mirrorSiteDict
         return {
-            "url-bolt": "bolt://{IP}:%d" % (self._serverDict[mirror_site_id].dbBoltPort),
-            "url-http": "http://{IP}:%d" % (self._serverDict[mirror_site_id].dbHttpPort),
+            "bolt-url": "bolt://{IP}:%d" % (self._serverDict[mirror_site_id].dbBoltPort),
+            "http-url": "http://{IP}:%d" % (self._serverDict[mirror_site_id].dbHttpPort),
+            "database": mirror_site_id,
             "description": "",
         }
 
