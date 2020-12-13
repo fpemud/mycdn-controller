@@ -51,7 +51,9 @@ class Storage:
             # corner cases (for example when the server crashes).
             for msId in self._mirrorSiteDict:
                 self._serverDict[msId] = _MariadbServer(param["listen-ip"], param["temp-directory"], param["log-directory"],
-                                                        msId, self._mirrorSiteDict[msId]["data-directory"],
+                                                        msId,
+                                                        self._mirrorSiteDict[msId]["state-directory"],
+                                                        self._mirrorSiteDict[msId]["data-directory"],
                                                         self._tableInfoDict[msId])
             # show log
             if any(self._bAdvertiseDict.values()):
@@ -85,11 +87,11 @@ class Storage:
 
 class _MariadbServer:
 
-    def __init__(self, listenIp, tmpDir, logDir, databaseName, dataDir, tableInfo):
+    def __init__(self, listenIp, tmpDir, logDir, databaseName, stateDir, dataDir, tableInfo):
         self._cfgFile = os.path.join(tmpDir, "mariadb-%s.cnf" % (databaseName))
         logFile = os.path.join(logDir, "mariadb-%s.log" % (databaseName))
-        tableInfoRecordFile = os.path.join(tmpDir, "mariadb-%s.table_record" % (databaseName))                      # FIXME
-        databaseTableSchemaRecordFile = os.path.join(tmpDir, "mariadb-%s.table_schema_record" % (databaseName))     # FIXME
+        tableInfoRecordFile = os.path.join(stateDir, "MARIADB_TABLE_RECORD")
+        tableSchemaRecordFile = os.path.join(stateDir, "MARIADB_TABLE_SCHEMA_RECORD")
 
         self._dbSocketFile = os.path.join(tmpDir, "mariadb-%s.socket" % (databaseName))
         self._dbWriteUser = "write"
@@ -127,15 +129,15 @@ class _MariadbServer:
                 "--bind-address=%s" % (listenIp),
                 "--port=%d" % (self._port),
             ]
-            self._proc = subprocess.Popen(cmd, cwd=self._tmpDir)
+            self._proc = subprocess.Popen(cmd, cwd=tmpDir)
             McUtil.waitSocketPortForProc("tcp", listenIp, self._port, self._proc)
 
             # post-initialize if needed
             if bJustInitialized:
-                self._initializePostStart(databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, self._dbSocketFile)
+                self._initializePostStart(databaseName, tableInfo, tableInfoRecordFile, tableSchemaRecordFile, self._dbSocketFile)
 
             # check
-            self._check(databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, self._dbSocketFile)
+            self._check(databaseName, tableInfo, tableInfoRecordFile, tableSchemaRecordFile, self._dbSocketFile)
         except Exception:
             self.dispose()
             raise
@@ -317,10 +319,10 @@ class _MariadbServer:
 
         os.unlink(os.path.join(dataDir, "initialize.failed"))
 
-    def _initializePostStart(self, databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, socketFile):
+    def _initializePostStart(self, databaseName, tableInfo, tableInfoRecordFile, tableSchemaRecordFile, socketFile):
         # record table schema
         #
-        # two seperate files "tableInfoRecordFile" and "databaseTableSchemaRecordFile" must be used
+        # two seperate files "tableInfoRecordFile" and "tableSchemaRecordFile" must be used
         # because we can't use simple string comparasion for "table info" and "table schema in database":
         # ====================================
         # CREATE TABLE MovieDirector (
@@ -350,7 +352,7 @@ class _MariadbServer:
             cur = conn.cursor()
             cur.execute("SHOW TABLES;")
             tableNameList = [x[0] for x in cur.fetchall()]
-            with open(databaseTableSchemaRecordFile, "w") as f:
+            with open(tableSchemaRecordFile, "w") as f:
                 for tableName in tableNameList:
                     cur.execute("SHOW CREATE TABLE %s;" % (tableName))
                     out = cur.fetchall()[0][1]
@@ -358,7 +360,7 @@ class _MariadbServer:
                     f.write(out + "\n")
                     f.write("\n")
 
-    def _check(self, databaseName, tableInfo, tableInfoRecordFile, databaseTableSchemaRecordFile, socketFile):
+    def _check(self, databaseName, tableInfo, tableInfoRecordFile, tableSchemaRecordFile, socketFile):
         with mariadb.connect(unix_socket=socketFile, database=databaseName, user=self._dbWriteUser, password=self._dbWritePasswd) as conn:
             cur = conn.cursor()
 
@@ -392,7 +394,7 @@ class _MariadbServer:
                     buf += "---- " + tableName + " ----\n"
                     buf += out + "\n"
                     buf += "\n"
-                if buf != McUtil.readFile(databaseTableSchemaRecordFile):
+                if buf != McUtil.readFile(tableSchemaRecordFile):
                     raise Exception("table schema in database changed")
 
         with mariadb.connect(unix_socket=socketFile, database=databaseName, user=self._dbReadUser) as conn:
