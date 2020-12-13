@@ -117,7 +117,7 @@ class McGlobalAdvertiser:
             if self.param.updater.isMirrorSiteInitialized(msId):
                 ret[msId]["access"] = dict()
                 for key in msObj.advertiserDict:
-                    ret[msId]["access"][key] = self.param.advertiseDict[key].get_access_info(msId)
+                    ret[msId]["access"][key] = self.param.advertiserDict[key].get_access_info(msId)
         return ret
 
 
