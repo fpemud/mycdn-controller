@@ -60,7 +60,7 @@ class Advertiser:
     def advertise_mirror_site(self, mirror_site_id):
         assert mirror_site_id in self._mirrorSiteDict
         self._advertisedMirrorSiteIdList.append(mirror_site_id)
-        self._generateVirtualRootDirAnd()
+        self._generateVirtualRootDir()
         self._generateCfgFn()
         os.kill(self._proc.pid, signal.SIGUSR1)
 
