@@ -745,7 +745,7 @@ class _UpdateHistory:
                 continue
             try:
                 m = re.fullmatch(" *(\\S+) +(\\S+ \\S+) +(\\S+ \\S+) *", lineList[i])
-                if m is not None:
+                if m is None:
                     raise ValueError()
                 obj = DynObject()
                 # column 1
