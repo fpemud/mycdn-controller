@@ -17,6 +17,8 @@ class Advertiser:
         }
 
     def __init__(self, param):
+        self._wsgiFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "wsgi_autoreloading.py")
+
         self._tmpDir = param["temp-directory"]
         self._logDir = param["log-directory"]
         self._virtRootDir = os.path.join(self._tmpDir, "advertiser-klaus")
@@ -73,12 +75,9 @@ class Advertiser:
 
             # create wsgi script
             realPath = self._mirrorSiteDict[msId]["storage-param"]["file"]["data-directory"]
+            srcBuf = McUtil.readFile(self._wsgiFile)
             with open(self.__wsgiFn(msId), "w") as f:
-                buf = ''
-                buf += '#!/usr/bin/python3\n'
-                buf += '# -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-\n'
-                buf += '\n'
-                buf += 'from klaus.contrib.wsgi_autoreloading import make_autoreloading_app\n'
+                buf = srcBuf
                 buf += '\n'
                 buf += 'application = make_autoreloading_app("%s", "%s",\n' % (realPath, msId)
                 buf += '                                     use_smarthttp=True,\n'
