@@ -84,7 +84,7 @@ class McPluginManager:
 
         # check metadata.xml file content
         # FIXME
-        rootElem = lxml.etree.parse(metadata_file)
+        rootElem = lxml.etree.parse(metadata_file).getroot()
         # if True:
         #     dtd = libxml2.parseDTD(None, constants.PATH_PLUGIN_DTD_FILE)
         #     ctxt = libxml2.newValidCtxt()
