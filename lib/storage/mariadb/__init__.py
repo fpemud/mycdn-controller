@@ -125,14 +125,12 @@ class _MariadbServer:
                 if True:
                     buf += "datadir = %s\n" % (dataDir)
                     buf += "transaction-isolation = SERIALIZABLE\n"
+                if True:
+                    buf += "log-error = %s\n" % (os.path.join(logDir, "mariadb-%s.err" % (databaseName)))
                 f.write(buf)
 
             # start mariadb
-            self._proc = subprocess.Popen([
-                "/usr/sbin/mysqld",
-                "--defaults-file=%s" % (self._cfgFile),
-                "--log-error=%s" % (os.path.join(logDir, "mariadb-%s.err" % (databaseName))),       # mariadb would print one line if "log-error" is in config file
-            ], cwd=tmpDir)
+            self._proc = subprocess.Popen(["/usr/sbin/mysqld", "--defaults-file=%s" % (self._cfgFile)], cwd=tmpDir)
             McUtil.waitSocketPortForProc("tcp", listenIp, self._port, self._proc)
 
             # post-initialize if needed
