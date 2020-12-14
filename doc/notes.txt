@@ -44,13 +44,15 @@ advertiser arguments:
 
 storage arguments:
 {
+    "temp-directory": ""
+    "log-directory": ""
+    "log-file-size": -1
+    "log-file-count": -1
     "mirror-sites": {
         MIRROR-SITE-ID: {
-            "plugin-directory": "",
-            "state-directory": "",
-            "log-directory": "",
-            "data-directory": "",
             "config-xml": "",
+            "state-directory": "",
+            "data-directory": "",
         }
     },
 }
@@ -64,11 +66,9 @@ storage-with-integrated-advertiser arguments:
     "log-file-count": -1
     "mirror-sites": {
         MIRROR-SITE-ID: {
-            "plugin-directory": "",
-            "state-directory": "",
-            "log-directory": "",
-            "data-directory": "",
             "config-xml": "",
+            "state-directory": "",
+            "data-directory": "",
         }
     },
 }

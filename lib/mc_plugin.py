@@ -108,23 +108,21 @@ class McPluginManager:
 
         # prepare storage initialization parameter
         param = {
+            "temp-directory": os.path.join(McConst.tmpDir, "storage-%s" % (name)),
+            "log-directory": os.path.join(McConst.logDir, "storage-%s" % (name)),
+            "log-file-size": 100000,                # FIXME
+            "log-file-count": 3,                    # FIXME
             "mirror-sites": dict(),
         }
         if mod.Storage.get_properties().get("with-integrated-advertiser", False):
             param.update({
                 "listen-ip": self.param.listenIp,
-                "temp-directory": os.path.join(McConst.tmpDir, "storage-%s" % (name)),
-                "log-directory": os.path.join(McConst.logDir, "storage-%s" % (name)),
-                "log-file-size": 100000,                # FIXME
-                "log-file-count": 3,                    # FIXME
             })
         for msId in mirrorSiteIdList:
             param["mirror-sites"][msId] = {
-                "plugin-directory": "",
-                "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
-                "log-directory": "",
-                "data-directory": self.param.mirrorSiteDict[msId].getDataDirForStorage(name),
                 "config-xml": self.param.mirrorSiteDict[msId].storageDict[name][0],
+                "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
+                "data-directory": self.param.mirrorSiteDict[msId].getDataDirForStorage(name),
             }
 
         # prepare directories
@@ -149,9 +147,8 @@ class McPluginManager:
         }
         for msId in mirrorSiteIdList:
             param["mirror-sites"][msId] = {
-                "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
-                "log-directory": "",
                 "config-xml": self.param.mirrorSiteDict[msId].advertiserDict[name][0],
+                "state-directory": self.param.mirrorSiteDict[msId].pluginStateDir,
                 "storage-param": dict()
             }
             for st in self.param.mirrorSiteDict[msId].storageDict:
