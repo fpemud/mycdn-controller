@@ -17,7 +17,7 @@ class Advertiser:
 
     def __init__(self, param):
         self._tmpDir = param["temp-directory"]
-        self._virtRootDir = os.path.join(self._tmpDir, "advertiser-git-vroot")
+        self._virtRootDir = os.path.join(self._tmpDir, "vroot")
         self._listenIp = param["listen-ip"]
         self._mirrorSiteDict = param["mirror-sites"]
 

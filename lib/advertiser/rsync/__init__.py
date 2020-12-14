@@ -17,8 +17,8 @@ class Advertiser:
 
     def __init__(self, param):
         self._tmpDir = param["temp-directory"]
-        self._cfgFile = os.path.join(self._tmpDir, "advertiser-rsync.conf")
-        self._lockFile = os.path.join(self._tmpDir, "advertiser-rsyncd.lock")
+        self._cfgFile = os.path.join(self._tmpDir, "rsync.conf")
+        self._lockFile = os.path.join(self._tmpDir, "rsyncd.lock")
         self._logFile = os.path.join(param["log-directory"], "advertiser-rsyncd.log")
         self._listenIp = param["listen-ip"]
         self._mirrorSiteDict = param["mirror-sites"]

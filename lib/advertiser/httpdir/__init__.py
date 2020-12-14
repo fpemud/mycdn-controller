@@ -19,9 +19,9 @@ class Advertiser:
     def __init__(self, param):
         self._tmpDir = param["temp-directory"]
         self._logDir = param["log-directory"]
-        self._virtRootDir = os.path.join(self._tmpDir, "advertiser-httpdir")
-        self._cfgFn = os.path.join(self._tmpDir, "advertiser-httpdir.conf")
-        self._pidFile = os.path.join(self._tmpDir, "advertiser-httpdir.pid")
+        self._virtRootDir = os.path.join(self._tmpDir, "vroot")
+        self._cfgFn = os.path.join(self._tmpDir, "httpd.conf")
+        self._pidFile = os.path.join(self._tmpDir, "httpd.pid")
         self._errorLogFile = os.path.join(self._logDir, "advertiser-httpdir-error.log")
         self._accessLogFile = os.path.join(self._logDir, "advertiser-httpdir-access.log")
         self._listenIp = param["listen-ip"]

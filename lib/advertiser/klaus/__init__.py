@@ -21,9 +21,9 @@ class Advertiser:
 
         self._tmpDir = param["temp-directory"]
         self._logDir = param["log-directory"]
-        self._virtRootDir = os.path.join(self._tmpDir, "advertiser-klaus")
-        self._cfgFn = os.path.join(self._tmpDir, "advertiser-klaus.conf")
-        self._pidFile = os.path.join(self._tmpDir, "advertiser-klaus.pid")
+        self._virtRootDir = os.path.join(self._tmpDir, "vroot")
+        self._cfgFn = os.path.join(self._tmpDir, "httpd.conf")
+        self._pidFile = os.path.join(self._tmpDir, "httpd.pid")
         self._errorLogFile = os.path.join(self._logDir, "advertiser-klaus-error.log")
         self._accessLogFile = os.path.join(self._logDir, "advertiser-klaus-access.log")
         self._listenIp = param["listen-ip"]
@@ -120,4 +120,4 @@ class Advertiser:
         os.rename(self._cfgFn + ".tmp", self._cfgFn)
 
     def __wsgiFn(self, msId):
-        return os.path.join(self._tmpDir, "advertiser-wsgi-%s.py" % (msId))
+        return os.path.join(self._tmpDir, "wsgi-%s.py" % (msId))

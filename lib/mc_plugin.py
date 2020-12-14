@@ -137,7 +137,7 @@ class McPluginManager:
         # prepare advertiser initialization parameter
         param = {
             "listen-ip": self.param.listenIp,
-            "temp-directory": McConst.tmpDir,
+            "temp-directory": os.path.join(McConst.tmpDir, "advertiser-%s" % (name)),
             "log-directory": McConst.logDir,
             "log-file-size": 100000,                # FIXME
             "log-file-count": 3,                    # FIXME
@@ -153,6 +153,9 @@ class McPluginManager:
             for st in self.param.mirrorSiteDict[msId].storageDict:
                 if st in mod.Advertiser.get_properties().get("storage-dependencies", []):
                     param["mirror-sites"][msId]["storage-param"][st] = self.param.storageDict[st].get_param(msId)
+
+        # prepare directories
+        McUtil.ensureDir(param["temp-directory"])
 
         # create object
         return mod.Advertiser(param)
