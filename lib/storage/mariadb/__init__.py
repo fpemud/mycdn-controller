@@ -126,7 +126,7 @@ class _MariadbServer:
                     buf += "datadir = %s\n" % (dataDir)
                     buf += "transaction-isolation = SERIALIZABLE\n"
                 if True:
-                    buf += "log-basename = %s\n" % (os.path.join(logDir, "mariadb-%s" % (databaseName)))
+                    buf += "log-error = %s\n" % (os.path.join(logDir, "mariadb-%s.err" % (databaseName)))
                 f.write(buf)
 
             # create log file
