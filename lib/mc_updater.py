@@ -386,7 +386,10 @@ class _OneMirrorSiteUpdater:
             cmd.append(json.dumps(args))
 
         # create process
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0)
+        proc = subprocess.Popen(cmd,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                bufsize=0,
+                                cwd=self.mirrorSite.pluginStateDir)
         fcntl.fcntl(proc.stdout, fcntl.F_SETFL, fcntl.fcntl(proc.stdout, fcntl.F_GETFL) | os.O_NONBLOCK)
         self.apiServer.addMirrorSite(self.mirrorSite.id, self, proc.pid)
 
