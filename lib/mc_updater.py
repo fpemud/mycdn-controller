@@ -109,7 +109,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
-            self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
+            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except Exception:
             self._clearVars()
@@ -189,7 +189,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
-            self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
+            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, self.schedDatetime.strftime("%Y-%m-%d %H:%M")))
         except Exception:
             self._clearVars()
@@ -255,7 +255,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.maintainExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
-            self.logger = RotatingFile(os.path.join(McConst.logDir, "%s.log" % (self.mirrorSite.id)), McConst.updaterLogFileSize, McConst.updaterLogFileCount)
+            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.updaterLogFileSize, McConst.updaterLogFileCount)
             logging.info("Mirror site \"%s\" maintainer started." % (self.mirrorSite.id))
         except Exception:
             self._clearVars()
@@ -346,10 +346,6 @@ class _OneMirrorSiteUpdater:
     def _createProc(self):
         cmd = []
 
-        # create log directory
-        logDir = os.path.join(McConst.logDir, self.mirrorSite.id)
-        McUtil.ensureDir(logDir)
-
         # executable
         if self.status == McMirrorSiteUpdater.MIRROR_SITE_UPDATE_STATUS_INITING:
             cmd.append(self.mirrorSite.initializerExe)
@@ -366,11 +362,14 @@ class _OneMirrorSiteUpdater:
                 "id": self.mirrorSite.id,
                 "config": self.mirrorSite.cfgDict,
                 "state-directory": self.mirrorSite.pluginStateDir,
-                "log-directory": logDir,
                 "debug-flag": "",
                 "country": self.param.mainCfg["country"],
                 "location": self.param.mainCfg["location"],
             }
+
+            if self.mirrorSite.logDir is not None:
+                args["log-directory"] = self.mirrorSite.logDir
+
             for storageName in self.mirrorSite.storageDict:
                 args["storage-" + storageName] = self.param.storageDict[storageName].get_param(self.mirrorSite.id)
 

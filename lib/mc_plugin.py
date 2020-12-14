@@ -183,9 +183,15 @@ class McMirrorSite:
         self.pluginStateDir = os.path.join(self.masterDir, "state")
         McUtil.ensureDir(self.pluginStateDir)
 
+        # log directory (plugin can use it)
+        self.logDir = None
+        if len(rootElem.xpath("./need-log-directory")) > 0:
+            self.logDir = os.path.join(McConst.logDir, "mirror-site-%s" % (self.id))
+            McUtil.ensureDir(self.logDir)
+
         # storage
         self.storageDict = dict()                       # {name:(config-xml,data-directory)}
-        for child in rootElem.xpath(".//storage"):
+        for child in rootElem.xpath("./storage"):
             st = child.get("type")
             if st not in self.param.pluginManager.getStorageNameList():
                 raise Exception("mirror site %s: invalid storage type %s" % (self.id, st))
@@ -196,7 +202,7 @@ class McMirrorSite:
 
         # advertiser
         self.advertiserDict = dict()                 # {name:(config-xml)}
-        for child in rootElem.xpath(".//advertiser"):
+        for child in rootElem.xpath("./advertiser"):
             st = child.get("type")
             if st not in self.param.pluginManager.getAdvertiserNameList():
                 raise Exception("mirror site %s: invalid advertiser type %s" % (self.id, st))
@@ -206,9 +212,9 @@ class McMirrorSite:
         # initializer
         self.initializerExe = None
         if True:
-            slist = rootElem.xpath(".//initializer")
+            slist = rootElem.xpath("./initializer")
             if len(slist) > 0:
-                self.initializerExe = slist[0].xpath(".//executable")[0].text
+                self.initializerExe = slist[0].xpath("./executable")[0].text
                 self.initializerExe = os.path.join(pluginDir, self.initializerExe)
 
         # updater
@@ -220,12 +226,12 @@ class McMirrorSite:
         self.updateRetryInterval = None    # timedelta
         self.updateRetryCronExpr = None    # string
         if True:
-            slist = rootElem.xpath(".//updater")
+            slist = rootElem.xpath("./updater")
             if len(slist) > 0:
-                self.updaterExe = slist[0].xpath(".//executable")[0].text
+                self.updaterExe = slist[0].xpath("./executable")[0].text
                 self.updaterExe = os.path.join(pluginDir, self.updaterExe)
 
-                tag = slist[0].xpath(".//schedule")[0]
+                tag = slist[0].xpath("./schedule")[0]
                 self.schedType = tag.get("type")
                 if self.schedType == "interval":
                     self.schedInterval = self._parseInterval(tag.text)
@@ -234,8 +240,8 @@ class McMirrorSite:
                 else:
                     raise Exception("mirror site %s: invalid schedule type %s" % (self.id, self.schedType))
 
-                if len(slist[0].xpath(".//retry-after-failure")) > 0:
-                    tag = slist[0].xpath(".//retry-after-failure")[0]
+                if len(slist[0].xpath("./retry-after-failure")) > 0:
+                    tag = slist[0].xpath("./retry-after-failure")[0]
                     self.updateRetryType = tag.get("type")
                     if self.updateRetryType == "interval":
                         self.updateRetryInterval = self._parseInterval(tag.text)
@@ -249,10 +255,13 @@ class McMirrorSite:
         # maintainer
         self.maintainerExe = None
         if True:
-            slist = rootElem.xpath(".//maintainer")
+            slist = rootElem.xpath("./maintainer")
             if len(slist) > 0:
                 self.maintainerExe = slist[0].xpath(".//executable")[0].text
                 self.maintainerExe = os.path.join(pluginDir, self.maintainerExe)
+
+        # log file for initializer/updater/maintainer stdout/stderr
+        self.mainUpdaterLogFile = os.path.join(McConst.logDir, "mirror-site-%s.log" % (self.id))
 
     def getDataDirForStorage(self, storageName):
         return os.path.join(self.masterDir, "storage-%s" % (storageName))
