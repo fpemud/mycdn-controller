@@ -11,7 +11,7 @@ from mc_param import McConst
 from mc_updater import McMirrorSiteUpdater
 
 
-class McGlobalAdvertiser:
+class McMainAdvertiser:
 
     def __init__(self, param):
         self.param = param

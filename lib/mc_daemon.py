@@ -18,7 +18,7 @@ from mc_util import StdoutRedirector
 from mc_util import AvahiServiceRegister
 from mc_param import McConst
 from mc_plugin import McPluginManager
-from mc_advertiser import McGlobalAdvertiser
+from mc_advertiser import McMainAdvertiser
 from mc_updater import McMirrorSiteUpdater
 
 
@@ -61,9 +61,9 @@ class McDaemon:
                     self.param.pluginManager.loadStorageObjects()           # log by itself
                     self.param.pluginManager.loadAdvertiserObjects()        # log by itself
 
-                    # global advertiser
-                    self.param.globalAdvertiser = McGlobalAdvertiser(self.param)
-                    logging.info("Mirror site global advertiser initialized.")
+                    # main advertiser
+                    self.param.globalAdvertiser = McMainAdvertiser(self.param)
+                    logging.info("Mirror site main advertiser initialized.")
 
                     # updater
                     self.param.updater = McMirrorSiteUpdater(self.param)
