@@ -90,7 +90,6 @@ class _MariadbServer:
     def __init__(self, listenIp, tmpDir, logDir, databaseName, stateDir, dataDir, tableInfo):
         self._cfgFile = os.path.join(tmpDir, "mariadb-%s.cnf" % (databaseName))
         self._pidFile = os.path.join(tmpDir, "mariadb-%s.pid" % (databaseName))
-        logFile = os.path.join(logDir, "mariadb-%s.log" % (databaseName))
         tableInfoRecordFile = os.path.join(stateDir, "MARIADB_TABLE_RECORD")
         tableSchemaRecordFile = os.path.join(stateDir, "MARIADB_TABLE_SCHEMA_RECORD")
 
@@ -104,7 +103,8 @@ class _MariadbServer:
         try:
             # initialize if needed
             if not self._isInitialized(dataDir):
-                self._initialize(databaseName, dataDir, tableInfo, logFile)
+                self._initialize(databaseName, dataDir, tableInfo,
+                                 os.path.join(logDir, "mariadb-install-db-%s.log" % (databaseName)))
                 bJustInitialized = True
             else:
                 bJustInitialized = False
@@ -125,17 +125,14 @@ class _MariadbServer:
                 if True:
                     buf += "datadir = %s\n" % (dataDir)
                     buf += "transaction-isolation = SERIALIZABLE\n"
-                if True:
-                    buf += "log-error = %s\n" % (os.path.join(logDir, "mariadb-%s.err" % (databaseName)))
                 f.write(buf)
 
-            # create log file
-            with open(logFile, "a") as f:
-                f.write("\n\n")
-                f.write("## mariadb #######################\n")
-
             # start mariadb
-            self._proc = subprocess.Popen(["/usr/sbin/mysqld", "--defaults-file=%s" % (self._cfgFile)], cwd=tmpDir)
+            self._proc = subprocess.Popen([
+                "/usr/sbin/mysqld",
+                "--defaults-file=%s" % (self._cfgFile),
+                "--log-error=%s" % (os.path.join(logDir, "mariadb-%s.err" % (databaseName))),       # mariadb would print one line if "log-error" is in config file
+            ], cwd=tmpDir)
             McUtil.waitSocketPortForProc("tcp", listenIp, self._port, self._proc)
 
             # post-initialize if needed
