@@ -109,29 +109,33 @@ class _MariadbServer:
             else:
                 bJustInitialized = False
 
-            # generate mariadb config file
-            with open(self._cfgFile, "w") as f:
-                buf = ""
-                buf += "[mysqld]\n"
-                f.write(buf)
-
             # allocate listening port
             self._port = McUtil.getFreeSocketPort("tcp")
 
-            # start mariadb
+            # generate mariadb config file
+            with open(self._cfgFile, "w") as f:
+                buf = ""
+                buf += "[mariadb]\n"
+                if True:
+                    buf += "pid-file = %s\n" % (self._pidFile)
+                if True:
+                    buf += "socket = %s\n" % (self._dbSocketFile)
+                    buf += "bind-address = %s\n" % (listenIp)
+                    buf += "port = %d\n" % (self._port)
+                if True:
+                    buf += "datadir = %s\n" % (dataDir)
+                    buf += "transaction-isolation = SERIALIZABLE\n"
+                if True:
+                    buf += "log-basename = %s\n" % (os.path.join(logDir, "mariadb-%s" % (databaseName)))
+                f.write(buf)
+
+            # create log file
             with open(logFile, "a") as f:
                 f.write("\n\n")
                 f.write("## mariadb #######################\n")
-            cmd = [
-                "/usr/sbin/mysqld",
-                "--no-defaults",
-                "--datadir=%s" % (dataDir),
-                "--socket=%s" % (self._dbSocketFile),
-                "--bind-address=%s" % (listenIp),
-                "--port=%d" % (self._port),
-                "--pid-file=%s" % (self._pidFile)
-            ]
-            self._proc = subprocess.Popen(cmd, cwd=tmpDir)
+
+            # start mariadb
+            self._proc = subprocess.Popen(["/usr/sbin/mysqld", "--defaults-file=%s" % (self._cfgFile)], cwd=tmpDir)
             McUtil.waitSocketPortForProc("tcp", listenIp, self._port, self._proc)
 
             # post-initialize if needed
