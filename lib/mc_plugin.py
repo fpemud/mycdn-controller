@@ -113,8 +113,8 @@ class McPluginManager:
         if mod.Storage.get_properties().get("with-integrated-advertiser", False):
             param.update({
                 "listen-ip": self.param.listenIp,
-                "temp-directory": McConst.tmpDir,
-                "log-directory": McConst.logDir,
+                "temp-directory": os.path.join(McConst.tmpDir, "storage-%s" % (name)),
+                "log-directory": os.path.join(McConst.logDir, "storage-%s" % (name)),
                 "log-file-size": 100000,                # FIXME
                 "log-file-count": 3,                    # FIXME
             })
@@ -126,6 +126,10 @@ class McPluginManager:
                 "data-directory": self.param.mirrorSiteDict[msId].getDataDirForStorage(name),
                 "config-xml": self.param.mirrorSiteDict[msId].storageDict[name][0],
             }
+
+        # prepare directories
+        McUtil.ensureDir(param["temp-directory"])
+        McUtil.ensureDir(param["log-directory"])
 
         # create object
         return mod.Storage(param)

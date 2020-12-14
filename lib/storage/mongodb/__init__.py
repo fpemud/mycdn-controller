@@ -16,9 +16,6 @@ class Storage:
         }
 
     def __init__(self, param):
-        self._listenIp = param["listen-ip"]
-        self._tmpDir = param["temp-directory"]
-        self._logDir = param["log-directory"]
         self._mirrorSiteDict = param["mirror-sites"]
         self._bAdvertiseDict = dict()                   # {mirror-site-id:bAdvertise}
 
@@ -64,8 +61,8 @@ class Storage:
 class _MongodbServer:
 
     def __init__(self, listenIp, tmpDir, logDir, databaseName, dataDir, tableInfo):
-        self._cfgFile = os.path.join(tmpDir, "advertiser-mongodb-%s.conf" % (databaseName))
-        self._logFile = os.path.join(logDir, "advertiser-mongodb-%s.log" % (databaseName))
+        self._cfgFile = os.path.join(tmpDir, "mongodb-%s.conf" % (databaseName))
+        self._logFile = os.path.join(logDir, "mongodb-%s.log" % (databaseName))
         self._tmpDir = tmpDir
 
         self._port = None

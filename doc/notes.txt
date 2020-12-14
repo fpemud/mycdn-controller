@@ -4,7 +4,7 @@ updater arguments:
     "id": self.mirrorSite.id,
     "config": self.mirrorSite.cfgDict,
     "state-directory": self.mirrorSite.pluginStateDir,
-    "log-directory": logDir,
+    "log-directory": logDir,                                    # if metadata.xml contains <need-log-directory>
     "debug-flag": "",
     "country": self.param.mainCfg["country"],
     "location": self.param.mainCfg["location"],
