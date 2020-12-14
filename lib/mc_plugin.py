@@ -97,10 +97,19 @@ class McPluginManager:
         #         raise exceptions.IncorrectPluginMetaFile(metadata_file, msg)
 
         # create McMirrorSite objects
-        for child in rootElem.xpath(".//mirror-site"):
-            obj = McMirrorSite(self.param, path, child, cfgDict)
-            assert obj.id not in self.param.mirrorSiteDict
-            self.param.mirrorSiteDict[obj.id] = obj
+        if rootElem.tag == "mirror-site":
+            msId = rootElem.get("id")
+            if msId in self.param.mirrorSiteDict:
+                raise Exception("metadata.xml for plugin %s contains duplicate mirror-site %s" % (name, msId))
+            self.param.mirrorSiteDict[msId] = McMirrorSite(self.param, path, rootElem, cfgDict)
+        elif rootElem.tag in ["mirror-sites", "plugin"]:                    # FIXME: "plugin" is deprecated
+            for child in rootElem.xpath("./mirror-site"):
+                msId = child.get("id")
+                if msId in self.param.mirrorSiteDict:
+                    raise Exception("metadata.xml for plugin %s contains duplicate mirror-site %s" % (name, msId))
+                self.param.mirrorSiteDict[msId] = McMirrorSite(self.param, path, child, cfgDict)
+        else:
+            raise Exception("metadata.xml content for plugin %s is invalid" % (name))
 
     def _loadOneStorageObject(self, name, mirrorSiteIdList):
         mod = __import__("storage.%s" % (name))
