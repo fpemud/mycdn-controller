@@ -25,8 +25,7 @@ def _get_namespace_dict(repos_root):
             namespace_dict[None].append(fullfn)
         else:
             fn = os.path.basename(fullfn)
-            if fn not in namespace_dict:
-                namespace_dict[fn] = glob.glob(fullfn + "/*")
+            namespace_dict[fn] = glob.glob(fullfn + "/*")
 
 
 def _poll_for_changes(interval, dir):

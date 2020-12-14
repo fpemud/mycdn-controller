@@ -89,6 +89,7 @@ class _MariadbServer:
 
     def __init__(self, listenIp, tmpDir, logDir, databaseName, stateDir, dataDir, tableInfo):
         self._cfgFile = os.path.join(tmpDir, "mariadb-%s.cnf" % (databaseName))
+        self._pidFile = os.path.join(tmpDir, "mariadb-%s.pid" % (databaseName))
         logFile = os.path.join(logDir, "mariadb-%s.log" % (databaseName))
         tableInfoRecordFile = os.path.join(stateDir, "MARIADB_TABLE_RECORD")
         tableSchemaRecordFile = os.path.join(stateDir, "MARIADB_TABLE_SCHEMA_RECORD")
@@ -128,6 +129,7 @@ class _MariadbServer:
                 "--socket=%s" % (self._dbSocketFile),
                 "--bind-address=%s" % (listenIp),
                 "--port=%d" % (self._port),
+                "--pid-file=%s" % (self._pidFile)
             ]
             self._proc = subprocess.Popen(cmd, cwd=tmpDir)
             McUtil.waitSocketPortForProc("tcp", listenIp, self._port, self._proc)
@@ -149,6 +151,8 @@ class _MariadbServer:
             self._proc = None
         if self._port is not None:
             self._port = None
+        if os.path.exists(self._pidFile):
+            os.unlink(self._pidFile)
         if os.path.exists(self._cfgFile):
             os.unlink(self._cfgFile)
 
