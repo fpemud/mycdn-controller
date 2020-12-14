@@ -138,7 +138,7 @@ class McPluginManager:
         param = {
             "listen-ip": self.param.listenIp,
             "temp-directory": os.path.join(McConst.tmpDir, "advertiser-%s" % (name)),
-            "log-directory": McConst.logDir,
+            "log-directory": os.path.join(McConst.logDir, "advertiser-%s" % (name)),
             "log-file-size": 100000,                # FIXME
             "log-file-count": 3,                    # FIXME
             "mirror-sites": dict(),
@@ -156,6 +156,7 @@ class McPluginManager:
 
         # prepare directories
         McUtil.ensureDir(param["temp-directory"])
+        McUtil.ensureDir(param["log-directory"])
 
         # create object
         return mod.Advertiser(param)

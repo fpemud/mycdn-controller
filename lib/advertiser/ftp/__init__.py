@@ -23,7 +23,7 @@ class Advertiser:
         self._logFileSize = param["log-file-size"]
         self._logFileCount = param["log-file-count"]
         self._cfgFile = os.path.join(self._tmpDir, "ftpd.cfg")
-        self._logFile = os.path.join(param["log-directory"], "advertiser-ftp.log")
+        self._logFile = os.path.join(param["log-directory"], "ftpd.log")
         self._listenIp = param["listen-ip"]
         self._mirrorSiteDict = param["mirror-sites"]
 

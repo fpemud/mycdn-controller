@@ -24,8 +24,8 @@ class Advertiser:
         self._virtRootDir = os.path.join(self._tmpDir, "vroot")
         self._cfgFn = os.path.join(self._tmpDir, "httpd.conf")
         self._pidFile = os.path.join(self._tmpDir, "httpd.pid")
-        self._errorLogFile = os.path.join(self._logDir, "advertiser-klaus-error.log")
-        self._accessLogFile = os.path.join(self._logDir, "advertiser-klaus-access.log")
+        self._errorLogFile = os.path.join(self._logDir, "error.log")
+        self._accessLogFile = os.path.join(self._logDir, "access.log")
         self._listenIp = param["listen-ip"]
         self._mirrorSiteDict = param["mirror-sites"]
 
