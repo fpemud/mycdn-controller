@@ -204,10 +204,6 @@ def refreshCfgFromCfgFile():
 
         if "logFile" not in dataObj:
             raise Exception("no \"logFile\" in config file")
-        if "logMaxBytes" not in dataObj:
-            raise Exception("no \"logMaxBytes\" in config file")
-        if "logBackupCount" not in dataObj:
-            raise Exception("no \"logBackupCount\" in config file")
         if "ip" not in dataObj:
             raise Exception("no \"ip\" in config file")
         if "port" not in dataObj:
@@ -226,10 +222,6 @@ def refreshCfgFromCfgFile():
 
         if "logFile" not in cfg:
             cfg["logFile"] = dataObj["logFile"]                     # cfg["logFile"] is not changable
-        if "logMaxBytes" not in cfg:
-            cfg["logMaxBytes"] = dataObj["logMaxBytes"]             # cfg["logMaxBytes"] is not changable
-        if "logBackupCount" not in cfg:
-            cfg["logBackupCount"] = dataObj["logBackupCount"]       # cfg["logBackupCount"] is not changable
         if "ip" not in cfg:
             cfg["ip"] = dataObj["ip"]                               # cfg["ip"] is not changable
         if "port" not in cfg:
@@ -243,7 +235,7 @@ def runServer():
     log = logging.getLogger("pyftpdlib")
     log.propagate = False
     log.setLevel(logging.INFO)
-    log.addHandler(logging.handlers.RotatingFileHandler(cfg["logFile"], cfg["logMaxBytes"], cfg["logBackupCount"]))
+    log.addHandler(logging.handlers.RotatingFileHandler(cfg["logFile"], 10 * 1024 * 1024, 2))
 
     authorizer = pyftpdlib.authorizers.DummyAuthorizer()
     authorizer.add_anonymous("/")

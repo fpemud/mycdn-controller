@@ -119,8 +119,6 @@ class McPluginManager:
         param = {
             "temp-directory": os.path.join(McConst.tmpDir, "storage-%s" % (name)),
             "log-directory": os.path.join(McConst.logDir, "storage-%s" % (name)),
-            "log-file-size": 100000,                # FIXME
-            "log-file-count": 3,                    # FIXME
             "mirror-sites": dict(),
         }
         if mod.Storage.get_properties().get("with-integrated-advertiser", False):
@@ -150,8 +148,6 @@ class McPluginManager:
             "listen-ip": self.param.listenIp,
             "temp-directory": os.path.join(McConst.tmpDir, "advertiser-%s" % (name)),
             "log-directory": os.path.join(McConst.logDir, "advertiser-%s" % (name)),
-            "log-file-size": 100000,                # FIXME
-            "log-file-count": 3,                    # FIXME
             "mirror-sites": dict(),
         }
         for msId in mirrorSiteIdList:

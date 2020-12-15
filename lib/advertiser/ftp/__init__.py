@@ -20,8 +20,6 @@ class Advertiser:
     def __init__(self, param):
         self._execFile = os.path.join(os.path.dirname(os.path.realpath(__file__)), "ftpd.py")
         self._tmpDir = param["temp-directory"]
-        self._logFileSize = param["log-file-size"]
-        self._logFileCount = param["log-file-count"]
         self._cfgFile = os.path.join(self._tmpDir, "ftpd.cfg")
         self._logFile = os.path.join(param["log-directory"], "ftpd.log")
         self._listenIp = param["listen-ip"]
@@ -65,8 +63,6 @@ class Advertiser:
         # generate file content
         dataObj = dict()
         dataObj["logFile"] = self._logFile
-        dataObj["logMaxBytes"] = self._logFileSize
-        dataObj["logBackupCount"] = self._logFileCount
         dataObj["ip"] = self._listenIp
         dataObj["port"] = self._port
         dataObj["dirmap"] = {x: self._mirrorSiteDict[x]["storage-param"]["file"]["data-directory"] for x in self._advertisedMirrorSiteIdList}

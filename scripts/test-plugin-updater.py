@@ -75,8 +75,6 @@ class MirrorSite:
                 "listen-ip": "0.0.0.0",
                 "temp-directory": McConst.tmpDir,
                 "log-directory": McConst.logDir,
-                "log-file-size": 100000,                # FIXME
-                "log-file-count": 3,                    # FIXME
             })
         param["mirror-sites"][msId] = {
             "plugin-directory": "",

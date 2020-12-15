@@ -24,8 +24,6 @@ advertiser arguments:
     "listen-ip": ""
     "temp-directory": ""
     "log-directory": ""
-    "log-file-size": -1
-    "log-file-count": -1
     "mirror-sites": {
         MIRROR-SITE-ID: {
             "config-xml": "",
@@ -46,8 +44,6 @@ storage arguments:
 {
     "temp-directory": ""
     "log-directory": ""
-    "log-file-size": -1
-    "log-file-count": -1
     "mirror-sites": {
         MIRROR-SITE-ID: {
             "config-xml": "",
@@ -62,8 +58,6 @@ storage-with-integrated-advertiser arguments:
     "listen-ip": ""
     "temp-directory": ""
     "log-directory": ""
-    "log-file-size": -1
-    "log-file-count": -1
     "mirror-sites": {
         MIRROR-SITE-ID: {
             "config-xml": "",
