@@ -5,6 +5,7 @@ import os
 import signal
 import logging
 import subprocess
+import atomicwrites
 from mc_util import McUtil
 
 
@@ -114,10 +115,9 @@ class Advertiser:
         buf += 'WSGIChunkedRequest On\n'
         buf += "\n"
 
-        # write file atomically
-        with open(self._cfgFn + ".tmp", "w") as f:
+        # write file
+        with atomicwrites.atomic_write(self._cfgFn, overwrite=True) as f:
             f.write(buf)
-        os.rename(self._cfgFn + ".tmp", self._cfgFn)
 
     def __wsgiFn(self, msId):
         return os.path.join(self._tmpDir, "wsgi-%s.py" % (msId))

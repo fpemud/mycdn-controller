@@ -6,6 +6,7 @@ import json
 import signal
 import logging
 import subprocess
+import atomicwrites
 from mc_util import McUtil
 
 
@@ -67,7 +68,6 @@ class Advertiser:
         dataObj["port"] = self._port
         dataObj["dirmap"] = {x: self._mirrorSiteDict[x]["storage-param"]["file"]["data-directory"] for x in self._advertisedMirrorSiteIdList}
 
-        # write file atomically
-        with open(self._cfgFile + ".tmp", "w") as f:
+        # write file
+        with atomicwrites.atomic_write(self._cfgFile, overwrite=True) as f:
             json.dump(dataObj, f)
-        os.rename(self._cfgFile + ".tmp", self._cfgFile)

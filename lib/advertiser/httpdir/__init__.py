@@ -5,6 +5,7 @@ import os
 import signal
 import logging
 import subprocess
+import atomicwrites
 from mc_util import McUtil
 
 
@@ -102,6 +103,5 @@ class Advertiser:
         buf += '</Directory>\n'
 
         # write file atomically
-        with open(self._cfgFn + ".tmp", "w") as f:
+        with atomicwrites.atomic_write(self._cfgFn, overwrite=True) as f:
             f.write(buf)
-        os.rename(self._cfgFn + ".tmp", self._cfgFn)
