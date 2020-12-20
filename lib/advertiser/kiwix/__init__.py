@@ -80,4 +80,4 @@ class Advertiser:
             "--address=%s" % (self._listenIp),
             "--port=%d" % (self._port),
             self._libraryFile,
-        ], cwd=self._tmpDir)
+        ], stderr=subprocess.STDOUT, cwd=self._tmpDir)
