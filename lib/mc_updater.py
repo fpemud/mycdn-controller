@@ -625,9 +625,12 @@ class _Scheduler:
         now = datetime.now()
 
         # execute jobs
+        bExecuted = False
         for jobId in self.jobDict:
             if self.jobInfoDict[jobId][1] <= now:
+                bExecuted = True
                 self._execJob(jobId, self.jobInfoDict[jobId][1])
+        assert bExecuted
 
         # recalculate timeout
         m = min([x[1] for x in self.jobInfoDict.values()])
