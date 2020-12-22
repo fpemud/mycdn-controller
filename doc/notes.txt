@@ -129,3 +129,12 @@ class StorageWithIntegratedAdvertiser:
 
     def advertise_mirror_site(self, mirror_site_id):
         pass
+
+
+
+system log files in mirror-site-log-directory (sandbox can make plugin can't overwrite them):
+    updater.log
+    updater.log.1
+    updater.log.2
+    advertiser-XXX.log
+    storage-XXX.log

@@ -20,13 +20,13 @@ class McConst:
     runDir = "/run/mirrors"
     tmpDir = "/tmp/mirrors"             # FIXME
 
+    rotateLogFileSize = 10 * 1024 * 1024
+    rotateLogFileCount = 2
+
     user = "mirrors"
     group = "mirrors"
     uid = pwd.getpwnam(user).pw_uid
     gid = grp.getgrnam(group).gr_gid
-
-    updaterLogFileSize = 10 * 1024 * 1024
-    updaterLogFileCount = 2
 
     mainCfgFile = os.path.join(etcDir, "main.conf")
     pluginCfgFileGlobPattern = os.path.join(etcDir, "plugin-*.conf")

@@ -195,8 +195,8 @@ class _FtpServer:
         # generate file content
         dataObj = dict()
         dataObj["logFile"] = self._logFile
-        dataObj["logMaxBytes"] = McConst.updaterLogFileSize
-        dataObj["logBackupCount"] = McConst.updaterLogFileCount
+        dataObj["logMaxBytes"] = McConst.rotateLogFileSize
+        dataObj["logBackupCount"] = McConst.rotateLogFileCount
         dataObj["ip"] = self.param.listenIp
         dataObj["port"] = self._port
         dataObj["dirmap"] = self._dirDict

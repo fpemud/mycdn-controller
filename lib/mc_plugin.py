@@ -190,10 +190,9 @@ class McMirrorSite:
         McUtil.ensureDir(self.pluginStateDir)
 
         # log directory (plugin can use it)
-        self.logDir = None
-        if len(rootElem.xpath("./need-log-directory")) > 0:
-            self.logDir = os.path.join(McConst.logDir, "mirror-site-%s" % (self.id))
-            McUtil.ensureDir(self.logDir)
+        self.logDir = os.path.join(McConst.logDir, "mirror-site-%s" % (self.id))
+        self.mainUpdaterLogFile = os.path.join(self.logDir, "updater.log")              # log file for initializer/updater/maintainer stdout/stderr
+        McUtil.ensureDir(self.logDir)
 
         # storage
         self.storageDict = dict()                       # {name:(config-xml,data-directory)}
@@ -265,9 +264,6 @@ class McMirrorSite:
             if len(slist) > 0:
                 self.maintainerExe = slist[0].xpath(".//executable")[0].text
                 self.maintainerExe = os.path.join(pluginDir, self.maintainerExe)
-
-        # log file for initializer/updater/maintainer stdout/stderr
-        self.mainUpdaterLogFile = os.path.join(McConst.logDir, "mirror-site-%s.log" % (self.id))
 
     def getDataDirForStorage(self, storageName):
         return os.path.join(self.masterDir, "storage-%s" % (storageName))

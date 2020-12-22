@@ -33,8 +33,8 @@ class McMainAdvertiser:
                 self._log = logging.getLogger("aiohttp")
                 self._log.propagate = False
                 self._log.addHandler(logging.handlers.RotatingFileHandler(os.path.join(McConst.logDir, 'main-httpd.log'),
-                                                                          maxBytes=McConst.updaterLogFileSize,
-                                                                          backupCount=McConst.updaterLogFileCount))
+                                                                          maxBytes=McConst.rotateLogFileSize,
+                                                                          backupCount=McConst.rotateLogFileCount))
             if True:
                 aiohttp_jinja2.setup(self._app, loader=jinja2.FileSystemLoader('/usr/share/mirrors'))       # FIXME, we should use VUE alike, not jinja
                 self._runner = aiohttp.web.AppRunner(self._app)

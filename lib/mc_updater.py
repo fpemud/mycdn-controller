@@ -109,7 +109,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.initExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
-            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.updaterLogFileSize, McConst.updaterLogFileCount)
+            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.rotateLogFileSize, McConst.rotateLogFileCount)
             logging.info("Mirror site \"%s\" initialization starts." % (self.mirrorSite.id))
         except Exception:
             self._clearVars()
@@ -189,7 +189,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.updateExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
-            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.updaterLogFileSize, McConst.updaterLogFileCount)
+            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.rotateLogFileSize, McConst.rotateLogFileCount)
             logging.info("Mirror site \"%s\" update triggered on \"%s\"." % (self.mirrorSite.id, self.schedDatetime.strftime("%Y-%m-%d %H:%M")))
         except Exception:
             self._clearVars()
@@ -255,7 +255,7 @@ class _OneMirrorSiteUpdater:
             self.proc = self._createProc()
             self.pidWatch = GLib.child_watch_add(self.proc.pid, self.maintainExitCallback)
             self.stdoutWatch = GLib.io_add_watch(self.proc.stdout, GLib.IO_IN, self._stdoutCallback)
-            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.updaterLogFileSize, McConst.updaterLogFileCount)
+            self.logger = RotatingFile(self.mirrorSite.mainUpdaterLogFile, McConst.rotateLogFileSize, McConst.rotateLogFileCount)
             logging.info("Mirror site \"%s\" maintainer started." % (self.mirrorSite.id))
         except Exception:
             self._clearVars()
