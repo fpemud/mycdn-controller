@@ -575,14 +575,14 @@ class _Scheduler:
         now = datetime.now()
         self.jobDict[jobId] = ("cron", croniter(cronExpr, now, datetime), jobCallback)
         self.jobInfoDict[jobId] = [lastSchedDatetime, self.__cronGetNextDatetime(now, self.jobDict[jobId][1])]
-        self._timeoutMayBecomeEarly(jobId)
+        self._timeoutMayBecomeEarly(jobId, now)
 
     def addIntervalJob(self, jobId, lastSchedDatetime, interval, jobCallback):
         assert jobId not in self.jobDict
         now = datetime.now()
         self.jobDict[jobId] = ("interval", interval, jobCallback)
         self.jobInfoDict[jobId] = [lastSchedDatetime, self.__intervalGetNextDatetime(now, lastSchedDatetime, interval)]
-        self._timeoutMayBecomeEarly(jobId)
+        self._timeoutMayBecomeEarly(jobId, now)
 
     def pauseJobUntil(self, jobId, untilDatetime):
         assert jobId in self.jobDict
@@ -594,7 +594,7 @@ class _Scheduler:
         assert jobId in self.jobDict
         if triggerDatetime < self.jobInfoDict[jobId][1]:
             self.jobInfoDict[jobId][1] = triggerDatetime
-            self._timeoutMayBecomeEarly(jobId)
+            self._timeoutMayBecomeEarly(jobId, datetime.now())
             return True
         else:
             return False
@@ -615,11 +615,11 @@ class _Scheduler:
     def _timeoutMayBecomeLate(self):
         m = min([x[1] for x in self.jobInfoDict.values()])
         if m > self.nextDatetime:
-            self.__updateTimeout(m)
+            self.__updateTimeout(datetime.now(), m)
 
-    def _timeoutMayBecomeEarly(self, jobId):
+    def _timeoutMayBecomeEarly(self, jobId, curDatetime):
         if self.jobInfoDict[jobId][1] < self.nextDatetime:
-            self.__updateTimeout(self.jobInfoDict[jobId][1])
+            self.__updateTimeout(curDatetime, self.jobInfoDict[jobId][1])
 
     def _jobCallback(self):
         now = datetime.now()
@@ -635,7 +635,7 @@ class _Scheduler:
         # recalculate timeout
         m = min([x[1] for x in self.jobInfoDict.values()])
         assert m > self.nextDatetime
-        self.__updateTimeout(m)
+        self.__updateTimeout(now, m)
 
         return False
 
@@ -654,11 +654,11 @@ class _Scheduler:
         else:
             assert False
 
-    def __updateTimeout(self, nextDatetime):
+    def __updateTimeout(self, curDatetime, nextDatetime):
         if self.timeoutHandler is not None:
             GLib.source_remove(self.timeoutHandler)
         self.nextDatetime = nextDatetime
-        interval = math.ceil((self.nextDatetime - datetime.now()).total_seconds())
+        interval = math.ceil((nextDatetime - curDatetime).total_seconds())
         interval = max(interval, 1)
         self.timeoutHandler = GLib.timeout_add_seconds(interval, self._jobCallback)
 
