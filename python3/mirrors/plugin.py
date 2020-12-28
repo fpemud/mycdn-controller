@@ -31,11 +31,21 @@ mirrors.plugin
 @contact: fpemud@sina.com
 """
 
+import sys
 import json
 import socket
 
 __author__ = "fpemud@sina.com (Fpemud)"
 __version__ = "0.0.1"
+
+
+def __getattr__(name):
+    if name == "params":
+        # maybe we should cache this result?
+        return json.loads(sys.argv[1])
+    else:
+        # ugly, from PEP-562, a string which is same as system error message
+        raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
 class ApiClient:
