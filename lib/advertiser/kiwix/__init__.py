@@ -25,7 +25,7 @@ class Advertiser:
         self._proc = None
         self._advertisedMirrorSiteIdList = []
         try:
-            McUtil.cmdCall("/usr/bin/kiwix-manage", self._libraryFile, "add", "dummy")      # generate an empty library file
+            self._generateLibraryXml()
             self._port = McUtil.getFreeSocketPort("tcp")
             self._proc = self._startProc()
             McUtil.waitSocketPortForProc("tcp", self._listenIp, self._port, self._proc)
@@ -65,6 +65,7 @@ class Advertiser:
     def _generateLibraryXml(self):
         with open(self._libraryFile, "w") as f:
             f.write("")
+        bProcessed = False
         for msId in self._advertisedMirrorSiteIdList:
             buf = McUtil.readFile(os.path.join(self._mirrorSiteDict[msId]["state-directory"], "library.list"))
             for line in buf.split("\n"):
@@ -72,6 +73,10 @@ class Advertiser:
                 if line == "" or line.startswith("#"):
                     continue
                 McUtil.cmdCall("/usr/bin/kiwix-manage", self._libraryFile, "add", line)
+                bProcessed = True
+        if not bProcessed:
+            # so that the library file is legal
+            McUtil.cmdCall("/usr/bin/kiwix-manage", self._libraryFile, "add", "dummy")
 
     def _startProc(self):
         return subprocess.Popen([
