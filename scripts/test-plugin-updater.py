@@ -20,15 +20,19 @@ class MirrorSite:
 
     def __init__(self, pluginId, path, mirrorSiteId):
         metadata_file = os.path.join(path, "metadata.xml")
-        root = lxml.etree.parse(metadata_file)
+        root = lxml.etree.parse(metadata_file).getroot()
 
         # find mirror site
-        rootElem = None
-        for child in root.xpath(".//mirror-site"):
-            if child.get("id") == mirrorSiteId:
-                rootElem = child
-                break
-        assert rootElem is not None
+        if root.tag == "mirror-site":
+            assert root.get("id") == mirrorSiteId
+            rootElem = root
+        elif rootElem.tag in ["mirror-sites"]:
+            rootElem = None
+            for child in root.xpath(".//mirror-site"):
+                if child.get("id") == mirrorSiteId:
+                    rootElem = child
+                    break
+            assert rootElem is not None
 
         # read config from current directory
         cfgFile = pluginId + ".conf"
