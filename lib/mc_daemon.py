@@ -74,15 +74,15 @@ class McDaemon:
                         self.param.avahiObj = AvahiServiceRegister()
                         self.param.avahiObj.add_service(socket.gethostname(), McConst.avahiServiceName, self.param.mainPort)
                         self.param.avahiObj.start()
-                        logging.info("Service \"%s\" registered." % (self.param.avahiServiceName))
+                        logging.info("Service \"%s\" registered." % (McConst.avahiServiceName))
 
                     # register pserver
-                    if McConst.pserversSupport and self.mainCfg["pserver-domain-name"] is not None:
+                    if McConst.pserversSupport and self.param.mainCfg["pserver-domain-name"] is not None:
                         import pservers.client
                         self.param.pserversClientObj = pservers.client.PersistClientGLib()
-                        self.param.pserversClientObj.register(self.mainCfg["pserver-domain-name"], self.param.mainPort)
+                        self.param.pserversClientObj.register(self.param.mainCfg["pserver-domain-name"], self.param.mainPort)
                         self.param.pserversClientObj.start()
-                        logging.info("pserver \"%s\" registered." % (self.mainCfg["pserver-domain-name"]))
+                        logging.info("pserver \"%s\" registered." % (self.param.mainCfg["pserver-domain-name"]))
 
                     # start main loop
                     logging.info("Mainloop begins.")
