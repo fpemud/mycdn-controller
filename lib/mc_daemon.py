@@ -130,7 +130,7 @@ class McDaemon:
                 raise Exception("only \"location\" specified in main config file")
             self.param.mainCfg["location"] = dataObj["location"]
         if "pservers" in dataObj:
-            if "domain-name" not in dataObj:
+            if "domain-name" not in dataObj["pservers"]:
                 raise Exception("no \"domain-name\" specified in \"pservers\" secion in main config file")
             self.param.mainCfg["pserver-domain-name"] = dataObj["pservers"]["domain-name"]
 
