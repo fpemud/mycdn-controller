@@ -77,7 +77,7 @@ class McDaemon:
                         logging.info("Service \"%s\" registered." % (self.param.avahiServiceName))
 
                     # register pserver
-                    if McConst.pserverSupport and self.mainCfg["pserver-domain-name"] is not None:
+                    if McConst.pserversSupport and self.mainCfg["pserver-domain-name"] is not None:
                         import pservers.client
                         self.param.pserversClientObj = pservers.client.PersistClientGLib()
                         self.param.pserversClientObj.register(self.mainCfg["pserver-domain-name"], self.param.mainPort)

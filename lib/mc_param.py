@@ -36,7 +36,7 @@ class McConst:
     avahiSupport = True
     avahiServiceName = "_mirrors._tcp"
 
-    pserverSupport = True
+    pserversSupport = True
 
 
 class McParam:
