@@ -129,10 +129,10 @@ class McDaemon:
             if "country" not in dataObj:
                 raise Exception("only \"location\" specified in main config file")
             self.param.mainCfg["location"] = dataObj["location"]
-        if "pserver" in dataObj:
+        if "pservers" in dataObj:
             if "domain-name" not in dataObj:
-                raise Exception("no \"domain-name\" specified in \"pserver\" secion in main config file")
-            self.param.mainCfg["pserver-domain-name"] = dataObj["pserver"]["domain-name"]
+                raise Exception("no \"domain-name\" specified in \"pservers\" secion in main config file")
+            self.param.mainCfg["pserver-domain-name"] = dataObj["pservers"]["domain-name"]
 
     def _sigHandlerINT(self, signum):
         logging.info("SIGINT received.")
