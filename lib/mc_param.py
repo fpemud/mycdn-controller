@@ -36,18 +36,20 @@ class McConst:
     avahiSupport = True
     avahiServiceName = "_mirrors._tcp"
 
+    pserverSupport = True
+
 
 class McParam:
 
     def __init__(self):
         self.listenIp = "0.0.0.0"
         self.mainPort = 2300
-        self.webAcceptForeign = True
 
         self.mainCfg = {
             "preferedUpdatePeriodList": [],     # { "start": CRON-EXPRESSION, "time": HOURS }
             "country": "CN",
             "location": "",
+            "pserver-domain-name": None,
         }
 
         # objects
@@ -57,5 +59,6 @@ class McParam:
         self.storageDict = dict()
         self.advertiserDict = dict()
         self.globalAdvertiser = None
-        self.avahiObj = None
         self.updater = None
+        self.avahiObj = None
+        self.pserversClientObj = None

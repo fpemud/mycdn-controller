@@ -75,6 +75,13 @@ class McDaemon:
                         self.param.avahiObj.add_service(socket.gethostname(), McConst.avahiServiceName, self.param.mainPort)
                         self.param.avahiObj.start()
 
+                    # register pserver
+                    if McConst.pserverSupport and self.mainCfg["pserver-domain-name"] is not None:
+                        import pservers.client
+                        self.param.pserversClientObj = pservers.client.PersistClientGLib()
+                        self.param.pserversClientObj.register(self.mainCfg["pserver-domain-name"], self.param.mainPort)
+                        self.param.pserversClientObj.start()
+
                     # start main loop
                     logging.info("Mainloop begins.")
                     GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, self._sigHandlerINT, None)
@@ -82,6 +89,8 @@ class McDaemon:
                     self.param.mainloop.run_forever()
                     logging.info("Mainloop exits.")
                 finally:
+                    if self.param.pserversClientObj is not None:
+                        self.param.pserversClientObj.stop()
                     if self.param.avahiObj is not None:
                         self.param.avahiObj.stop()
                     if self.param.updater is not None:
@@ -110,8 +119,6 @@ class McDaemon:
             self.param.listenIp = dataObj["listenIp"]
         if "mainPort" in dataObj:
             self.param.mainPort = dataObj["mainPort"]
-        if "webAcceptForeign" in dataObj:
-            self.param.webAcceptForeign = dataObj["webAcceptForeign"]
         if "preferedUpdatePeriodList" in dataObj:
             self.param.mainCfg["preferedUpdatePeriodList"] = dataObj["preferedUpdatePeriodList"]
         if "country" in dataObj:
@@ -120,6 +127,10 @@ class McDaemon:
             if "country" not in dataObj:
                 raise Exception("only \"location\" specified in main config file")
             self.param.mainCfg["location"] = dataObj["location"]
+        if "pserver" in dataObj:
+            if "domain-name" not in dataObj:
+                raise Exception("no \"domain-name\" specified in \"pserver\" secion in main config file")
+            self.param.mainCfg["pserver-domain-name"] = dataObj["pserver"]["domain-name"]
 
     def _sigHandlerINT(self, signum):
         logging.info("SIGINT received.")
