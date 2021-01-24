@@ -4,3 +4,4 @@ maintainer notify updating/update-failed stack
 show total network usage, plugin network usage
 show total disk usage, plugin disk usage
 from /usr/lib64 to /usr/lib
+perodic redundant removal (need cow file system support)
