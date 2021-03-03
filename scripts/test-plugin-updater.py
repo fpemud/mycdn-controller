@@ -102,7 +102,7 @@ class InitOrUpdateProc:
             cmd = [msObj.updateExec]
 
         # create log directory
-        logDir = os.path.join(McConst.logDir, msObj.id)
+        logDir = os.path.join(McConst.logDir, "mirror-site-" + msObj.id)
         McUtil.ensureDir(logDir)
 
         args = {
