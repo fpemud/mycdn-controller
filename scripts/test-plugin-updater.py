@@ -26,13 +26,15 @@ class MirrorSite:
         if root.tag == "mirror-site":
             assert root.get("id") == mirrorSiteId
             rootElem = root
-        elif rootElem.tag in ["mirror-sites"]:
+        elif root.tag in ["mirror-sites"]:
             rootElem = None
             for child in root.xpath(".//mirror-site"):
                 if child.get("id") == mirrorSiteId:
                     rootElem = child
                     break
             assert rootElem is not None
+        else:
+            assert False
 
         # read config from current directory
         cfgFile = pluginId + ".conf"
